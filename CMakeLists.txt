@@ -80,6 +80,7 @@ if (NOT CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
       TARGETS test_imgui_vtk
       MODULES ${VTK_LIBRARIES}
   )
+  add_subdirectory(debugger_view)
   return ()
 endif ()
 
