@@ -19,6 +19,9 @@
 #include "vtkRenderer.h"
 #include "vtkRenderWindow.h"
 #include "vtkRenderWindowInteractor.h"
+#include "vtkfmt/core.h"
+#include "vtkfmt/format.h"
+#include "vtkfmt/ranges.h"
 
 #ifdef ADOBE_IMGUI_SPECTRUM
 #include "imgui_spectrum.h"
@@ -50,6 +53,86 @@ public:
     {
         if (vtkCommand::LeftButtonPressEvent == eventId)
         {
+            int eventPosition[2];
+            double worldPosition[3];
+            double worldPosition_[4];
+            auto interactor = vtkRenderWindowInteractor::SafeDownCast(caller);
+            interactor->GetEventPosition(eventPosition[0], eventPosition[1]);
+            fmt::print("EventPosition: {}\n", eventPosition);
+            auto renderer = interactor->FindPokedRenderer(eventPosition[0], eventPosition[1]);
+            if (renderer != nullptr)
+            {
+                vtkNew<vtkCoordinate> coordinate;
+                coordinate->SetCoordinateSystemToDisplay();
+                coordinate->SetValue(eventPosition[0], eventPosition[1]);
+                double* worldPoint = coordinate->GetComputedWorldValue(renderer);
+                std::memcpy(worldPosition, worldPoint, sizeof(worldPosition));
+                fmt::print("worldPosition: {}\n", worldPosition);
+                // 另一种办法
+                renderer->SetDisplayPoint(eventPosition[0], eventPosition[1], 0);
+                renderer->DisplayToWorld();
+                renderer->GetWorldPoint(worldPosition_);
+                fmt::print("worldPosition_: {}\n", worldPosition_);
+                
+                switch (gData->myPickerType)
+                {
+                case MyPicker::Point:
+                {
+                    interactor->GetPicker()->Pick(eventPosition[0], eventPosition[1], 0, renderer);
+                    double picked[3];
+                    interactor->GetPicker()->GetPickPosition(picked);
+                    fmt::print("Picked: {}\n", picked);
+                    auto sphereSource = vtkSmartPointer<vtkSphereSource>::New();
+                    sphereSource->Update();
+                    auto mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+                    mapper->SetInputConnection(sphereSource->GetOutputPort());
+                    auto actor = vtkSmartPointer<vtkActor>::New();
+                    actor->SetMapper(mapper);
+                    actor->SetPosition(picked);
+                    actor->SetScale(0.05);
+                    actor->GetProperty()->SetColor(1, 0, 0);
+                    renderer->AddActor(actor);
+                }
+                break;
+                case MyPicker::Cell:
+                {
+                    auto picker = vtkCellPicker::SafeDownCast(interactor->GetPicker());
+                    picker->SetTolerance(0.0005);
+                    picker->Pick(eventPosition[0], eventPosition[1], 0, renderer);
+                    if (picker->GetCellId() != -1)
+                    {
+                        vtkSmartPointer<vtkIdTypeArray> ids = vtkSmartPointer<vtkIdTypeArray>::New();
+                        ids->SetNumberOfComponents(1);
+                        ids->InsertNextValue(picker->GetCellId());
+
+                        vtkSmartPointer<vtkSelectionNode> selectionNode = vtkSmartPointer<vtkSelectionNode>::New();
+                        selectionNode->SetFieldType(vtkSelectionNode::CELL);
+                        selectionNode->SetContentType(vtkSelectionNode::INDICES);
+                        selectionNode->SetSelectionList(ids);
+
+                        vtkSmartPointer<vtkSelection> selection = vtkSmartPointer<vtkSelection>::New();
+                        selection->AddNode(selectionNode);
+
+                        vtkSmartPointer<vtkExtractSelection> extractSelection = vtkSmartPointer<vtkExtractSelection>::New();
+                        extractSelection->SetInputData(0, gData->polyData);
+                        extractSelection->SetInputData(1, selection);
+                        extractSelection->Update();
+
+                        auto selectedMapper = vtkSmartPointer<vtkDataSetMapper>::New();
+                        selectedMapper->SetInputConnection(extractSelection->GetOutputPort());
+                        auto selectedActor = vtkSmartPointer<vtkActor>::New();
+                        selectedActor->SetMapper(selectedMapper);
+                        selectedActor->GetProperty()->EdgeVisibilityOn();
+                        selectedActor->GetProperty()->SetEdgeColor(1, 0, 0);
+                        selectedActor->GetProperty()->SetLineWidth(13);
+                        renderer->AddActor(selectedActor);
+                    }
+                }
+                    break;
+                default:
+                    break;
+                }
+            }
         }
         else if (vtkCommand::MouseMoveEvent == eventId)
         {
@@ -128,6 +211,7 @@ int main(int argc, char* argv[])
   iren->EnableRenderOff();
   vtkNew<MyCallback> cb;
   iren->AddObserver(vtkCommand::LeftButtonPressEvent, cb);
+  iren->AddObserver(vtkCommand::RightButtonPressEvent, cb);
   iren->AddObserver(vtkCommand::MouseMoveEvent, cb);
   iren->AddObserver(vtkCommand::LeftButtonReleaseEvent, cb);
   iren->AddObserver(vtkCommand::LeftButtonDoubleClickEvent, cb);

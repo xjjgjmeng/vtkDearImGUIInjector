@@ -14,11 +14,15 @@
 #include <vtkCaptionActor2D.h>
 #include <vtkTextActor.h>
 #include <vtkTextProperty.h>
+#include <vtkPointPicker.h>
 #include <vtkRenderWindowInteractor.h>
 #include <vtkCaptionWidget.h>
 #include <vtkCellPicker.h>
 #include <vtkPropPicker.h>
 #include <vtkProp3D.h>
+#include <vtkSelectionNode.h>
+#include <vtkDataSetMapper.h>
+#include <vtkExtractSelection.h>
 #include <vtkActor2D.h>
 #include <vtkLineSource.h>
 #include <vtkPolyDataMapper.h>
@@ -26,17 +30,24 @@
 #include <vtkfmt/core.h>
 #include <vtkfmt/format.h>
 
+enum class MyPicker : int { None, Point, Cell, Prop, };
+
 namespace Inj
 {
 	struct GData
 	{
 		vtkSmartPointer<vtkActor> actor;
+		vtkSmartPointer<vtkPolyData> polyData;
 		vtkSmartPointer<vtkCaptionRepresentation> captionRepresentation;
 		vtkSmartPointer<vtkCaptionWidget> captionWidget;
 		vtkSmartPointer<vtkCellPicker> InteractionPicker;
 		vtkSmartPointer<vtkPropPicker> PropPicker;
 		vtkSmartPointer<vtkProp3D> InteractionProp;
 		vtkSmartPointer<vtkActor2D> lineActor;
+		vtkNew<vtkPointPicker> pointPicker;
+		vtkNew<vtkCellPicker> cellPicker;
+		vtkNew<vtkPropPicker> propPicker;
+		MyPicker myPickerType = MyPicker::None;
 	};
 
 	static void Pan(vtkRenderer* CurrentRenderer, vtkProp* InteractionProp)
