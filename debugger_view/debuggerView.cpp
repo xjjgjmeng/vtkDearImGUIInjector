@@ -1,6 +1,6 @@
 ﻿#include "debuggerView.h"
 
-#include "imgui.h"
+
 
 #include "vtkDearImGuiInjector.h"
 
@@ -84,6 +84,7 @@ void showView(vtkRenderer *renderer)
     // 创建演员（Actor）
     //vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
     ::gData->lineActor->SetMapper(mapper1);
+    ::gData->lineActor->SetPickable(true);
     renderer->AddActor(::gData->lineActor);
 
 
@@ -161,6 +162,12 @@ void showView1(vtkDearImGuiInjector* overlay_)
             }
             ImGui::TreePop();
         }
+        if (ImGui::TreeNode("Log"))
+        {
+          gData->log.Draw();
+          ImGui::TreePop();
+        }
+
         if (ImGui::TreeNode("Picker"))
         {
             if (vtkPropPicker::SafeDownCast(overlay_->Interactor->GetPicker()))

@@ -1,4 +1,4 @@
-#include <Windows.h>
+﻿#include <Windows.h>
 
 #include <sstream>
 #include <string>
@@ -19,9 +19,6 @@
 #include "vtkRenderer.h"
 #include "vtkRenderWindow.h"
 #include "vtkRenderWindowInteractor.h"
-#include "vtkfmt/core.h"
-#include "vtkfmt/format.h"
-#include "vtkfmt/ranges.h"
 
 #ifdef ADOBE_IMGUI_SPECTRUM
 #include "imgui_spectrum.h"
@@ -58,7 +55,7 @@ public:
             double worldPosition_[4];
             auto interactor = vtkRenderWindowInteractor::SafeDownCast(caller);
             interactor->GetEventPosition(eventPosition[0], eventPosition[1]);
-            fmt::print("EventPosition: {}\n", eventPosition);
+            gData->log.Add(fmt::format("EventPosition: {}", eventPosition));
             auto renderer = interactor->FindPokedRenderer(eventPosition[0], eventPosition[1]);
             if (renderer != nullptr)
             {
@@ -67,12 +64,12 @@ public:
                 coordinate->SetValue(eventPosition[0], eventPosition[1]);
                 double* worldPoint = coordinate->GetComputedWorldValue(renderer);
                 std::memcpy(worldPosition, worldPoint, sizeof(worldPosition));
-                fmt::print("worldPosition: {}\n", worldPosition);
+                gData->log.Add(fmt::format("worldPosition: {}", worldPosition));
                 // 另一种办法
                 renderer->SetDisplayPoint(eventPosition[0], eventPosition[1], 0);
                 renderer->DisplayToWorld();
                 renderer->GetWorldPoint(worldPosition_);
-                fmt::print("worldPosition_: {}\n", worldPosition_);
+                gData->log.Add(fmt::format("worldPosition_: {}", worldPosition_));
                 
                 switch (gData->myPickerType)
                 {
@@ -81,7 +78,7 @@ public:
                     interactor->GetPicker()->Pick(eventPosition[0], eventPosition[1], 0, renderer);
                     double picked[3];
                     interactor->GetPicker()->GetPickPosition(picked);
-                    fmt::print("Picked: {}\n", picked);
+                    gData->log.Add(fmt::format("Picked: {}", picked));
                     auto sphereSource = vtkSmartPointer<vtkSphereSource>::New();
                     sphereSource->Update();
                     auto mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
@@ -128,6 +125,27 @@ public:
                         renderer->AddActor(selectedActor);
                     }
                 }
+                    break;
+                case MyPicker::Prop:
+                    {
+                        static vtkActor* LastPickedActor;
+                        static vtkNew<vtkProperty> LastPickedProperty;
+                        auto picker = vtkPropPicker::SafeDownCast(interactor->GetPicker());
+                        picker->Pick(eventPosition[0], eventPosition[1], 0, renderer);
+                        if (LastPickedActor)
+                        {
+                          LastPickedActor->GetProperty()->DeepCopy(LastPickedProperty);
+                        }
+                        gData->log.Add(fmt::format("PickedActor: {}", (void*)picker->GetActor()));
+                        LastPickedActor = picker->GetActor();
+                        if (LastPickedActor)
+                        {
+                          LastPickedProperty->DeepCopy(LastPickedActor->GetProperty());
+                          LastPickedActor->GetProperty()->SetColor(0,1,0);
+                          LastPickedActor->GetProperty()->SetDiffuse(1.0);
+                          LastPickedActor->GetProperty()->SetSpecular(0);
+                        }
+                    }
                     break;
                 default:
                     break;
