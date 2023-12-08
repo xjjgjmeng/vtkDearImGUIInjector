@@ -41,6 +41,8 @@
 #include <vtkCellPicker.h>
 #include <vtkProperty.h>
 #include <vtkCamera.h>
+#include <vtkTextActor.h>
+#include <vtkTextProperty.h>
 #include <vtkPlaneSource.h>
 #include "vtkfmt/core.h"
 #include "vtkfmt/ranges.h"

@@ -12,6 +12,24 @@ static void SetupUI(vtkDearImGuiInjector*);
 static void DrawUI(vtkDearImGuiInjector*);
 static void HelpMarker(const char* desc);
 
+namespace
+{
+    auto getTextActor()
+    {
+        auto text = vtkSmartPointer<vtkTextActor>::New();
+        text->GetTextProperty()->SetFontFamily(VTK_FONT_FILE);
+        text->GetTextProperty()->SetFontFile("C:/Windows/Fonts/simhei.ttf");
+        text->GetTextProperty()->SetColor(0, 1, 0);
+        text->GetTextProperty()->SetOpacity(0.8);
+        text->GetTextProperty()->SetBackgroundColor(1, 0, 0);
+        text->GetTextProperty()->SetBackgroundOpacity(0.5);
+        text->GetTextProperty()->SetFontSize(18);
+        text->GetTextProperty()->SetJustification(VTK_TEXT_RIGHT);
+        //text->GetPositionCoordinate()->SetCoordinateSystemToWorld();
+        return text;
+    }
+}
+
 //------------------------------------------------------------------------------
 // Main
 //------------------------------------------------------------------------------
@@ -22,6 +40,7 @@ vtkSmartPointer<vtkRenderWindowInteractor> iren;
 vtkSmartPointer<vtkRenderWindow> renderWindow;
 vtkSmartPointer<vtkRenderer> renderer;
 vtkSmartPointer<vtkDICOMImageReader> reader;
+vtkSmartPointer<vtkImageActor> actor;
 double spacing[3];
 
 class MyStyle : public vtkInteractorStyleImage
@@ -29,49 +48,60 @@ class MyStyle : public vtkInteractorStyleImage
 public:
   static MyStyle* New() { return new MyStyle; }
 
-  void 	OnLeftButtonDown() override
+  void OnLeftButtonDown() override
   {
-      this->Slicing = 1;
+      this->m_slicing = true;
   }
 
-  void 	OnLeftButtonUp() override
+  void OnLeftButtonUp() override
   {
-      this->Slicing = 0;
+      this->m_slicing = false;
   }
 
-  void 	OnMouseMove() override
+  void OnMouseMove() override
   {
-      if (this->Slicing)
+      if (this->m_slicing)
       {
           int lastPos[2];
           iren->GetLastEventPosition(lastPos);
           int currPos[2];
           iren->GetEventPosition(currPos);
           // Increment slice position by deltaY of mouse
-          const int deltaY = lastPos[1] - currPos[1];
-          //reslice->Update();
-          const double sliceSpacing = ::spacing[2];
-          
-          // move the center point that we are slicing through
-          double point[4];
-          point[0] = 0.0;
-          point[1] = 0.0;
-          point[2] = sliceSpacing * deltaY;
-          //fmt::print("point:{}\n", point[2]);
-          point[3] = 1.0;
-          double center[4];
-          vtkMatrix4x4* matrix = reslice->GetResliceAxes();
-          matrix->MultiplyPoint(point, center);
-          matrix->SetElement(0, 3, center[0]);
-          matrix->SetElement(1, 3, center[1]);
-          matrix->SetElement(2, 3, center[2]);
-          ::colorMap->Update();
-          ::renderWindow->Render();
+          resliceImg(lastPos[1] - currPos[1]);
       }
   }
 
+  void OnMouseWheelForward() override
+  {
+      resliceImg(-1);
+  }
+
+  void OnMouseWheelBackward() override
+  {
+      resliceImg(1);
+  }
+
 private:
-  int Slicing=0;
+    void resliceImg(const int factor)
+    {
+        // move the center point that we are slicing through
+        double point[4];
+        point[0] = 0.0;
+        point[1] = 0.0;
+        point[2] = ::spacing[2] * factor;
+        point[3] = 1.0;
+        double center[4];
+        vtkMatrix4x4* matrix = ::reslice->GetResliceAxes();
+        matrix->MultiplyPoint(point, center);
+        matrix->SetElement(0, 3, center[0]);
+        matrix->SetElement(1, 3, center[1]);
+        matrix->SetElement(2, 3, center[2]);
+        ::colorMap->Update();
+        ::renderWindow->Render();
+    }
+
+private:
+  bool m_slicing = false;
 };
 
 int main(int argc, char* argv[])
@@ -144,7 +174,7 @@ int main(int argc, char* argv[])
     colorMap->SetInputConnection(reslice->GetOutputPort());
     colorMap->Update();
 
-    auto actor = vtkSmartPointer<vtkImageActor>::New();
+    actor = vtkSmartPointer<vtkImageActor>::New();
     actor->SetInputData(colorMap->GetOutput());
     renderer->AddActor(actor);
 
@@ -336,6 +366,47 @@ static void DrawUI(vtkDearImGuiInjector* overlay)
                 if (ImGui::Button("ResetCamera"))
                 {
                     ::renderer->ResetCamera();
+                }
+                if (ImGui::Button("AddMarker"))
+                {
+                    auto text = ::getTextActor();
+                    text->SetInput(fmt::format("{}",::reslice->GetResliceAxesOrigin()[2]).c_str());
+                    text->GetPositionCoordinate()->SetCoordinateSystemToWorld();
+                    text->SetPosition(::actor->GetCenter());
+                    ::renderer->AddActor(text);
+
+                    static std::map<void*, vtkSmartPointer<vtkMatrix4x4>> actorMap;
+                    auto myMat = vtkSmartPointer<vtkMatrix4x4>::New();
+                    myMat->DeepCopy(::reslice->GetResliceAxes());
+                    actorMap.emplace(text.GetPointer(), myMat);
+
+                    auto callback = vtkSmartPointer<vtkCallbackCommand>::New();
+                    callback->SetClientData(text.GetPointer());
+                    callback->SetCallback([](vtkObject* caller, unsigned long eventId, void* clientData, void* callData)
+                        {
+                            if (vtkCommand::ModifiedEvent == eventId)
+                            {
+                                auto isMatrixEqual = [](const vtkMatrix4x4* matrix1, const vtkMatrix4x4* matrix2)
+                                    {
+                                        for (int i = 0; i < 4; i++)
+                                        {
+                                            for (int j = 0; j < 4; j++)
+                                            {
+                                                if (matrix1->GetElement(i, j) != matrix2->GetElement(i, j))
+                                                {
+                                                    return false;
+                                                }
+                                            }
+                                        }
+                                        return true;
+                                    };
+                                auto currMat = ::reslice->GetResliceAxes();
+                                auto mat = actorMap[clientData];
+                                auto text = reinterpret_cast<vtkTextActor*>(clientData);
+                                text->SetVisibility(isMatrixEqual(currMat, mat));
+                            }
+                        });
+                    ::reslice->GetResliceAxes()->AddObserver(vtkCommand::ModifiedEvent, callback);
                 }
             }
             ImGui::End();
