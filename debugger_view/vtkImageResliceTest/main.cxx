@@ -1,35 +1,4 @@
-﻿#include <Windows.h>
-
-#include <sstream>
-#include <string>
-
-#include "vtkDearImGuiInjector.h"
-
-#include "vtkActor.h"
-#include "vtkCallbackCommand.h"
-#include "vtkCameraOrientationWidget.h"
-#include "vtkCameraOrientationRepresentation.h"
-#include "vtkCameraOrientationWidget.h"
-#include "vtkConeSource.h"
-#include "vtkInteractorStyle.h"
-#include "vtkInteractorStyleSwitch.h"
-#include "vtkNew.h"
-#include "vtkImageReslice.h"
-#include "vtkPolyData.h"
-#include "vtkPolyDataMapper.h"
-#include "vtkRenderer.h"
-#include "vtkMatrix4x4.h"
-#include "vtkImageData.h"
-#include "vtkRenderWindow.h"
-#include "vtkImageMapToColors.h"
-#include "vtkLookupTable.h"
-#include "vtkRenderWindowInteractor.h"
-#include "vtkDICOMImageReader.h"
-#include "vtkImageActor.h"
-#include "vtkInteractorStyleImage.h"
-#include "vtkfmt/core.h"
-#include "vtkfmt/ranges.h"
-#include "vtkfmt/format.h"
+﻿#include "../IncludeAllInOne.h"
 
 #ifdef ADOBE_IMGUI_SPECTRUM
 #include "imgui_spectrum.h"
@@ -52,6 +21,7 @@ vtkSmartPointer<vtkImageMapToColors> colorMap;
 vtkSmartPointer<vtkRenderWindowInteractor> iren;
 vtkSmartPointer<vtkRenderWindow> renderWindow;
 vtkSmartPointer<vtkRenderer> renderer;
+vtkSmartPointer<vtkDICOMImageReader> reader;
 double spacing[3];
 
 class MyStyle : public vtkInteractorStyleImage
@@ -114,7 +84,7 @@ int main(int argc, char* argv[])
     renderWindow->AddRenderer(renderer);
     iren->SetRenderWindow(renderWindow);
 
-    auto reader = vtkSmartPointer<vtkDICOMImageReader>::New();
+    reader = vtkSmartPointer<vtkDICOMImageReader>::New();
     reader->SetDirectoryName("D:/test_data/202110020082000");
     reader->Update();
 
@@ -247,6 +217,13 @@ static void DrawUI(vtkDearImGuiInjector* overlay)
             ImGui::SetNextWindowSize(ImVec2(450, 550), ImGuiCond_Once);
             ImGui::Begin("VTK");
             {
+                if (ImGui::CollapsingHeader("vtkImageData", ImGuiTreeNodeFlags_DefaultOpen))
+                {
+                    int dims[3];
+                    ::reader->GetOutput()->GetDimensions(dims);
+                    ImGui::Text(fmt::format("Dimensions: {}", dims).c_str());
+                }
+
                 auto lookupmap = colorMap->GetLookupTable();
                 double* pRange = lookupmap->GetRange();
                 float min_ = pRange[0];
