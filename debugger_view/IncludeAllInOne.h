@@ -13,6 +13,7 @@
 #include "vtkCameraOrientationRepresentation.h"
 #include "vtkCameraOrientationWidget.h"
 #include "vtkConeSource.h"
+#include "vtkCubeSource.h"
 #include "vtkInteractorStyle.h"
 #include "vtkInteractorStyleSwitch.h"
 #include "vtkNew.h"
@@ -47,3 +48,5 @@
 #include "vtkfmt/core.h"
 #include "vtkfmt/ranges.h"
 #include "vtkfmt/format.h"
+
+#include <imgui.h>

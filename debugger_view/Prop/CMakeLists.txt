@@ -1,6 +1,6 @@
 set(CMAKE_CXX_STANDARD 17)
 # set(CMAKE_VERBOSE_MAKEFILE 1)
-set(EXEC_NAME vtkImageReslice)
+set(EXEC_NAME Prop)
 
 # In this CMakeLists.txt file, components are all built separately and linked together
 # If you prefer to compile source files + dependencies (OpenGL loaders, imgui, VtkViewer, etc.)

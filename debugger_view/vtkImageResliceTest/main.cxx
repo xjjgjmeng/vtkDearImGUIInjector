@@ -115,7 +115,7 @@ int main(int argc, char* argv[])
     iren->SetRenderWindow(renderWindow);
 
     reader = vtkSmartPointer<vtkDICOMImageReader>::New();
-    reader->SetDirectoryName("D:/test_data/202110020082000");
+    reader->SetDirectoryName("C:\\Users\\123\\Desktop\\180327-hxy");
     reader->Update();
 
     int extent[6];
