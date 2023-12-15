@@ -1,4 +1,5 @@
 ﻿#include "../IncludeAllInOne.h"
+#include <ImGuiCommon.h>
 
 #ifdef ADOBE_IMGUI_SPECTRUM
 #include "imgui_spectrum.h"
@@ -115,7 +116,7 @@ int main(int argc, char* argv[])
     iren->SetRenderWindow(renderWindow);
 
     reader = vtkSmartPointer<vtkDICOMImageReader>::New();
-    reader->SetDirectoryName("C:\\Users\\123\\Desktop\\180327-hxy");
+    reader->SetDirectoryName("D:\\test_data\\202110020082000");
     reader->Update();
 
     int extent[6];
@@ -247,11 +248,15 @@ static void DrawUI(vtkDearImGuiInjector* overlay)
             ImGui::SetNextWindowSize(ImVec2(450, 550), ImGuiCond_Once);
             ImGui::Begin("VTK");
             {
-                if (ImGui::CollapsingHeader("vtkImageData", ImGuiTreeNodeFlags_DefaultOpen))
+                if (ImGui::TreeNode("vtkImageData"))
                 {
-                    int dims[3];
-                    ::reader->GetOutput()->GetDimensions(dims);
-                    ImGui::Text(fmt::format("Dimensions: {}", dims).c_str());
+                    ImGuiNs::vtkObjSetup(::reader->GetOutput());
+                    ImGui::TreePop();
+                }
+                if (ImGui::TreeNode("vtkImageActor"))
+                {
+                    ImGuiNs::vtkObjSetup(::actor);
+                    ImGui::TreePop();
                 }
 
                 auto lookupmap = colorMap->GetLookupTable();
@@ -297,7 +302,11 @@ static void DrawUI(vtkDearImGuiInjector* overlay)
                 {
                     {
                         double myArray[3];
-                        ::reslice->GetOutputSpacing(myArray);
+#if 1
+                        ::reslice->GetOutputSpacing(myArray); //1
+#else
+                        ::reslice->GetOutputInformation(0)->Get(vtkDataObject::SPACING(), myArray); // 0.25
+#endif
                         if (ImGui::DragScalarN("Spacing", ImGuiDataType_Double, myArray, 3, .1f))
                         {
                             ::reslice->SetOutputSpacing(myArray);
