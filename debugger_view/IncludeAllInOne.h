@@ -35,13 +35,19 @@
 #include "vtkImageActor.h"
 #include "vtkInteractorStyleImage.h"
 #include <vtkNamedColors.h>
+#include <vtkVolume.h>
+#include <vtkVolumeProperty.h>
+#include <vtkImageFlip.h>
+#include <vtkPiecewiseFunction.h>
 #include <vtkAnnotatedCubeActor.h>
+#include <vtkColorTransferFunction.h>
 #include <vtkOrientationMarkerWidget.h>
 #include <vtkResliceImageViewer.h>
 #include <vtkImagePlaneWidget.h>
 #include <vtkDistanceWidget.h>
 #include <vtkResliceImageViewerMeasurements.h>
 #include <vtkResliceCursorLineRepresentation.h>
+#include <vtkGPUVolumeRayCastMapper.h>
 #include <vtkResliceCursorWidget.h>
 #include <vtkResliceCursorActor.h>
 #include <vtkResliceCursorPolyDataAlgorithm.h>
@@ -54,6 +60,8 @@
 #include <vtkProperty2D.h>
 #include <vtkSphereSource.h>
 #include <vtkCamera.h>
+#include <vtkWorldPointPicker.h>
+#include <vtkInformationVector.h>
 #include <vtkTextActor.h>
 #include <vtkTextProperty.h>
 #include <vtkPlaneSource.h>
@@ -61,17 +69,27 @@
 #include <vtkInformation.h>
 #include <vtkMath.h>
 #include <vtkTexture.h>
+#include <vtkImageCast.h>
+#include <vtkImageGaussianSmooth.h>
+#include <vtkImageMathematics.h>
 #include <vtkPolygon.h>
 #include <vtkTriangle.h>
 #include <vtkCellArray.h>
+#include <vtkProp3DCollection.h>
 #include <vtkUnsignedCharArray.h>
 #include <vtkPointData.h>
 #include <vtkCellData.h>
+#include <vtkUnstructuredGrid.h>
+#include <vtkInteractorStyleTrackballActor.h>
 #include <vtkLineSource.h>
+#include <vtkSelectionNode.h>
+#include <vtkExtractSelection.h>
+#include <vtkDataSetMapper.h>
 #include <vtkXMLImageDataWriter.h>
 #include <vtkImageActorPointPlacer.h>
 #include <vtkParametricSpline.h>
 #include <vtkParametricFunctionSource.h>
+#include <vtkWeakPointer.h>
 #include "vtkfmt/core.h"
 #include "vtkfmt/ranges.h"
 #include "vtkfmt/format.h"
@@ -130,7 +148,7 @@ namespace ImguiVtkNs
 
     static const char* getDicomFile()
     {
-        const char* retval = "D:/test_data/202110020082000/255.dcm";
+        const char* retval = "D:/test_data/series/I0000000200.dcm";
         if (!std::filesystem::exists(retval))
         {
             throw "dicom file does not exist!";
@@ -140,7 +158,7 @@ namespace ImguiVtkNs
 
     static const char* getDicomDir()
     {
-        const char* retval = "D:/test_data/202110020082000";
+        const char* retval = "D:/test_data/series";
         if (!std::filesystem::exists(retval))
         {
             throw "dicom dir does not exist!";

@@ -1,12 +1,14 @@
 ﻿#pragma once
 
 #include "../IncludeAllInOne.h"
+#include "ImageSharpenFilter.h"
+#include "DrawFreeLineStyle.h"
 
 namespace ImGuiNs
 {
     void HelpMarker(const char* desc);
     void vtkObjSetup(vtkSmartPointer<vtkObject> vtkObj);
-	struct ExampleAppLog
+	struct LogView
 	{
 		ImGuiTextBuffer     Buf;
 		ImGuiTextFilter     Filter;
@@ -14,7 +16,7 @@ namespace ImGuiNs
 		bool                AutoScroll;  // Keep scrolling if already at the bottom.
 		bool				ShowTimestamp = false;
 
-		ExampleAppLog()
+		LogView()
 		{
 			AutoScroll = true;
 			Clear();
@@ -132,4 +134,6 @@ namespace ImGuiNs
 			ImGui::EndChild();
 		}
 	};
+
+	void printWorldPt(ImGuiNs::LogView& logView, vtkRenderer* pRenderer, double disPtX, double disPtY);
 }

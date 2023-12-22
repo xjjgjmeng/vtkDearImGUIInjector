@@ -167,42 +167,5 @@ void showView1(vtkDearImGuiInjector* overlay_)
           gData->log.Draw();
           ImGui::TreePop();
         }
-
-        if (ImGui::TreeNode("Picker"))
-        {
-            if (vtkPropPicker::SafeDownCast(overlay_->Interactor->GetPicker()))
-            {
-                gData->myPickerType = MyPicker::Prop;
-            }
-            if (vtkPointPicker::SafeDownCast(overlay_->Interactor->GetPicker()))
-            {
-                gData->myPickerType = MyPicker::Point;
-            }
-            if (vtkCellPicker::SafeDownCast(overlay_->Interactor->GetPicker()))
-            {
-                gData->myPickerType = MyPicker::Cell;
-            }
-            if (ImGui::RadioButton("Point", reinterpret_cast<int*>(&gData->myPickerType), static_cast<int>(MyPicker::Point)))
-            {
-                overlay_->Interactor->SetPicker(gData->pointPicker);
-            }
-            ImGui::SameLine();
-            if (ImGui::RadioButton("Cell", reinterpret_cast<int*>(&gData->myPickerType), static_cast<int>(MyPicker::Cell)))
-            {
-                overlay_->Interactor->SetPicker(gData->cellPicker);
-            }
-            ImGui::SameLine();
-            if (ImGui::RadioButton("Prop", reinterpret_cast<int*>(&gData->myPickerType), static_cast<int>(MyPicker::Prop)))
-            {
-                overlay_->Interactor->SetPicker(gData->propPicker);
-            }
-            ImGui::TreePop();
-        }
     }
-
-#if 0
-
-
-
-#endif
 }

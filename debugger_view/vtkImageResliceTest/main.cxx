@@ -43,6 +43,7 @@ vtkSmartPointer<vtkRenderer> renderer;
 vtkSmartPointer<vtkDICOMImageReader> reader;
 vtkSmartPointer<vtkImageActor> actor;
 double spacing[3];
+ImageSharpenFilter* pMyFilter = nullptr;
 
 class MyStyle : public vtkInteractorStyleImage
 {
@@ -172,7 +173,14 @@ int main(int argc, char* argv[])
         colorTable->Build();
         colorMap->SetLookupTable(colorTable);
     }
+#if 1
+    vtkNew<ImageSharpenFilter> myFilter;
+    ::pMyFilter = myFilter;
+    myFilter->SetInputConnection(reslice->GetOutputPort());
+    colorMap->SetInputConnection(myFilter->GetOutputPort());
+#else
     colorMap->SetInputConnection(reslice->GetOutputPort());
+#endif
     colorMap->Update();
 
     actor = vtkSmartPointer<vtkImageActor>::New();
@@ -417,6 +425,12 @@ static void DrawUI(vtkDearImGuiInjector* overlay)
                         });
                     ::reslice->GetResliceAxes()->AddObserver(vtkCommand::ModifiedEvent, callback);
                 }
+                if (auto v = ::pMyFilter->GetSharpenCount(); ImGui::SliderInt("Sharpen", &v, 0, 100))
+                {
+                    ::pMyFilter->SetSharpenCount(v);
+                    ::colorMap->Update();
+                }
+                
             }
             ImGui::End();
         };

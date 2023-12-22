@@ -35,7 +35,6 @@
 
 #include "imgui.h"
 
-enum class MyPicker : int { None, Point, Cell, Prop, };
 struct ExampleAppLog
 {
   ImGuiTextBuffer Buf;
@@ -174,10 +173,6 @@ namespace Inj
 		vtkSmartPointer<vtkPropPicker> PropPicker;
 		vtkSmartPointer<vtkProp3D> InteractionProp;
 		vtkSmartPointer<vtkActor2D> lineActor;
-		vtkNew<vtkPointPicker> pointPicker;
-		vtkNew<vtkCellPicker> cellPicker;
-		vtkNew<vtkPropPicker> propPicker;
-		MyPicker myPickerType = MyPicker::None;
         ExampleAppLog log;
 	};
 

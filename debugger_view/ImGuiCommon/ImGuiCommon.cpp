@@ -15,6 +15,32 @@ namespace ImGuiNs
         }
     }
 
+    void printWorldPt(ImGuiNs::LogView& logView, vtkRenderer* pRenderer, double disPtX, double disPtY)
+    {
+        // 0
+        {
+            double worldPt[4];
+            vtkInteractorObserver::ComputeDisplayToWorld(pRenderer, disPtX, disPtY, 0, worldPt);
+            logView.Add(fmt::format("worldPt0: {}", worldPt));
+        }
+        // 1
+        {
+            vtkNew<vtkCoordinate> coordinate;
+            coordinate->SetCoordinateSystemToDisplay();
+            coordinate->SetValue(disPtX, disPtY);
+            auto worldPt = coordinate->GetComputedWorldValue(pRenderer);
+            logView.Add(fmt::format("worldPt1: {}", std::initializer_list{ worldPt[0],worldPt[1], worldPt[2] }));
+        }
+        // 2
+        {
+            pRenderer->SetDisplayPoint(disPtX, disPtY, 0);
+            pRenderer->DisplayToWorld();
+            double worldPt[4];
+            pRenderer->GetWorldPoint(worldPt);
+            logView.Add(fmt::format("worldPt2: {}", worldPt));
+        }
+    }
+
     void vtkObjSetup(vtkSmartPointer<vtkObject> vtkObj)
     {
         if (ImGui::CollapsingHeader("vtkObject", ImGuiTreeNodeFlags_DefaultOpen))
@@ -141,6 +167,15 @@ Note that the view up vector is whatever was set via SetViewUp, and is not neces
 The result is a horizontal rotation of the camera.
 围绕以focalpoint为中心的viewup旋转相机（只有相机的position在变）
 结果是相机的水平旋转)");
+                        ImGui::SameLine();
+                        {
+                            static auto autoAzimuth = false;
+                            ImGui::Checkbox("Auto", &autoAzimuth);
+                            if (autoAzimuth)
+                            {
+                                pCamera->Azimuth(-myOff);
+                            }
+                        }
                     }
                     {
                         ImGui::Text("Yaw:");
@@ -294,6 +329,18 @@ A value greater than 1 is a zoom-in, a value less than 1 is a zoom-out.
                 {
                     pRenderer->ResetCameraClippingRange();
                 }
+                if (bool v = pRenderer->GetUseDepthPeelingForVolumes(); ImGui::Checkbox("UseDepthPeelingForVolumes", &v))
+                {
+                    pRenderer->SetUseDepthPeelingForVolumes(v);
+                }
+                if (int v = pRenderer->GetMaximumNumberOfPeels(); ImGui::SliderInt("MaximumNumberOfPeels", &v, 0, 100))
+                {
+                    pRenderer->SetMaximumNumberOfPeels(v);
+                }
+                if (float v = pRenderer->GetOcclusionRatio(); ImGui::SliderFloat("OcclusionRatio", &v, 0., 10.))
+                {
+                    pRenderer->SetOcclusionRatio(v);
+                }
             }
         }
         else if (const auto pDataObject = vtkDataObject::SafeDownCast(vtkObj); pDataObject && ImGui::CollapsingHeader("vtkDataObject", ImGuiTreeNodeFlags_DefaultOpen))
@@ -309,6 +356,68 @@ A value greater than 1 is a zoom-in, a value less than 1 is a zoom-out.
                     }
                 }
             }
+        }
+        else if (const auto pAbstractPicker = vtkAbstractPicker::SafeDownCast(vtkObj); pAbstractPicker && ImGui::TreeNodeEx("vtkAbstractPicker", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            {
+                double v[3];
+                pAbstractPicker->GetPickPosition(v);
+                ImGui::Text(fmt::format("PickPosition: {::.2f}", v).c_str());
+            }
+            {
+                double v[3];
+                pAbstractPicker->GetSelectionPoint(v);
+                ImGui::Text(fmt::format("SelectionPoint: {::.2f}", v).c_str());
+            }
+
+            if (const auto pAbstractPropPicker = vtkAbstractPropPicker::SafeDownCast(vtkObj); pAbstractPropPicker && ImGui::TreeNodeEx("vtkAbstractPropPicker", ImGuiTreeNodeFlags_DefaultOpen))
+            {
+                ImGui::Text(fmt::format("ViewProp: {}", reinterpret_cast<void*>(pAbstractPropPicker->GetViewProp())).c_str());
+                ImGui::Text(fmt::format("Prop3D: {}", reinterpret_cast<void*>(pAbstractPropPicker->GetProp3D())).c_str());
+                ImGui::Text(fmt::format("Actor2D: {}", reinterpret_cast<void*>(pAbstractPropPicker->GetActor2D())).c_str());
+                ImGui::Text(fmt::format("Actor: {}", reinterpret_cast<void*>(pAbstractPropPicker->GetActor())).c_str());
+                ImGui::Text(fmt::format("Volume: {}", reinterpret_cast<void*>(pAbstractPropPicker->GetVolume())).c_str());
+                ImGui::Text(fmt::format("Assembly: {}", reinterpret_cast<void*>(pAbstractPropPicker->GetAssembly())).c_str());
+                ImGui::Text(fmt::format("PropAssembly: {}", reinterpret_cast<void*>(pAbstractPropPicker->GetPropAssembly())).c_str());
+                ImGui::Text(fmt::format("Path: {}", reinterpret_cast<void*>(pAbstractPropPicker->GetPath())).c_str());
+
+                if (const auto pPicker = vtkPicker::SafeDownCast(vtkObj); pPicker && ImGui::TreeNodeEx("vtkPicker", ImGuiTreeNodeFlags_DefaultOpen))
+                {
+                    if (double v = pPicker->GetTolerance(); ImGui::DragScalar("Tolerance", ImGuiDataType_Double, &v, 0.01f))
+                    {
+                        pPicker->SetTolerance(v);
+                    }
+                    ImGui::Text(fmt::format("Actors-NumberOfItems: {}", pPicker->GetActors()->GetNumberOfItems()).c_str());
+                    ImGui::Text(fmt::format("Prop3Ds-NumberOfItems: {}", pPicker->GetProp3Ds()->GetNumberOfItems()).c_str());
+
+                    if (const auto pPointPicker = vtkPointPicker::SafeDownCast(vtkObj); pPointPicker && ImGui::TreeNodeEx("vtkPointPicker", ImGuiTreeNodeFlags_DefaultOpen))
+                    {
+                        ImGui::Text(fmt::format("PointId: {}", pPointPicker->GetPointId()).c_str());
+                        ImGui::TreePop();
+                    }
+                    else if (const auto pCellPicker = vtkCellPicker::SafeDownCast(vtkObj); pCellPicker && ImGui::TreeNodeEx("vtkCellPicker", ImGuiTreeNodeFlags_DefaultOpen))
+                    {
+                        ImGui::Text(fmt::format("PointId: {}", pCellPicker->GetPointId()).c_str());
+                        ImGui::Text(fmt::format("CellId: {}", pCellPicker->GetCellId()).c_str());
+                        ImGui::Text(fmt::format("SubId: {}", pCellPicker->GetSubId()).c_str());
+                        ImGui::TreePop();
+                    }
+
+                    ImGui::TreePop();
+                }
+                else if (const auto pPropPicker = vtkPropPicker::SafeDownCast(vtkObj); pPropPicker && ImGui::TreeNodeEx("vtkPropPicker", ImGuiTreeNodeFlags_DefaultOpen))
+                {
+                    ImGui::TreePop();
+                }
+
+                ImGui::TreePop();
+            }
+            else if (const auto pWorldPointPicker = vtkWorldPointPicker::SafeDownCast(vtkObj); pWorldPointPicker && ImGui::TreeNodeEx("vtkWorldPointPicker", ImGuiTreeNodeFlags_DefaultOpen))
+            {
+                ImGui::TreePop();
+            }
+
+            ImGui::TreePop();
         }
 
         if (const auto pProp3D = vtkProp3D::SafeDownCast(vtkObj); pProp3D && ImGui::CollapsingHeader("vtkProp3D", ImGuiTreeNodeFlags_DefaultOpen))
@@ -470,6 +579,121 @@ A value greater than 1 is a zoom-in, a value less than 1 is a zoom-out.
                 ImGui::TreePop();
             }
 
+            ImGui::TreePop();
+        }
+        else if (const auto pVolume = vtkVolume::SafeDownCast(vtkObj); pVolume && ImGui::TreeNodeEx("vtkVolume", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            // mapper
+            if (const auto pGPUVolumeRayCastMapper = vtkGPUVolumeRayCastMapper::SafeDownCast(pVolume->GetMapper()); pGPUVolumeRayCastMapper && ImGui::TreeNodeEx("vtkGPUVolumeRayCastMapper", ImGuiTreeNodeFlags_DefaultOpen))
+            {
+                // BlendMode
+                {
+                    const char* modeText[] = { "COMPOSITE_BLEND", "MAXIMUM_INTENSITY_BLEND", "MINIMUM_INTENSITY_BLEND", "AVERAGE_INTENSITY_BLEND", "ADDITIVE_BLEND", "ISOSURFACE_BLEND", "SLICE_BLEND" };
+                    if (auto v = pGPUVolumeRayCastMapper->GetBlendMode(); ImGui::Combo("BlendMode", &v, modeText, IM_ARRAYSIZE(modeText)))
+                    {
+                        pGPUVolumeRayCastMapper->SetBlendMode(v);
+                    }
+                }
+                if (float v = pGPUVolumeRayCastMapper->GetImageSampleDistance(); ImGui::SliderFloat("ImageSampleDistance", &v, 0., 10.))
+                {
+                    pGPUVolumeRayCastMapper->SetImageSampleDistance(v);
+                }
+                if (float v = pGPUVolumeRayCastMapper->GetSampleDistance(); ImGui::SliderFloat("SampleDistance", &v, 0.01, 3.)) // 调到0.001会崩溃且变卡
+                {
+                    pGPUVolumeRayCastMapper->SetSampleDistance(v);
+                }
+                if (bool v = pGPUVolumeRayCastMapper->GetAutoAdjustSampleDistances(); ImGui::Checkbox("AutoAdjustSampleDistances", &v))
+                {
+                    pGPUVolumeRayCastMapper->SetAutoAdjustSampleDistances(v);
+                }
+                if (bool v = pGPUVolumeRayCastMapper->GetUseJittering(); ImGui::Checkbox("UseJittering", &v))
+                {
+                    pGPUVolumeRayCastMapper->SetUseJittering(v);
+                }
+                ImGui::TreePop();
+            }
+            // property
+            if (const auto pVolumeProperty = pVolume->GetProperty(); pVolumeProperty && ImGui::TreeNodeEx("vtkVolumeProperty", ImGuiTreeNodeFlags_DefaultOpen))
+            {
+                if (bool v = pVolumeProperty->GetShade(); ImGui::Checkbox("ShadeOn", &v))
+                {
+                    pVolumeProperty->SetShade(v);
+                }
+                ImGui::SameLine();
+                if (bool v = pVolumeProperty->GetDisableGradientOpacity(); ImGui::Checkbox("DisableGradientOpacity", &v))
+                {
+                    pVolumeProperty->SetDisableGradientOpacity(v);
+                }
+                if (float v = pVolumeProperty->GetAmbient(); ImGui::SliderFloat("Ambient", &v, 0., 1.))
+                {
+                    pVolumeProperty->SetAmbient(v);
+                }
+                if (float v = pVolumeProperty->GetDiffuse(); ImGui::SliderFloat("Diffuse", &v, 0., 1.))
+                {
+                    pVolumeProperty->SetDiffuse(v);
+                }
+                if (float v = pVolumeProperty->GetSpecular(); ImGui::SliderFloat("Specular", &v, 0., 1.))
+                {
+                    pVolumeProperty->SetSpecular(v);
+                }
+                if (float v = pVolumeProperty->GetSpecularPower(); ImGui::SliderFloat("SpecularPower", &v, 0., 300.))
+                {
+                    pVolumeProperty->SetSpecularPower(v);
+                }
+                // InterpolationType
+                {
+                    const char* modeText[] = { "VTK_NEAREST_INTERPOLATION", "VTK_LINEAR_INTERPOLATION", "VTK_CUBIC_INTERPOLATION" };
+                    if (auto v = pVolumeProperty->GetInterpolationType(); ImGui::Combo("InterpolationType", &v, modeText, IM_ARRAYSIZE(modeText)))
+                    {
+                        pVolumeProperty->SetInterpolationType(v);
+                    }
+                }
+                //ScalarOpacity
+                if (ImGui::CollapsingHeader("ScalarOpacity"))
+                {
+                    const auto pPiecewiseFunction = pVolumeProperty->GetScalarOpacity();
+                    if (ImGui::TreeNodeEx("vtkPiecewiseFunction", ImGuiTreeNodeFlags_DefaultOpen))
+                    {
+                        for (auto i = 0; i < pPiecewiseFunction->GetSize(); ++i)
+                        {
+                            double nodeValue[4];
+                            pPiecewiseFunction->GetNodeValue(i, nodeValue);
+                            if (float v = nodeValue[1]; ImGui::SliderFloat(fmt::format("{}",nodeValue[0]).c_str(), &v, 0., 1.))
+                            {
+                                nodeValue[1] = v;
+                                pPiecewiseFunction->SetNodeValue(i, nodeValue);
+                            }
+                        }
+                        ImGui::TreePop();
+                    }
+                }
+                if (ImGui::CollapsingHeader("Color"))
+                {
+                    const auto pColorTransferFunction = pVolumeProperty->GetRGBTransferFunction();
+                    if (ImGui::TreeNodeEx("vtkColorTransferFunction", ImGuiTreeNodeFlags_DefaultOpen))
+                    {
+                        for (auto i = 0; i < pColorTransferFunction->GetSize(); ++i)
+                        {
+                            double nodeValue[6];
+                            pColorTransferFunction->GetNodeValue(i, nodeValue);
+                            if (float v[3] = { nodeValue[1],nodeValue[2],nodeValue[3] }; ImGui::ColorEdit3(fmt::format("{}", nodeValue[0]).c_str(), v))
+                            {
+#if 0 // 此代码无效
+                                nodeValue[1] = v[0];
+                                nodeValue[2] = v[1];
+                                nodeValue[3] = v[2];
+                                pColorTransferFunction->GetNodeValue(i, nodeValue);
+                                pColorTransferFunction->Modified();
+#else
+                                pColorTransferFunction->AddRGBPoint(nodeValue[0], v[0], v[1], v[2]);
+#endif
+                            }
+                        }
+                        ImGui::TreePop();
+                    }
+                }
+                ImGui::TreePop();
+            }
             ImGui::TreePop();
         }
     }
