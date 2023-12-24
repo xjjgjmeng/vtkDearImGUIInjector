@@ -69,20 +69,20 @@ int main(int argc, char* argv[])
                 logView.Draw();
                 ImGui::TreePop();
             }
-            if (ImGui::TreeNodeEx("Volume", ImGuiTreeNodeFlags_DefaultOpen))
+            //if (ImGui::TreeNodeEx("Volume", ImGuiTreeNodeFlags_DefaultOpen))
             {
-                ImGuiNs::vtkObjSetup(pVolume);
-                ImGui::TreePop();
+                ImGuiNs::vtkObjSetup("Volume", pVolume);
+                //ImGui::TreePop();
             }
-            if (ImGui::TreeNodeEx("Renderer"))
+            //if (ImGui::TreeNodeEx("Renderer"))
             {
-                ImGuiNs::vtkObjSetup(ren);
-                ImGui::TreePop();
+                ImGuiNs::vtkObjSetup("Renderer", ren);
+                //ImGui::TreePop();
             }
-            if (ImGui::TreeNodeEx("Camera", ImGuiTreeNodeFlags_DefaultOpen))
+            //f (ImGui::TreeNodeEx("Camera", ImGuiTreeNodeFlags_DefaultOpen))
             {
-                ImGuiNs::vtkObjSetup(ren->GetActiveCamera());
-                ImGui::TreePop();
+                ImGuiNs::vtkObjSetup("Camera", ren->GetActiveCamera());
+                //ImGui::TreePop();
             }
             //ImPlot::ShowDemoWindow();
         };

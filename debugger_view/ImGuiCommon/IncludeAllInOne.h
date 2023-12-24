@@ -73,6 +73,7 @@
 #include <vtkImageGaussianSmooth.h>
 #include <vtkImageMathematics.h>
 #include <vtkPolygon.h>
+#include <vtkRendererCollection.h>
 #include <vtkTriangle.h>
 #include <vtkCellArray.h>
 #include <vtkProp3DCollection.h>
@@ -90,79 +91,11 @@
 #include <vtkParametricSpline.h>
 #include <vtkParametricFunctionSource.h>
 #include <vtkWeakPointer.h>
+#include <vtkAxesActor.h>
+#include <vtkOrientationMarkerWidget.h>
 #include "vtkfmt/core.h"
 #include "vtkfmt/ranges.h"
 #include "vtkfmt/format.h"
 #include "vtkfmt/chrono.h"
 
 #include <imgui.h>
-
-static std::function<void()> imgui_render_callback;
-
-namespace ImguiVtkNs
-{
-    static void DrawUI(vtkDearImGuiInjector* overlay)
-    {
-        vtkNew<vtkCallbackCommand> uiDraw;
-        auto uiDrawFunction = [](vtkObject* caller, long unsigned int vtkNotUsed(eventId),
-            void* clientData, void* vtkNotUsed(callData))
-            {
-                vtkDearImGuiInjector* overlay_ = reinterpret_cast<vtkDearImGuiInjector*>(caller);
-
-                ImGui::SetNextWindowPos(ImVec2(0, 25), ImGuiCond_Once);
-                ImGui::SetNextWindowSize(ImVec2(450, 550), ImGuiCond_Once);
-                ImGui::Begin("VTK");
-                {
-                    if (::imgui_render_callback)
-                    {
-                        ::imgui_render_callback();
-                    }
-                }
-                ImGui::End();
-            };
-        uiDraw->SetCallback(uiDrawFunction);
-        overlay->AddObserver(vtkDearImGuiInjector::ImGuiDrawEvent, uiDraw);
-    }
-
-    static void SetupUI(vtkDearImGuiInjector* overlay)
-    {
-        vtkNew<vtkCallbackCommand> uiSetup;
-        auto uiSetupFunction =
-            [](vtkObject* caller, long unsigned int vtkNotUsed(eventId), void* clientData, void* callData)
-            {
-                vtkDearImGuiInjector* overlay_ = reinterpret_cast<vtkDearImGuiInjector*>(caller);
-                if (!callData)
-                {
-                    return;
-                }
-                bool imguiInitStatus = *(reinterpret_cast<bool*>(callData));
-                if (imguiInitStatus)
-                {
-                    auto io = ImGui::GetIO();
-                    io.Fonts->AddFontFromFileTTF("C:/Windows/Fonts/simhei.ttf", 15.f, nullptr, io.Fonts->GetGlyphRangesChineseFull());
-                }
-            };
-        uiSetup->SetCallback(uiSetupFunction);
-        overlay->AddObserver(vtkDearImGuiInjector::ImGuiSetupEvent, uiSetup);
-    }
-
-    static const char* getDicomFile()
-    {
-        const char* retval = "D:/test_data/series/I0000000200.dcm";
-        if (!std::filesystem::exists(retval))
-        {
-            throw "dicom file does not exist!";
-        }
-        return retval;
-    }
-
-    static const char* getDicomDir()
-    {
-        const char* retval = "D:/test_data/series";
-        if (!std::filesystem::exists(retval))
-        {
-            throw "dicom dir does not exist!";
-        }
-        return retval;
-    }
-}

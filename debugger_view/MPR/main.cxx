@@ -1,4 +1,4 @@
-﻿#include "../IncludeAllInOne.h"
+﻿#include <IncludeAllInOne.h>
 
 #ifdef ADOBE_IMGUI_SPECTRUM
 #include "imgui_spectrum.h"

@@ -1,5 +1,4 @@
-﻿#include "../IncludeAllInOne.h"
-#include <ImGuiCommon.h>
+﻿#include <ImGuiCommon.h>
 
 #ifdef ADOBE_IMGUI_SPECTRUM
 #include "imgui_spectrum.h"
@@ -7,10 +6,6 @@
 #include "imgui.h"                 // to draw custom UI
 #include "vtkOpenGLRenderWindow.h" // needed to check if opengl is supported.
 
-// Listens to vtkDearImGuiInjector::ImGuiSetupEvent
-static void SetupUI(vtkDearImGuiInjector*);
-// Listens to vtkDearImGuiInjector::ImGuiDrawEvent
-static void DrawUI(vtkDearImGuiInjector*);
 static void HelpMarker(const char* desc);
 
 namespace
@@ -117,7 +112,7 @@ int main(int argc, char* argv[])
     iren->SetRenderWindow(renderWindow);
 
     reader = vtkSmartPointer<vtkDICOMImageReader>::New();
-    reader->SetDirectoryName("D:\\test_data\\202110020082000");
+    reader->SetDirectoryName(ImguiVtkNs::getDicomDir());
     reader->Update();
 
     int extent[6];
@@ -187,6 +182,185 @@ int main(int argc, char* argv[])
     actor->SetInputData(colorMap->GetOutput());
     renderer->AddActor(actor);
 
+    ::pWindow = renderWindow;
+    ::imgui_render_callback = [&]
+    {
+        //f (ImGui::TreeNode("vtkImageData"))
+        {
+            ImGuiNs::vtkObjSetup("vtkImageData", ::reader->GetOutput());
+            //ImGui::TreePop();
+        }
+        //if (ImGui::TreeNode("vtkImageActor"))
+        {
+            ImGuiNs::vtkObjSetup("vtkImageActor", ::actor);
+            //ImGui::TreePop();
+        }
+
+        auto lookupmap = colorMap->GetLookupTable();
+        double* pRange = lookupmap->GetRange();
+        float min_ = pRange[0];
+        float max_ = pRange[1];
+        if (ImGui::DragFloatRange2("ScalarsToColorsRange", &min_, &max_, 1.f, 0.0f, 10000.0f, "Min: %lf", "Max: %lf"))
+        {
+            lookupmap->SetRange(min_, max_);
+            ::colorMap->Update();
+        }
+
+        // slab mode
+        {
+            const char* slabModeText[] = { "VTK_IMAGE_SLAB_MIN", "VTK_IMAGE_SLAB_MAX", "VTK_IMAGE_SLAB_MEAN", "VTK_IMAGE_SLAB_SUM" };
+            auto currentSlabMode = ::reslice->GetSlabMode();
+            if (ImGui::Combo("SlabMode", &currentSlabMode, slabModeText, IM_ARRAYSIZE(slabModeText)))
+            {
+                ::reslice->SetSlabMode(currentSlabMode);
+                ::colorMap->Update();
+            }
+        }
+        // thickness
+        {
+            const char* items[] = { "1 mm", "5 mm", "10 mm", "15 mm", "100 mm", "1000 mm" };
+            int dataArray[] = { 1, 5, 10, 15, 100, 1000 };
+            static int currentIdx = -1;
+            if (ImGui::Combo("Thickness", &currentIdx, items, IM_ARRAYSIZE(items)))
+            {
+                const auto n = dataArray[currentIdx] / ::spacing[2];
+                ::reslice->SetSlabNumberOfSlices(n);
+                ::colorMap->Update();
+            }
+            auto numOfSlices = ::reslice->GetSlabNumberOfSlices();
+            if (ImGui::DragInt("SlabNumberOfSlices", &numOfSlices, 1, 1, 10000))
+            {
+                ::reslice->SetSlabNumberOfSlices(numOfSlices);
+                ::colorMap->Update();
+            }
+        }
+        // output
+        if (ImGui::TreeNodeEx("Output", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            {
+                double myArray[3];
+#if 1
+                ::reslice->GetOutputSpacing(myArray); //1
+#else
+                ::reslice->GetOutputInformation(0)->Get(vtkDataObject::SPACING(), myArray); // 0.25
+#endif
+                if (ImGui::DragScalarN("Spacing", ImGuiDataType_Double, myArray, 3, .1f))
+                {
+                    ::reslice->SetOutputSpacing(myArray);
+                    ::colorMap->Update();
+                }
+            }
+            {
+                int myArray[6];
+                ::reslice->GetOutputExtent(myArray);
+                if (ImGui::DragScalarN("Extent", ImGuiDataType_S32, myArray, 6))
+                {
+                    ::reslice->SetOutputExtent(myArray);
+                    ::colorMap->Update();
+                }
+            }
+
+            ImGui::TreePop();
+        }
+        {
+            if (ImGui::TreeNodeEx("ResliceAxesDirectionCosines", ImGuiTreeNodeFlags_DefaultOpen))
+            {
+                double xyz[9];
+                ::reslice->GetResliceAxesDirectionCosines(xyz);
+                if (ImGui::DragScalarN("X", ImGuiDataType_Double, xyz, 3, .01f))
+                {
+                    ::reslice->SetResliceAxesDirectionCosines(xyz);
+                    ::colorMap->Update();
+                }
+                if (ImGui::DragScalarN("Y", ImGuiDataType_Double, xyz + 3, 3, .01f))
+                {
+                    ::reslice->SetResliceAxesDirectionCosines(xyz);
+                    ::colorMap->Update();
+                }
+                if (ImGui::DragScalarN("Z", ImGuiDataType_Double, xyz + 6, 3, .01f))
+                {
+                    ::reslice->SetResliceAxesDirectionCosines(xyz);
+                    ::colorMap->Update();
+                }
+
+                ImGui::TreePop();
+            }
+
+            double o[3];
+            ::reslice->GetResliceAxesOrigin(o);
+            if (ImGui::DragScalarN("ResliceAxesOrigin", ImGuiDataType_Double, o, 3, .1f))
+            {
+                ::reslice->SetResliceAxesOrigin(o);
+                ::colorMap->Update();
+            }
+        }
+        {
+            if (auto wrap = ::reslice->GetWrap(); ImGui::Button(fmt::format("Wrap: {}", wrap).c_str()))
+            {
+                ::reslice->SetWrap(!wrap);
+                ::reslice->Update();
+                ::colorMap->Update();
+            }
+            ImGui::SameLine();
+            if (auto mirror = ::reslice->GetMirror(); ImGui::Button(fmt::format("Mirror: {}", mirror).c_str()))
+            {
+                ::reslice->SetMirror(!mirror);
+                ::reslice->Update();
+                ::colorMap->Update();
+            }
+        }
+        if (ImGui::Button("ResetCamera"))
+        {
+            ::renderer->ResetCamera();
+        }
+        if (ImGui::Button("AddMarker"))
+        {
+            auto text = ::getTextActor();
+            text->SetInput(fmt::format("{}", ::reslice->GetResliceAxesOrigin()[2]).c_str());
+            text->GetPositionCoordinate()->SetCoordinateSystemToWorld();
+            text->SetPosition(::actor->GetCenter());
+            ::renderer->AddActor(text);
+
+            static std::map<void*, vtkSmartPointer<vtkMatrix4x4>> actorMap;
+            auto myMat = vtkSmartPointer<vtkMatrix4x4>::New();
+            myMat->DeepCopy(::reslice->GetResliceAxes());
+            actorMap.emplace(text.GetPointer(), myMat);
+
+            auto callback = vtkSmartPointer<vtkCallbackCommand>::New();
+            callback->SetClientData(text.GetPointer());
+            callback->SetCallback([](vtkObject* caller, unsigned long eventId, void* clientData, void* callData)
+                {
+                    if (vtkCommand::ModifiedEvent == eventId)
+                    {
+                        auto isMatrixEqual = [](const vtkMatrix4x4* matrix1, const vtkMatrix4x4* matrix2)
+                        {
+                            for (int i = 0; i < 4; i++)
+                            {
+                                for (int j = 0; j < 4; j++)
+                                {
+                                    if (matrix1->GetElement(i, j) != matrix2->GetElement(i, j))
+                                    {
+                                        return false;
+                                    }
+                                }
+                            }
+                            return true;
+                        };
+                        auto currMat = ::reslice->GetResliceAxes();
+                        auto mat = actorMap[clientData];
+                        auto text = reinterpret_cast<vtkTextActor*>(clientData);
+                        text->SetVisibility(isMatrixEqual(currMat, mat));
+                    }
+                });
+            ::reslice->GetResliceAxes()->AddObserver(vtkCommand::ModifiedEvent, callback);
+        }
+        if (auto v = ::pMyFilter->GetSharpenCount(); ImGui::SliderInt("Sharpen", &v, 0, 100))
+        {
+            ::pMyFilter->SetSharpenCount(v);
+            ::colorMap->Update();
+        }
+    };
+
     // Start rendering app
     renderer->SetBackground(0.2, 0.3, 0.4);
     renderWindow->Render();
@@ -197,9 +371,9 @@ int main(int argc, char* argv[])
     // 💉 the overlay.
     dearImGuiOverlay->Inject(iren);
     // These functions add callbacks to ImGuiSetupEvent and ImGuiDrawEvents.
-    SetupUI(dearImGuiOverlay);
+    ImguiVtkNs::SetupUI(dearImGuiOverlay);
     // You can draw custom user interface elements using ImGui:: namespace.
-    DrawUI(dearImGuiOverlay);
+    ImguiVtkNs::DrawUI(dearImGuiOverlay);
     /// Change to your code ends here. ///
 
     // Start event loop
@@ -219,223 +393,6 @@ int main(int argc, char* argv[])
     iren->Start();
 
     return 0;
-}
-
-static void SetupUI(vtkDearImGuiInjector* overlay)
-{
-    vtkNew<vtkCallbackCommand> uiSetup;
-    auto uiSetupFunction =
-        [](vtkObject* caller, long unsigned int vtkNotUsed(eventId), void* clientData, void* callData)
-        {
-            vtkDearImGuiInjector* overlay_ = reinterpret_cast<vtkDearImGuiInjector*>(caller);
-            if (!callData)
-            {
-                return;
-            }
-            bool imguiInitStatus = *(reinterpret_cast<bool*>(callData));
-            if (imguiInitStatus)
-            {
-                auto io = ImGui::GetIO();
-                //io.Fonts->AddFontFromFileTTF("C:/Windows/Fonts/simhei.ttf", 15.f, nullptr, io.Fonts->GetGlyphRangesChineseFull());
-            }
-        };
-    uiSetup->SetCallback(uiSetupFunction);
-    overlay->AddObserver(vtkDearImGuiInjector::ImGuiSetupEvent, uiSetup);
-}
-
-static void DrawUI(vtkDearImGuiInjector* overlay)
-{
-    vtkNew<vtkCallbackCommand> uiDraw;
-    auto uiDrawFunction = [](vtkObject* caller, long unsigned int vtkNotUsed(eventId),
-        void* clientData, void* vtkNotUsed(callData))
-        {
-            vtkDearImGuiInjector* overlay_ = reinterpret_cast<vtkDearImGuiInjector*>(caller);
-
-            ImGui::SetNextWindowBgAlpha(0.5);
-            ImGui::SetNextWindowPos(ImVec2(5, 25), ImGuiCond_Once);
-            ImGui::SetNextWindowSize(ImVec2(450, 550), ImGuiCond_Once);
-            ImGui::Begin("VTK");
-            {
-                if (ImGui::TreeNode("vtkImageData"))
-                {
-                    ImGuiNs::vtkObjSetup(::reader->GetOutput());
-                    ImGui::TreePop();
-                }
-                if (ImGui::TreeNode("vtkImageActor"))
-                {
-                    ImGuiNs::vtkObjSetup(::actor);
-                    ImGui::TreePop();
-                }
-
-                auto lookupmap = colorMap->GetLookupTable();
-                double* pRange = lookupmap->GetRange();
-                float min_ = pRange[0];
-                float max_ = pRange[1];
-                if (ImGui::DragFloatRange2("ScalarsToColorsRange", &min_, &max_, 1.f, 0.0f, 10000.0f, "Min: %lf", "Max: %lf"))
-                {
-                    lookupmap->SetRange(min_, max_);
-                    ::colorMap->Update();
-                }
-
-                // slab mode
-                {
-                    const char* slabModeText[] = { "VTK_IMAGE_SLAB_MIN", "VTK_IMAGE_SLAB_MAX", "VTK_IMAGE_SLAB_MEAN", "VTK_IMAGE_SLAB_SUM" };
-                    auto currentSlabMode = ::reslice->GetSlabMode();
-                    if (ImGui::Combo("SlabMode", &currentSlabMode, slabModeText, IM_ARRAYSIZE(slabModeText)))
-                    {
-                        ::reslice->SetSlabMode(currentSlabMode);
-                        ::colorMap->Update();
-                    }
-                }
-                // thickness
-                {
-                    const char* items[] = { "1 mm", "5 mm", "10 mm", "15 mm", "100 mm", "1000 mm" };
-                    int dataArray[] = { 1, 5, 10, 15, 100, 1000 };
-                    static int currentIdx = -1;
-                    if (ImGui::Combo("Thickness", &currentIdx, items, IM_ARRAYSIZE(items)))
-                    {
-                        const auto n = dataArray[currentIdx] / ::spacing[2];
-                        ::reslice->SetSlabNumberOfSlices(n);
-                        ::colorMap->Update();
-                    }
-                    auto numOfSlices = ::reslice->GetSlabNumberOfSlices();
-                    if (ImGui::DragInt("SlabNumberOfSlices", &numOfSlices, 1, 1, 10000))
-                    {
-                        ::reslice->SetSlabNumberOfSlices(numOfSlices);
-                        ::colorMap->Update();
-                    }
-                }
-                // output
-                if (ImGui::TreeNodeEx("Output", ImGuiTreeNodeFlags_DefaultOpen))
-                {
-                    {
-                        double myArray[3];
-#if 1
-                        ::reslice->GetOutputSpacing(myArray); //1
-#else
-                        ::reslice->GetOutputInformation(0)->Get(vtkDataObject::SPACING(), myArray); // 0.25
-#endif
-                        if (ImGui::DragScalarN("Spacing", ImGuiDataType_Double, myArray, 3, .1f))
-                        {
-                            ::reslice->SetOutputSpacing(myArray);
-                            ::colorMap->Update();
-                        }
-                    }
-                    {
-                        int myArray[6];
-                        ::reslice->GetOutputExtent(myArray);
-                        if (ImGui::DragScalarN("Extent", ImGuiDataType_S32, myArray, 6))
-                        {
-                            ::reslice->SetOutputExtent(myArray);
-                            ::colorMap->Update();
-                        }
-                    }
-
-                    ImGui::TreePop();
-                }
-                {
-                    if (ImGui::TreeNodeEx("ResliceAxesDirectionCosines", ImGuiTreeNodeFlags_DefaultOpen))
-                    {
-                        double xyz[9];
-                        ::reslice->GetResliceAxesDirectionCosines(xyz);
-                        if (ImGui::DragScalarN("X", ImGuiDataType_Double, xyz, 3, .01f))
-                        {
-                            ::reslice->SetResliceAxesDirectionCosines(xyz);
-                            ::colorMap->Update();
-                        }
-                        if (ImGui::DragScalarN("Y", ImGuiDataType_Double, xyz + 3, 3, .01f))
-                        {
-                            ::reslice->SetResliceAxesDirectionCosines(xyz);
-                            ::colorMap->Update();
-                        }
-                        if (ImGui::DragScalarN("Z", ImGuiDataType_Double, xyz + 6, 3, .01f))
-                        {
-                            ::reslice->SetResliceAxesDirectionCosines(xyz);
-                            ::colorMap->Update();
-                        }
-
-                        ImGui::TreePop();
-                    }
-
-                    double o[3];
-                    ::reslice->GetResliceAxesOrigin(o);
-                    if (ImGui::DragScalarN("ResliceAxesOrigin", ImGuiDataType_Double, o, 3, .1f))
-                    {
-                        ::reslice->SetResliceAxesOrigin(o);
-                        ::colorMap->Update();
-                    }
-                }
-                {
-                    if (auto wrap = ::reslice->GetWrap(); ImGui::Button(fmt::format("Wrap: {}", wrap).c_str()))
-                    {
-                        ::reslice->SetWrap(!wrap);
-                        ::reslice->Update();
-                        ::colorMap->Update();
-                    }
-                    ImGui::SameLine();
-                    if (auto mirror = ::reslice->GetMirror(); ImGui::Button(fmt::format("Mirror: {}", mirror).c_str()))
-                    {
-                        ::reslice->SetMirror(!mirror);
-                        ::reslice->Update();
-                        ::colorMap->Update();
-                    }
-                }
-                if (ImGui::Button("ResetCamera"))
-                {
-                    ::renderer->ResetCamera();
-                }
-                if (ImGui::Button("AddMarker"))
-                {
-                    auto text = ::getTextActor();
-                    text->SetInput(fmt::format("{}",::reslice->GetResliceAxesOrigin()[2]).c_str());
-                    text->GetPositionCoordinate()->SetCoordinateSystemToWorld();
-                    text->SetPosition(::actor->GetCenter());
-                    ::renderer->AddActor(text);
-
-                    static std::map<void*, vtkSmartPointer<vtkMatrix4x4>> actorMap;
-                    auto myMat = vtkSmartPointer<vtkMatrix4x4>::New();
-                    myMat->DeepCopy(::reslice->GetResliceAxes());
-                    actorMap.emplace(text.GetPointer(), myMat);
-
-                    auto callback = vtkSmartPointer<vtkCallbackCommand>::New();
-                    callback->SetClientData(text.GetPointer());
-                    callback->SetCallback([](vtkObject* caller, unsigned long eventId, void* clientData, void* callData)
-                        {
-                            if (vtkCommand::ModifiedEvent == eventId)
-                            {
-                                auto isMatrixEqual = [](const vtkMatrix4x4* matrix1, const vtkMatrix4x4* matrix2)
-                                    {
-                                        for (int i = 0; i < 4; i++)
-                                        {
-                                            for (int j = 0; j < 4; j++)
-                                            {
-                                                if (matrix1->GetElement(i, j) != matrix2->GetElement(i, j))
-                                                {
-                                                    return false;
-                                                }
-                                            }
-                                        }
-                                        return true;
-                                    };
-                                auto currMat = ::reslice->GetResliceAxes();
-                                auto mat = actorMap[clientData];
-                                auto text = reinterpret_cast<vtkTextActor*>(clientData);
-                                text->SetVisibility(isMatrixEqual(currMat, mat));
-                            }
-                        });
-                    ::reslice->GetResliceAxes()->AddObserver(vtkCommand::ModifiedEvent, callback);
-                }
-                if (auto v = ::pMyFilter->GetSharpenCount(); ImGui::SliderInt("Sharpen", &v, 0, 100))
-                {
-                    ::pMyFilter->SetSharpenCount(v);
-                    ::colorMap->Update();
-                }
-                
-            }
-            ImGui::End();
-        };
-    uiDraw->SetCallback(uiDrawFunction);
-    overlay->AddObserver(vtkDearImGuiInjector::ImGuiDrawEvent, uiDraw);
 }
 
 static void HelpMarker(const char* desc)

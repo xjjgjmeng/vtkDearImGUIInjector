@@ -51,66 +51,28 @@ int main(int argc, char* argv[])
   axes->InteractiveOn();
   ren->ResetCamera();
 
+  ::pWindow = renWin;
   ::imgui_render_callback = [&]
       {
-          if (ImGui::TreeNodeEx("Camera", ImGuiTreeNodeFlags_DefaultOpen))
+          //if (ImGui::TreeNodeEx("Camera", ImGuiTreeNodeFlags_DefaultOpen))
           {
-              ImGuiNs::vtkObjSetup(ren->GetActiveCamera());
-              ImGui::TreePop();
+              //ImGuiNs::vtkObjSetup("Camera", ren->GetActiveCamera(), ImGuiTreeNodeFlags_DefaultOpen);
+              //ImGui::TreePop();
           }
 
-          if (ImGui::TreeNodeEx("vtkAnnotatedCubeActor"))
+          //if (ImGui::TreeNodeEx("Renderer"))
           {
-              ImGuiNs::vtkObjSetup(axesActor);
-              ImGui::TreePop();
+              //ImGuiNs::vtkObjSetup("Renderer", ren);
+              //ImGui::TreePop();
           }
 
-          if (ImGui::TreeNodeEx("vtkAnnotatedCubeActor", ImGuiTreeNodeFlags_DefaultOpen))
+          //if (ImGui::TreeNodeEx("vtkAnnotatedCubeActor"))
           {
-              if (float v = vtkMath::RadiansFromDegrees(axesActor->GetXFaceTextRotation()); ImGui::SliderAngle("XFaceTextRotation", &v))
-              {
-                  axesActor->SetXFaceTextRotation(vtkMath::DegreesFromRadians(v));
-              }
-              if (float v = vtkMath::RadiansFromDegrees(axesActor->GetYFaceTextRotation()); ImGui::SliderAngle("YFaceTextRotation", &v))
-              {
-                  axesActor->SetYFaceTextRotation(vtkMath::DegreesFromRadians(v));
-              }
-              if (float v = vtkMath::RadiansFromDegrees(axesActor->GetZFaceTextRotation()); ImGui::SliderAngle("ZFaceTextRotation", &v))
-              {
-                  axesActor->SetZFaceTextRotation(vtkMath::DegreesFromRadians(v));
-              }
-
-              ImGui::TreePop();
+              ImGuiNs::vtkObjSetup(u8"立方体", cubeActor, ImGuiTreeNodeFlags_DefaultOpen);
+              //ImGui::TreePop();
           }
 
-          if (ImGui::TreeNodeEx("TextEdgesProperty", ImGuiTreeNodeFlags_DefaultOpen))
-          {
-              const auto pProperty = axesActor->GetTextEdgesProperty();
-              if (float v[3] = { pProperty->GetColor()[0],pProperty->GetColor()[1],pProperty->GetColor()[2] }; ImGui::ColorEdit3("Color", v))
-              {
-                  pProperty->SetColor(v[0], v[1], v[2]);
-              }
-              if (float v = pProperty->GetLineWidth(); ImGui::DragFloat("LineWidth", &v, 0.1, 0.01, 10))
-              {
-                  pProperty->SetLineWidth(v);
-              }
-
-              ImGui::TreePop();
-          }
-          if (ImGui::TreeNodeEx("CubeProperty", ImGuiTreeNodeFlags_DefaultOpen))
-          {
-              const auto pProperty = axesActor->GetCubeProperty();
-              if (float v[3] = { pProperty->GetColor()[0],pProperty->GetColor()[1],pProperty->GetColor()[2] }; ImGui::ColorEdit3("Color", v))
-              {
-                  pProperty->SetColor(v[0], v[1], v[2]);
-              }
-              if (float v = pProperty->GetLineWidth(); ImGui::DragFloat("LineWidth", &v, 0.1, 0.01, 10))
-              {
-                  pProperty->SetLineWidth(v);
-              }
-
-              ImGui::TreePop();
-          }
+          ImGuiNs::vtkObjSetup(u8"左下角指示器", axesActor);
 
           if (ImGui::TreeNodeEx("vtkOrientationMarkerWidget", ImGuiTreeNodeFlags_DefaultOpen))
           {
@@ -200,11 +162,22 @@ int main(int argc, char* argv[])
     ImguiVtkNs::DrawUI(dearImGuiOverlay);
     /// Change to your code ends here. ///
 
+    // vtkCameraOrientationWidget
     vtkNew<vtkCameraOrientationWidget> camManipulator;
     camManipulator->SetParentRenderer(ren);
     camManipulator->On();
     auto rep = vtkCameraOrientationRepresentation::SafeDownCast(camManipulator->GetRepresentation());
     rep->AnchorToLowerRight();
+
+    // vtkOrientationMarkerWidget
+    vtkNew<vtkAxesActor> iconActor;
+    vtkNew<vtkOrientationMarkerWidget> orientationWidget;
+    orientationWidget->SetOutlineColor(0.9300, 0.5700, 0.1300);
+    orientationWidget->SetInteractor(iren);
+    orientationWidget->SetOrientationMarker(iconActor);
+    orientationWidget->SetViewport(0.8, 0.8, 1., 1.);
+    orientationWidget->SetEnabled(1);
+    orientationWidget->InteractiveOff();
 
     // Start event loop
 #if 0

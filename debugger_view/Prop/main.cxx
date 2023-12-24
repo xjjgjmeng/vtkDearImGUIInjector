@@ -130,17 +130,17 @@ static void DrawUI(vtkDearImGuiInjector* overlay)
                 {
                     if (ImGui::BeginTabItem("Prop"))
                     {
-                        ImGuiNs::vtkObjSetup(::coneActor);
+                        ImGuiNs::vtkObjSetup("Prop-", ::coneActor);
                         ImGui::EndTabItem();
                     }
                     if (ImGui::BeginTabItem("Camera"))
                     {
-                        ImGuiNs::vtkObjSetup(::renderer->GetActiveCamera());
+                        ImGuiNs::vtkObjSetup("Camera-", ::renderer->GetActiveCamera());
                         ImGui::EndTabItem();
                     }
                     if (ImGui::BeginTabItem("Renderer"))
                     {
-                        ImGuiNs::vtkObjSetup(::renderer);
+                        ImGuiNs::vtkObjSetup("Renderer-",::renderer);
                         ImGui::EndTabItem();
                     }
                     ImGui::EndTabBar();

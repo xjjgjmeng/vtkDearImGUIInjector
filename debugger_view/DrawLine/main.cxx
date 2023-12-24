@@ -118,15 +118,15 @@ int main(int argc, char* argv[])
               logView.Draw();
               ImGui::TreePop();
           }
-          if (ImGui::TreeNodeEx("vtkImageActor", ImGuiTreeNodeFlags_DefaultOpen))
+          //if (ImGui::TreeNodeEx("vtkImageActor", ImGuiTreeNodeFlags_DefaultOpen))
           {
-              ImGuiNs::vtkObjSetup(viewer->GetImageActor());
-              ImGui::TreePop();
+              ImGuiNs::vtkObjSetup("vtkImageActor", viewer->GetImageActor());
+              //ImGui::TreePop();
           }
-          if (ImGui::TreeNodeEx("Camera"))
+          //if (ImGui::TreeNodeEx("Camera"))
           {
-              ImGuiNs::vtkObjSetup(ren->GetActiveCamera());
-              ImGui::TreePop();
+              ImGuiNs::vtkObjSetup("Camera", ren->GetActiveCamera());
+              //ImGui::TreePop();
           }
           if (ImGui::TreeNode("vtkResliceImageViewer"))
           {

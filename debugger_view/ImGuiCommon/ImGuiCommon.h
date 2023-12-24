@@ -1,13 +1,13 @@
 ﻿#pragma once
 
-#include "../IncludeAllInOne.h"
+#include "IncludeAllInOne.h"
 #include "ImageSharpenFilter.h"
 #include "DrawFreeLineStyle.h"
 
 namespace ImGuiNs
 {
     void HelpMarker(const char* desc);
-    void vtkObjSetup(vtkSmartPointer<vtkObject> vtkObj);
+    void vtkObjSetup(std::string_view objName, vtkSmartPointer<vtkObject> vtkObj, const ImGuiTreeNodeFlags = 0);
 	struct LogView
 	{
 		ImGuiTextBuffer     Buf;
@@ -136,4 +136,111 @@ namespace ImGuiNs
 	};
 
 	void printWorldPt(ImGuiNs::LogView& logView, vtkRenderer* pRenderer, double disPtX, double disPtY);
+}
+
+static std::function<void()> imgui_render_callback;
+static vtkWeakPointer<vtkRenderWindow> pWindow;
+
+namespace ImguiVtkNs
+{
+	static void DrawUI(vtkDearImGuiInjector* overlay)
+	{
+		vtkNew<vtkCallbackCommand> uiDraw;
+		auto uiDrawFunction = [](vtkObject* caller, long unsigned int vtkNotUsed(eventId),
+			void* clientData, void* vtkNotUsed(callData))
+		{
+			vtkDearImGuiInjector* overlay_ = reinterpret_cast<vtkDearImGuiInjector*>(caller);
+
+			ImGui::SetNextWindowPos(ImVec2(0, 25), ImGuiCond_Once);
+			ImGui::SetNextWindowSize(ImVec2(450, 550), ImGuiCond_Once);
+			ImGui::Begin("VTK");
+			{
+				if (::pWindow.Get())
+				{
+					if (ImGui::BeginTabBar("MyTabBar666"))
+					{
+						if (ImGui::BeginTabItem("Obj"))
+						{
+							::imgui_render_callback();
+							ImGui::EndTabItem();
+						}
+						if (ImGui::BeginTabItem("CameraInfo"))
+						{
+							ImGuiNs::vtkObjSetup("Camera", ::pWindow->GetRenderers()->GetFirstRenderer()->GetActiveCamera(), ImGuiTreeNodeFlags_DefaultOpen);
+							ImGui::EndTabItem();
+						}
+						if (ImGui::BeginTabItem("RendererInfo"))
+						{
+							ImGuiNs::vtkObjSetup("Renderer", ::pWindow->GetRenderers()->GetFirstRenderer(), ImGuiTreeNodeFlags_DefaultOpen);
+							ImGui::EndTabItem();
+						}
+						if (ImGui::BeginTabItem("InteractorInfo"))
+						{
+							ImGuiNs::vtkObjSetup("Interactor", ::pWindow->GetInteractor(), ImGuiTreeNodeFlags_DefaultOpen);
+							ImGui::EndTabItem();
+						}
+						if (ImGui::BeginTabItem("WindowInfo"))
+						{
+							ImGuiNs::vtkObjSetup("Window", ::pWindow.Get(), ImGuiTreeNodeFlags_DefaultOpen);
+							ImGui::EndTabItem();
+						}
+						ImGui::EndTabBar();
+					}
+				}
+				else
+				{
+					//if (::imgui_render_callback)
+					{
+						::imgui_render_callback();
+					}
+				}
+			}
+			ImGui::End();
+		};
+		uiDraw->SetCallback(uiDrawFunction);
+		overlay->AddObserver(vtkDearImGuiInjector::ImGuiDrawEvent, uiDraw);
+	}
+
+	static void SetupUI(vtkDearImGuiInjector* overlay)
+	{
+		vtkNew<vtkCallbackCommand> uiSetup;
+		auto uiSetupFunction =
+			[](vtkObject* caller, long unsigned int vtkNotUsed(eventId), void* clientData, void* callData)
+		{
+			vtkDearImGuiInjector* overlay_ = reinterpret_cast<vtkDearImGuiInjector*>(caller);
+			if (!callData)
+			{
+				return;
+			}
+			bool imguiInitStatus = *(reinterpret_cast<bool*>(callData));
+			if (imguiInitStatus)
+			{
+				auto io = ImGui::GetIO();
+				io.Fonts->AddFontFromFileTTF("C:/Windows/Fonts/simhei.ttf", 15.f, nullptr, io.Fonts->GetGlyphRangesChineseFull());
+			}
+		};
+		uiSetup->SetCallback(uiSetupFunction);
+		overlay->AddObserver(vtkDearImGuiInjector::ImGuiSetupEvent, uiSetup);
+	}
+
+	static const char* getDicomFile()
+	{
+		//const char* retval = "D:/test_data/series/I0000000200.dcm";
+		const char* retval = "C:\\Users\\123\\Desktop\\180327-hxy\\0200.dcm";
+		if (!std::filesystem::exists(retval))
+		{
+			throw "dicom file does not exist!";
+		}
+		return retval;
+	}
+
+	static const char* getDicomDir()
+	{
+		const char* retval = "C:\\Users\\123\\Desktop\\180327-hxy";
+		if (!std::filesystem::exists(retval))
+		{
+			throw "dicom dir does not exist!";
+		}
+		return retval;
+	}
 }

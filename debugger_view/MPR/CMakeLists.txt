@@ -9,7 +9,7 @@ file(GLOB_RECURSE header_file "*.h")
 file(GLOB source_file "*.cpp" "*.cxx")
 add_executable(${EXEC_NAME} ${header_file} ${source_file})
 
-target_link_libraries(${EXEC_NAME} PRIVATE ${CMAKE_PROJECT_NAME})
+target_link_libraries(${EXEC_NAME} PRIVATE ${CMAKE_PROJECT_NAME} ImGuiCommon)
 
 if (VTK_VERSION VERSION_LESS "9.0.0")
 include(${VTK_USE_FILE})

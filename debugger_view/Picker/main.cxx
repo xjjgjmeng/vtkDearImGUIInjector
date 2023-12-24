@@ -168,15 +168,15 @@ int main(int argc, char* argv[])
                 logView.Draw();
                 ImGui::TreePop();
             }
-            if (ImGui::TreeNodeEx("Camera"))
+            //if (ImGui::TreeNodeEx("Camera"))
             {
-                ImGuiNs::vtkObjSetup(ren->GetActiveCamera());
-                ImGui::TreePop();
+                ImGuiNs::vtkObjSetup("Camera", ren->GetActiveCamera());
+                //ImGui::TreePop();
             }
-            if (ImGui::TreeNodeEx("Cube"))
+            //if (ImGui::TreeNodeEx("Cube"))
             {
-                ImGuiNs::vtkObjSetup(cubeActor);
-                ImGui::TreePop();
+                ImGuiNs::vtkObjSetup("Cube", cubeActor);
+                //ImGui::TreePop();
             }
             if (ImGui::TreeNodeEx("Picker", ImGuiTreeNodeFlags_DefaultOpen))
             {
@@ -246,9 +246,9 @@ int main(int argc, char* argv[])
                 }
                 ImGui::TreePop();
             }
-            if (ImGui::CollapsingHeader("Picker_", ImGuiTreeNodeFlags_DefaultOpen))
+            //if (ImGui::CollapsingHeader("Picker_", ImGuiTreeNodeFlags_DefaultOpen))
             {
-                ImGuiNs::vtkObjSetup(iren->GetPicker());
+                ImGuiNs::vtkObjSetup("Picker_", iren->GetPicker());
             }
         };
 
