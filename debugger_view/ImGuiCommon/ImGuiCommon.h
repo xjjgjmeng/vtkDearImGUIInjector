@@ -225,8 +225,8 @@ namespace ImguiVtkNs
 
 	static const char* getDicomFile()
 	{
-		//const char* retval = "D:/test_data/series/I0000000200.dcm";
-		const char* retval = "C:\\Users\\123\\Desktop\\180327-hxy\\0200.dcm";
+		const char* retval = "D:/test_data/series/I0000000200.dcm";
+		//const char* retval = "C:\\Users\\123\\Desktop\\180327-hxy\\0200.dcm";
 		if (!std::filesystem::exists(retval))
 		{
 			throw "dicom file does not exist!";
@@ -236,7 +236,8 @@ namespace ImguiVtkNs
 
 	static const char* getDicomDir()
 	{
-		const char* retval = "C:\\Users\\123\\Desktop\\180327-hxy";
+		const char* retval = "D:/test_data/series";
+		//const char* retval = "C:\\Users\\123\\Desktop\\180327-hxy";
 		if (!std::filesystem::exists(retval))
 		{
 			throw "dicom dir does not exist!";

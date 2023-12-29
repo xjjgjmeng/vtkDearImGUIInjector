@@ -97,9 +97,16 @@ int main(int argc, char* argv[])
   auto ren = viewer->GetRenderer();
   auto renWin = viewer->GetRenderWindow();
   vtkNew<vtkRenderWindowInteractor> iren;
-  iren->SetRenderWindow(renWin);
+  viewer->SetupInteractor(iren);
 
+  vtkNew<vtkImageSlab> pSlab;
+#if 0
+  pSlab->SetSliceRange(100, 101);
+  pSlab->SetInputConnection(reader->GetOutputPort());
+  viewer->SetInputConnection(pSlab->GetOutputPort());
+#else
   viewer->SetInputData(reader->GetOutput());
+#endif
   viewer->SetSlice(212);
   viewer->SetSliceOrientationToXY();
   viewer->GetRenderer()->ResetCamera();
@@ -128,14 +135,8 @@ int main(int argc, char* argv[])
               ImGuiNs::vtkObjSetup("Camera", ren->GetActiveCamera());
               //ImGui::TreePop();
           }
-          if (ImGui::TreeNode("vtkResliceImageViewer"))
-          {
-              if (int v[3]; viewer->GetSliceRange(v), v[2] = viewer->GetSlice(), ImGui::SliderInt("Slice", &v[2], v[0], v[1]))
-              {
-                  viewer->SetSlice(v[2]);
-              }
-              ImGui::TreePop();
-          }
+          ImGuiNs::vtkObjSetup("Slab", pSlab);
+          ImGuiNs::vtkObjSetup("View", viewer, ImGuiTreeNodeFlags_DefaultOpen);
           ImGui::Checkbox(u8"只能绘制到影像上", &myStyle->m_drawOntoImage);
       };
 

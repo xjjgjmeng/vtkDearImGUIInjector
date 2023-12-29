@@ -527,6 +527,195 @@ A value greater than 1 is a zoom-in, a value less than 1 is a zoom-out.
                     }
                     ImGui::TreePop();
                 }
+                else if (const auto pImageViewer2 = vtkImageViewer2::SafeDownCast(vtkObj); pImageViewer2 && ImGui::TreeNodeEx("vtkImageViewer2", ImGuiTreeNodeFlags_DefaultOpen))
+                {
+                    if (int v[3]; pImageViewer2->GetSliceRange(v), v[2] = pImageViewer2->GetSlice(), ImGui::SliderInt("Slice", &v[2], v[0], v[1]))
+                    {
+                        pImageViewer2->SetSlice(v[2]);
+                    }
+
+                    if (float v = pImageViewer2->GetColorLevel(); ImGui::SliderFloat("ColorLevel", &v, 0., 10000.))
+                    {
+                        pImageViewer2->SetColorLevel(v);
+                    }
+
+                    if (float v = pImageViewer2->GetColorWindow(); ImGui::SliderFloat("ColorWindow", &v, 0., 10000.))
+                    {
+                        pImageViewer2->SetColorWindow(v);
+                    }
+
+                    if (int v[2]{ pImageViewer2->GetSize()[0], pImageViewer2->GetSize()[1] }; ImGui::DragInt2("Size", v))
+                    {
+                        pImageViewer2->SetSize(v);
+                    }
+
+                    if (int v[2]{ pImageViewer2->GetPosition()[0], pImageViewer2->GetPosition()[1] }; ImGui::DragInt2("Position", v))
+                    {
+                        pImageViewer2->SetPosition(v);
+                    }
+
+                    {
+                        const char* modeText[] = { "SLICE_ORIENTATION_YZ", "SLICE_ORIENTATION_XZ", "SLICE_ORIENTATION_XY"};
+                        if (auto v = pImageViewer2->GetSliceOrientation(); ImGui::Combo("SliceOrientation", &v, modeText, IM_ARRAYSIZE(modeText)))
+                        {
+                            pImageViewer2->SetSliceOrientation(v);
+                        }
+                    }
+
+                    if (bool v = pImageViewer2->GetOffScreenRendering(); ImGui::Checkbox("OffScreenRendering ", &v))
+                    {
+                        pImageViewer2->SetOffScreenRendering(v);
+                    }
+
+                    if (const auto pResliceImageViewer = vtkResliceImageViewer::SafeDownCast(vtkObj); pResliceImageViewer && ImGui::TreeNodeEx("vtkResliceImageViewer", ImGuiTreeNodeFlags_DefaultOpen))
+                    {
+                        if (bool v = pResliceImageViewer->GetSliceScrollOnMouseWheel(); ImGui::Checkbox("SliceScrollOnMouseWheel", &v))
+                        {
+                            pResliceImageViewer->SetSliceScrollOnMouseWheel(v);
+                        }
+
+                        if (bool v = pResliceImageViewer->GetThickMode(); ImGui::Checkbox("ThickMode ", &v))
+                        {
+                            pResliceImageViewer->SetThickMode(v);
+                        }
+
+                        {
+                            const char* modeText[] = { "RESLICE_AXIS_ALIGNED", "RESLICE_OBLIQUE" };
+                            if (auto v = pResliceImageViewer->GetResliceMode(); ImGui::Combo("ResliceMode", &v, modeText, IM_ARRAYSIZE(modeText)))
+                            {
+                                pResliceImageViewer->SetResliceMode(v);
+                            }
+                        }
+
+                        if (float v = pResliceImageViewer->GetSliceScrollFactor(); ImGui::SliderFloat("SliceScrollFactor", &v, 0., 10.))
+                        {
+                            pResliceImageViewer->SetSliceScrollFactor(v);
+                        }
+
+                        vtkObjSetup("ResliceCursor", pResliceImageViewer->GetResliceCursor(), ImGuiTreeNodeFlags_DefaultOpen);
+                        vtkObjSetup("ResliceCursorWidget", pResliceImageViewer->GetResliceCursorWidget(), ImGuiTreeNodeFlags_DefaultOpen);
+
+                        ImGui::TreePop();
+                    }
+
+                    ImGui::TreePop();
+                }
+                else if (const auto pResliceCursor = vtkResliceCursor::SafeDownCast(vtkObj); pResliceCursor && ImGui::TreeNodeEx("vtkResliceCursor", ImGuiTreeNodeFlags_DefaultOpen))
+                {
+                    if (bool v = pResliceCursor->GetThickMode(); ImGui::Checkbox("ThickMode ", &v))
+                    {
+                        pResliceCursor->SetThickMode(v);
+                    }
+
+                    if (double v[3]; pResliceCursor->GetThickness(v), ImGui::DragScalarN("Thickness", ImGuiDataType_Double, v, 3, 0.5f))
+                    {
+                        pResliceCursor->SetThickness(v);
+                    }
+                    ImGui::TreePop();
+                }
+                else if (const auto pInteractorObserver = vtkInteractorObserver::SafeDownCast(vtkObj); pInteractorObserver && ImGui::TreeNodeEx("vtkInteractorObserver", ImGuiTreeNodeFlags_DefaultOpen))
+                {
+                    if (bool v = pInteractorObserver->GetEnabled(); ImGui::Checkbox("Enabled ", &v))
+                    {
+                        pInteractorObserver->SetEnabled(v);
+                    }
+                    if (const auto pAbstractWidget = vtkAbstractWidget::SafeDownCast(vtkObj); pAbstractWidget && ImGui::TreeNodeEx("vtkAbstractWidget", ImGuiTreeNodeFlags_DefaultOpen))
+                    {
+                        if (const auto pResliceCursorWidget = vtkResliceCursorWidget::SafeDownCast(vtkObj); pResliceCursorWidget && ImGui::TreeNodeEx("vtkResliceCursorWidget", ImGuiTreeNodeFlags_DefaultOpen))
+                        {
+                            ImGui::TreePop();
+                        }
+
+                        ImGui::TreePop();
+                    }
+
+                    ImGui::TreePop();
+                }
+                else if (const auto pAlgorithm = vtkAlgorithm::SafeDownCast(vtkObj); pAlgorithm && ImGui::TreeNodeEx("vtkAlgorithm", ImGuiTreeNodeFlags_DefaultOpen))
+                {
+                    if (const auto pImageAlgorithm = vtkImageAlgorithm::SafeDownCast(vtkObj); pImageAlgorithm && ImGui::TreeNodeEx("vtkImageAlgorithm", ImGuiTreeNodeFlags_DefaultOpen))
+                    {
+                        if (const auto pThreadedImageAlgorithm = vtkThreadedImageAlgorithm::SafeDownCast(vtkObj); pThreadedImageAlgorithm && ImGui::TreeNodeEx("vtkThreadedImageAlgorithm", ImGuiTreeNodeFlags_DefaultOpen))
+                        {
+                            if (const auto pImageSlab = vtkImageSlab::SafeDownCast(vtkObj); pImageSlab && ImGui::TreeNodeEx("vtkImageSlab", ImGuiTreeNodeFlags_DefaultOpen))
+                            {
+                                {
+                                    const char* modeText[] = { "VTK_IMAGE_SLAB_MIN", "VTK_IMAGE_SLAB_MAX", "VTK_IMAGE_SLAB_MEAN", "VTK_IMAGE_SLAB_SUM" };
+                                    if (auto v = pImageSlab->GetOperation(); ImGui::Combo("Operation", &v, modeText, IM_ARRAYSIZE(modeText)))
+                                    {
+                                        pImageSlab->SetOperation(v);
+                                    }
+                                }
+                                {
+                                    const char* modeText[] = { "X", "Y", "Z" };
+                                    if (auto v = pImageSlab->GetOrientation(); ImGui::Combo("Orientation", &v, modeText, IM_ARRAYSIZE(modeText)))
+                                    {
+                                        pImageSlab->SetOrientation(v);
+                                    }
+                                }
+                                if (int v[2]; pImageSlab->GetSliceRange(v), ImGui::DragInt2("SliceRange", v))
+                                {
+                                    pImageSlab->SetSliceRange(v);
+                                }
+
+                                ImGui::TreePop();
+                            }
+                            ImGui::TreePop();
+                        }
+                        ImGui::TreePop();
+                    }
+                    else if (const auto pPolyDataAlgorithm = vtkPolyDataAlgorithm::SafeDownCast(vtkObj); pPolyDataAlgorithm && ImGui::TreeNodeEx("vtkPolyDataAlgorithm", ImGuiTreeNodeFlags_DefaultOpen))
+                    {
+                        if (const auto pLineSource = vtkLineSource::SafeDownCast(vtkObj); pLineSource && ImGui::TreeNodeEx("vtkLineSource", ImGuiTreeNodeFlags_DefaultOpen))
+                        {
+                            if (double v[3]; pLineSource->GetPoint1(v), ImGui::DragScalarN("Point1", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), 0.1f))
+                            {
+                                pLineSource->SetPoint1(v);
+                            }
+                            if (double v[3]; pLineSource->GetPoint2(v), ImGui::DragScalarN("Point2", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), 0.1f))
+                            {
+                                pLineSource->SetPoint2(v);
+                            }
+                            if (bool v = pLineSource->GetUseRegularRefinement(); ImGui::Checkbox("UseRegularRefinement", &v))
+                            {
+                                pLineSource->SetUseRegularRefinement(v);
+                            }
+                            if (int v = pLineSource->GetResolution(); ImGui::DragInt("Resolution", &v))
+                            {
+                                pLineSource->SetResolution(v);
+                            }
+                            if (int v = pLineSource->GetOutputPointsPrecision(); ImGui::DragInt("OutputPointsPrecision", &v))
+                            {
+                                pLineSource->SetOutputPointsPrecision(v);
+                            }
+                            if (pLineSource->GetPoints())
+                            {
+                                ImGui::Text("PointsNumber: %d", pLineSource->GetPoints()->GetNumberOfPoints());
+                            }
+
+                            ImGui::TreePop();
+                        }
+                        ImGui::TreePop();
+                    }
+                    else if (const auto pAbstractMapper = vtkAbstractMapper::SafeDownCast(vtkObj); pAbstractMapper && ImGui::TreeNodeEx("vtkAbstractMapper", ImGuiTreeNodeFlags_DefaultOpen))
+                    {
+                        if (const auto pAbstractMapper3D = vtkAbstractMapper3D::SafeDownCast(vtkObj); pAbstractMapper3D && ImGui::TreeNodeEx("vtkAbstractMapper3D", ImGuiTreeNodeFlags_DefaultOpen))
+                        {
+                            if (const auto pMapper = vtkMapper::SafeDownCast(vtkObj); pMapper && ImGui::TreeNodeEx("vtkMapper", ImGuiTreeNodeFlags_DefaultOpen))
+                            {
+                                if (const auto pPolyDataMapper = vtkPolyDataMapper::SafeDownCast(vtkObj); pPolyDataMapper && ImGui::TreeNodeEx("vtkPolyDataMapper", ImGuiTreeNodeFlags_DefaultOpen))
+                                {
+                                    ImGui::InputScalarN("Bounds", ImGuiDataType_Double, pPolyDataMapper->GetBounds(), 6, nullptr, nullptr, nullptr, ImGuiInputTextFlags_ReadOnly);
+                                    ImGui::TreePop();
+                                }
+                                ImGui::TreePop();
+                            }
+                            ImGui::TreePop();
+                        }
+                        ImGui::TreePop();
+                    }
+                    ImGui::TreePop();
+                }
 
                 if (const auto pProp3D = vtkProp3D::SafeDownCast(vtkObj); pProp3D && ImGui::CollapsingHeader("vtkProp3D", ImGuiTreeNodeFlags_DefaultOpen))
                 {
