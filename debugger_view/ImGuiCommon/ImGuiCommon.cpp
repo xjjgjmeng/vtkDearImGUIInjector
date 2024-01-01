@@ -45,18 +45,26 @@ namespace ImGuiNs
     {
         if (ImGui::TreeNodeEx(objName.data(), flags))
         {
-            if (ImGui::TreeNodeEx("vtkObject", ImGuiTreeNodeFlags_DefaultOpen))
+            if (ImGui::CollapsingHeader("vtkObject", ImGuiTreeNodeFlags_DefaultOpen))
             {
                 ImGui::Text("MTime: %ld", vtkObj->GetMTime());
                 ImGui::Text("Name: %s", vtkObj->GetClassName());
 
+                // 继承自vtkObject
                 if (const auto pProp = vtkProp::SafeDownCast(vtkObj); pProp && ImGui::CollapsingHeader("vtkProp", ImGuiTreeNodeFlags_DefaultOpen))
                 {
                     ImGui::InputScalarN("Bounds", ImGuiDataType_Double, pProp->GetBounds(), 6, nullptr, nullptr, nullptr, ImGuiInputTextFlags_ReadOnly);
-                    ImGui::InputScalarN("Matrix0", ImGuiDataType_Double, pProp->GetMatrix()->GetData() + 0, 4, nullptr, nullptr, nullptr, ImGuiInputTextFlags_ReadOnly);
-                    ImGui::InputScalarN("Matrix1", ImGuiDataType_Double, pProp->GetMatrix()->GetData() + 4, 4, nullptr, nullptr, nullptr, ImGuiInputTextFlags_ReadOnly);
-                    ImGui::InputScalarN("Matrix2", ImGuiDataType_Double, pProp->GetMatrix()->GetData() + 8, 4, nullptr, nullptr, nullptr, ImGuiInputTextFlags_ReadOnly);
-                    ImGui::InputScalarN("Matrix3", ImGuiDataType_Double, pProp->GetMatrix()->GetData() + 12, 4, nullptr, nullptr, nullptr, ImGuiInputTextFlags_ReadOnly);
+                    if (pProp->GetMatrix())
+                    {
+                        ImGui::InputScalarN("Matrix0", ImGuiDataType_Double, pProp->GetMatrix()->GetData() + 0, 4, nullptr, nullptr, nullptr, ImGuiInputTextFlags_ReadOnly);
+                        ImGui::InputScalarN("Matrix1", ImGuiDataType_Double, pProp->GetMatrix()->GetData() + 4, 4, nullptr, nullptr, nullptr, ImGuiInputTextFlags_ReadOnly);
+                        ImGui::InputScalarN("Matrix2", ImGuiDataType_Double, pProp->GetMatrix()->GetData() + 8, 4, nullptr, nullptr, nullptr, ImGuiInputTextFlags_ReadOnly);
+                        ImGui::InputScalarN("Matrix3", ImGuiDataType_Double, pProp->GetMatrix()->GetData() + 12, 4, nullptr, nullptr, nullptr, ImGuiInputTextFlags_ReadOnly);
+                    }
+                    else
+                    {
+                        ImGui::Text("Matrix nullptr");
+                    }
 
                     if (bool visibility = pProp->GetVisibility(); ImGui::Checkbox("Visibility ", &visibility))
                     {
@@ -619,11 +627,37 @@ A value greater than 1 is a zoom-in, a value less than 1 is a zoom-out.
                     {
                         pInteractorObserver->SetEnabled(v);
                     }
+
                     if (const auto pAbstractWidget = vtkAbstractWidget::SafeDownCast(vtkObj); pAbstractWidget && ImGui::TreeNodeEx("vtkAbstractWidget", ImGuiTreeNodeFlags_DefaultOpen))
                     {
+                        vtkObjSetup("Representation", pAbstractWidget->GetRepresentation(), ImGuiTreeNodeFlags_DefaultOpen);
                         if (const auto pResliceCursorWidget = vtkResliceCursorWidget::SafeDownCast(vtkObj); pResliceCursorWidget && ImGui::TreeNodeEx("vtkResliceCursorWidget", ImGuiTreeNodeFlags_DefaultOpen))
                         {
                             ImGui::TreePop();
+                        }
+                        else if (const auto pBoxWidget2 = vtkBoxWidget2::SafeDownCast(vtkObj); pBoxWidget2 && ImGui::TreeNodeEx("vtkBoxWidget2", ImGuiTreeNodeFlags_DefaultOpen))
+                        {
+                            if (bool v = pBoxWidget2->GetTranslationEnabled(); ImGui::Checkbox("TranslationEnabled ", &v))
+                            {
+                                pBoxWidget2->SetTranslationEnabled(v);
+                            }
+                            if (bool v = pBoxWidget2->GetRotationEnabled(); ImGui::Checkbox("RotationEnabled ", &v))
+                            {
+                                pBoxWidget2->SetRotationEnabled(v);
+                            }
+                            if (bool v = pBoxWidget2->GetScalingEnabled(); ImGui::Checkbox("ScalingEnabled ", &v))
+                            {
+                                pBoxWidget2->SetScalingEnabled(v);
+                            }
+                            if (bool v = pBoxWidget2->GetMoveFacesEnabled(); ImGui::Checkbox("MoveFacesEnabled ", &v))
+                            {
+                                pBoxWidget2->SetMoveFacesEnabled(v);
+                            }
+                            ImGui::TreePop();
+                        }
+                        else if (const auto pLineWidget2 = vtkLineWidget2::SafeDownCast(vtkObj); pLineWidget2 && ImGui::CollapsingHeader("vtkLineWidget2", ImGuiTreeNodeFlags_DefaultOpen))
+                        {
+                            //vtkObjSetup("LineRepresentation", pLineWidget2->GetLineRepresentation(), ImGuiTreeNodeFlags_DefaultOpen);
                         }
 
                         ImGui::TreePop();
@@ -631,7 +665,7 @@ A value greater than 1 is a zoom-in, a value less than 1 is a zoom-out.
 
                     ImGui::TreePop();
                 }
-                else if (const auto pAlgorithm = vtkAlgorithm::SafeDownCast(vtkObj); pAlgorithm && ImGui::TreeNodeEx("vtkAlgorithm", ImGuiTreeNodeFlags_DefaultOpen))
+                else if (const auto pAlgorithm = vtkAlgorithm::SafeDownCast(vtkObj); pAlgorithm && ImGui::CollapsingHeader("vtkAlgorithm", ImGuiTreeNodeFlags_DefaultOpen))
                 {
                     if (const auto pImageAlgorithm = vtkImageAlgorithm::SafeDownCast(vtkObj); pImageAlgorithm && ImGui::TreeNodeEx("vtkImageAlgorithm", ImGuiTreeNodeFlags_DefaultOpen))
                     {
@@ -695,28 +729,124 @@ A value greater than 1 is a zoom-in, a value less than 1 is a zoom-out.
 
                             ImGui::TreePop();
                         }
-                        ImGui::TreePop();
-                    }
-                    else if (const auto pAbstractMapper = vtkAbstractMapper::SafeDownCast(vtkObj); pAbstractMapper && ImGui::TreeNodeEx("vtkAbstractMapper", ImGuiTreeNodeFlags_DefaultOpen))
-                    {
-                        if (const auto pAbstractMapper3D = vtkAbstractMapper3D::SafeDownCast(vtkObj); pAbstractMapper3D && ImGui::TreeNodeEx("vtkAbstractMapper3D", ImGuiTreeNodeFlags_DefaultOpen))
+                        else if (const auto pVolumeOutlineSource = vtkVolumeOutlineSource::SafeDownCast(vtkObj); pVolumeOutlineSource && ImGui::TreeNodeEx("vtkVolumeOutlineSource", ImGuiTreeNodeFlags_DefaultOpen))
                         {
-                            if (const auto pMapper = vtkMapper::SafeDownCast(vtkObj); pMapper && ImGui::TreeNodeEx("vtkMapper", ImGuiTreeNodeFlags_DefaultOpen))
+                            if (bool v = pVolumeOutlineSource->GetGenerateFaces(); ImGui::Checkbox("GenerateFaces", &v))
                             {
-                                if (const auto pPolyDataMapper = vtkPolyDataMapper::SafeDownCast(vtkObj); pPolyDataMapper && ImGui::TreeNodeEx("vtkPolyDataMapper", ImGuiTreeNodeFlags_DefaultOpen))
-                                {
-                                    ImGui::InputScalarN("Bounds", ImGuiDataType_Double, pPolyDataMapper->GetBounds(), 6, nullptr, nullptr, nullptr, ImGuiInputTextFlags_ReadOnly);
-                                    ImGui::TreePop();
-                                }
-                                ImGui::TreePop();
+                                pVolumeOutlineSource->SetGenerateFaces(v);
+                            }
+                            if (bool v = pVolumeOutlineSource->GetGenerateScalars(); ImGui::Checkbox("GenerateScalars", &v))
+                            {
+                                pVolumeOutlineSource->SetGenerateScalars(v);
+                            }
+                            if (bool v = pVolumeOutlineSource->GetGenerateOutline(); ImGui::Checkbox("GenerateOutline", &v))
+                            {
+                                pVolumeOutlineSource->SetGenerateOutline(v);
+                            }
+                            if (float v[3] = { pVolumeOutlineSource->GetColor()[0],pVolumeOutlineSource->GetColor()[1],pVolumeOutlineSource->GetColor()[2] }; ImGui::ColorEdit3("Color", v))
+                            {
+                                pVolumeOutlineSource->SetColor(v[0], v[1], v[2]);
+                            }
+                            if (float v[3]{ pVolumeOutlineSource->GetActivePlaneColor()[0],pVolumeOutlineSource->GetActivePlaneColor()[1],pVolumeOutlineSource->GetActivePlaneColor()[2] }; ImGui::ColorEdit3("ActivePlaneColor", v))
+                            {
+                                pVolumeOutlineSource->SetActivePlaneColor(v[0], v[1], v[2]);
+                            }
+                            if (int v = pVolumeOutlineSource->GetActivePlaneId(); ImGui::SliderInt("ActivePlaneId", &v, -1, 5))
+                            {
+                                pVolumeOutlineSource->SetActivePlaneId(v);
                             }
                             ImGui::TreePop();
                         }
                         ImGui::TreePop();
                     }
-                    ImGui::TreePop();
+                    else if (const auto pAbstractMapper = vtkAbstractMapper::SafeDownCast(vtkObj); pAbstractMapper && ImGui::CollapsingHeader("vtkAbstractMapper", ImGuiTreeNodeFlags_DefaultOpen))
+                    {
+                        if (const auto pAbstractMapper3D = vtkAbstractMapper3D::SafeDownCast(vtkObj); pAbstractMapper3D && ImGui::CollapsingHeader("vtkAbstractMapper3D", ImGuiTreeNodeFlags_DefaultOpen))
+                        {
+                            if (const auto pMapper = vtkMapper::SafeDownCast(vtkObj); pMapper && ImGui::CollapsingHeader("vtkMapper", ImGuiTreeNodeFlags_DefaultOpen))
+                            {
+                                if (const auto pPolyDataMapper = vtkPolyDataMapper::SafeDownCast(vtkObj); pPolyDataMapper && ImGui::CollapsingHeader("vtkPolyDataMapper", ImGuiTreeNodeFlags_DefaultOpen))
+                                {
+                                    ImGui::InputScalarN("Bounds", ImGuiDataType_Double, pPolyDataMapper->GetBounds(), 6, nullptr, nullptr, nullptr, ImGuiInputTextFlags_ReadOnly);
+                                }
+                            }
+                            else if (const auto pAbstractVolumeMapper = vtkAbstractVolumeMapper::SafeDownCast(vtkObj); pAbstractVolumeMapper && ImGui::CollapsingHeader("vtkAbstractVolumeMapper", ImGuiTreeNodeFlags_DefaultOpen))
+                            {
+                                if (const auto pVolumeMapper = vtkVolumeMapper::SafeDownCast(vtkObj); pVolumeMapper && ImGui::CollapsingHeader("vtkVolumeMapper", ImGuiTreeNodeFlags_DefaultOpen))
+                                {
+                                    // BlendMode
+                                    {
+                                        const char* modeText[] = { "COMPOSITE_BLEND", "MAXIMUM_INTENSITY_BLEND", "MINIMUM_INTENSITY_BLEND", "AVERAGE_INTENSITY_BLEND", "ADDITIVE_BLEND", "ISOSURFACE_BLEND", "SLICE_BLEND" };
+                                        if (auto v = pVolumeMapper->GetBlendMode(); ImGui::Combo("BlendMode", &v, modeText, IM_ARRAYSIZE(modeText)))
+                                        {
+                                            pVolumeMapper->SetBlendMode(v);
+                                        }
+                                    }
+#if 0
+                                    {
+                                        const char* items[] = { "VTK_CROP_SUBVOLUME", "VTK_CROP_FENCE", "VTK_CROP_INVERTED_FENCE", "VTK_CROP_CROSS", "VTK_CROP_INVERTED_CROSS" };
+                                        int dataArray[] = { VTK_CROP_SUBVOLUME, VTK_CROP_FENCE, VTK_CROP_INVERTED_FENCE, VTK_CROP_CROSS, VTK_CROP_INVERTED_CROSS };
+                                        static int currentIdx = -1;
+                                        if (ImGui::Combo("CroppingRegionFlags", &currentIdx, items, IM_ARRAYSIZE(items)))
+                                        {
+                                            const auto n = dataArray[currentIdx] / ::spacing[2];
+                                            ::reslice->SetSlabNumberOfSlices(n);
+                                            ::colorMap->Update();
+                                        }
+                                    }
+#else
+                                    {
+                                        std::map<int, char*> myMap
+                                        {
+                                            {VTK_CROP_SUBVOLUME,"VTK_CROP_SUBVOLUME"},
+                                            {VTK_CROP_FENCE,"VTK_CROP_FENCE"},
+                                            {VTK_CROP_INVERTED_FENCE,"VTK_CROP_INVERTED_FENCE"},
+                                            {VTK_CROP_CROSS,"VTK_CROP_CROSS"},
+                                            {VTK_CROP_INVERTED_CROSS,"VTK_CROP_INVERTED_CROSS"}
+                                        };
+                                        for (auto i : myMap)
+                                        {
+                                            if (ImGui::Button(i.second)) pVolumeMapper->SetCroppingRegionFlags(i.first); ImGui::SameLine();
+                                        }
+                                        ImGui::Text(myMap[pVolumeMapper->GetCroppingRegionFlags()]);
+                                    }
+#endif
+                                    
+                                    if (bool v = pVolumeMapper->GetCropping(); ImGui::Checkbox("Cropping", &v))
+                                    {
+                                        pVolumeMapper->SetCropping(v);
+                                    }
+                                    if (double v[6]; pVolumeMapper->GetCroppingRegionPlanes(v), ImGui::DragScalarN("CroppingRegionPlanes", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), 0.1f))
+                                    {
+                                        pVolumeMapper->SetCroppingRegionPlanes(v);
+                                    }
+                                    if (const auto pGPUVolumeRayCastMapper = vtkGPUVolumeRayCastMapper::SafeDownCast(vtkObj); pGPUVolumeRayCastMapper && ImGui::TreeNodeEx("vtkGPUVolumeRayCastMapper", ImGuiTreeNodeFlags_DefaultOpen))
+                                    {
+                                        if (float v = pGPUVolumeRayCastMapper->GetImageSampleDistance(); ImGui::SliderFloat("ImageSampleDistance", &v, 0., 10.))
+                                        {
+                                            pGPUVolumeRayCastMapper->SetImageSampleDistance(v);
+                                        }
+                                        if (float v = pGPUVolumeRayCastMapper->GetSampleDistance(); ImGui::SliderFloat("SampleDistance", &v, 0.01, 3.)) // 调到0.001会崩溃且变卡
+                                        {
+                                            pGPUVolumeRayCastMapper->SetSampleDistance(v);
+                                        }
+                                        if (bool v = pGPUVolumeRayCastMapper->GetAutoAdjustSampleDistances(); ImGui::Checkbox("AutoAdjustSampleDistances", &v))
+                                        {
+                                            pGPUVolumeRayCastMapper->SetAutoAdjustSampleDistances(v);
+                                        }
+                                        if (bool v = pGPUVolumeRayCastMapper->GetUseJittering(); ImGui::Checkbox("UseJittering", &v))
+                                        {
+                                            pGPUVolumeRayCastMapper->SetUseJittering(v);
+                                        }
+                                        ImGui::TreePop();
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
 
+                // 继承自vtkProp
                 if (const auto pProp3D = vtkProp3D::SafeDownCast(vtkObj); pProp3D && ImGui::CollapsingHeader("vtkProp3D", ImGuiTreeNodeFlags_DefaultOpen))
                 {
                     double pos[3];
@@ -776,6 +906,79 @@ A value greater than 1 is a zoom-in, a value less than 1 is a zoom-out.
                         ImGui::PopButtonRepeat();
                     }
                 }
+                else if (const auto pWidgetRepresentation = vtkWidgetRepresentation::SafeDownCast(vtkObj); pWidgetRepresentation && ImGui::CollapsingHeader("vtkWidgetRepresentation", ImGuiTreeNodeFlags_DefaultOpen))
+                {
+                    if (bool v = pWidgetRepresentation->GetPickingManaged(); ImGui::Checkbox("PickingManaged", &v))
+                    {
+                        pWidgetRepresentation->SetPickingManaged(v);
+                    }
+                    if (float v = pWidgetRepresentation->GetPlaceFactor(); ImGui::SliderFloat("PlaceFactor", &v, 0., 2.))
+                    {
+                        pWidgetRepresentation->SetPlaceFactor(v);
+                    }
+                    if (float v = pWidgetRepresentation->GetHandleSize(); ImGui::SliderFloat("HandleSize", &v, 0., 20.))
+                    {
+                        pWidgetRepresentation->SetHandleSize(v);
+                    }
+                    ImGui::Text(fmt::format("InteractionState: {}", pWidgetRepresentation->GetInteractionState()).c_str());
+                }
+
+                // 继承自vtkWidgetRepresentation
+                if (const auto pBoxRepresentation = vtkBoxRepresentation::SafeDownCast(vtkObj); pBoxRepresentation && ImGui::CollapsingHeader("vtkBoxRepresentation", ImGuiTreeNodeFlags_DefaultOpen))
+                {
+                    if (bool v = pBoxRepresentation->GetInsideOut(); ImGui::Checkbox("InsideOut", &v))
+                    {
+                        pBoxRepresentation->SetInsideOut(v);
+                    }
+                    if (bool v = pBoxRepresentation->GetOutlineCursorWires(); ImGui::Checkbox("OutlineCursorWires", &v))
+                    {
+                        pBoxRepresentation->SetOutlineCursorWires(v);
+                    }
+                    if (bool v = pBoxRepresentation->GetOutlineFaceWires(); ImGui::Checkbox("OutlineFaceWires", &v))
+                    {
+                        pBoxRepresentation->SetOutlineFaceWires(v);
+                    }
+                    if (bool v = pBoxRepresentation->GetTwoPlaneMode(); ImGui::Checkbox("TwoPlaneMode", &v))
+                    {
+                        pBoxRepresentation->SetTwoPlaneMode(v);
+                    }
+                    if (bool v = pBoxRepresentation->GetSnapToAxes(); ImGui::Checkbox("SnapToAxes", &v))
+                    {
+                        pBoxRepresentation->SetSnapToAxes(v);
+                    }
+                    if (ImGui::Button("HandlesOn")) pBoxRepresentation->HandlesOn();
+                    ImGui::SameLine();
+                    if (ImGui::Button("HandlesOff")) pBoxRepresentation->HandlesOff();
+                    if (ImGui::Button("StepBackward")) pBoxRepresentation->StepBackward();
+                    ImGui::SameLine();
+                    if (ImGui::Button("StepForward")) pBoxRepresentation->StepForward();
+                }
+                else if (const auto pLineRepresentation = vtkLineRepresentation::SafeDownCast(vtkObj); pLineRepresentation && ImGui::CollapsingHeader("vtkLineRepresentation", ImGuiTreeNodeFlags_DefaultOpen))
+                {
+                    if (bool v = pLineRepresentation->GetDistanceAnnotationVisibility(); ImGui::Checkbox("DistanceAnnotationVisibility ", &v))
+                    {
+                        pLineRepresentation->SetDistanceAnnotationVisibility(v);
+                    }
+                    if (bool v = pLineRepresentation->GetDirectionalLine(); ImGui::Checkbox("DirectionalLine ", &v))
+                    {
+                        pLineRepresentation->SetDirectionalLine(v);
+                    }
+                    ImGui::Text(pLineRepresentation->GetDistanceAnnotationFormat());
+                    ImGui::Text(fmt::format("Distance: {}", pLineRepresentation->GetDistance()).c_str());
+                    if (float v[3]{ pLineRepresentation->GetDistanceAnnotationScale()[0], pLineRepresentation->GetDistanceAnnotationScale()[1],pLineRepresentation->GetDistanceAnnotationScale()[2] }; ImGui::DragFloat3("DistanceAnnotationScale", v, .1f))
+                    {
+                        pLineRepresentation->SetDistanceAnnotationScale(v[0], v[1], v[2]);
+                    }
+                    {
+                        const char* modeText[] = { "Outside", "OnP1", "OnP2", "TranslatingP1", "TranslatingP2", "OnLine", "Scaling" };
+                        ImGui::Text(fmt::format("InteractionState: {}", modeText[pLineRepresentation->GetInteractionState()]).c_str());
+                    }
+                    vtkObjSetup("EndPointProperty", pLineRepresentation->GetEndPointProperty());
+                    vtkObjSetup("EndPoint2Property", pLineRepresentation->GetEndPoint2Property());
+                    vtkObjSetup("LineProperty", pLineRepresentation->GetLineProperty());
+                    vtkObjSetup("SelectedLineProperty", pLineRepresentation->GetSelectedLineProperty());
+                    vtkObjSetup("DistanceAnnotationProperty", pLineRepresentation->GetDistanceAnnotationProperty());
+                }
 
                 if (const auto pActor = vtkActor::SafeDownCast(vtkObj); pActor && ImGui::CollapsingHeader("vtkActor", ImGuiTreeNodeFlags_DefaultOpen))
                 {
@@ -805,35 +1008,7 @@ A value greater than 1 is a zoom-in, a value less than 1 is a zoom-out.
                 }
                 else if (const auto pVolume = vtkVolume::SafeDownCast(vtkObj); pVolume && ImGui::TreeNodeEx("vtkVolume", ImGuiTreeNodeFlags_DefaultOpen))
                 {
-                    // mapper
-                    if (const auto pGPUVolumeRayCastMapper = vtkGPUVolumeRayCastMapper::SafeDownCast(pVolume->GetMapper()); pGPUVolumeRayCastMapper && ImGui::TreeNodeEx("vtkGPUVolumeRayCastMapper", ImGuiTreeNodeFlags_DefaultOpen))
-                    {
-                        // BlendMode
-                        {
-                            const char* modeText[] = { "COMPOSITE_BLEND", "MAXIMUM_INTENSITY_BLEND", "MINIMUM_INTENSITY_BLEND", "AVERAGE_INTENSITY_BLEND", "ADDITIVE_BLEND", "ISOSURFACE_BLEND", "SLICE_BLEND" };
-                            if (auto v = pGPUVolumeRayCastMapper->GetBlendMode(); ImGui::Combo("BlendMode", &v, modeText, IM_ARRAYSIZE(modeText)))
-                            {
-                                pGPUVolumeRayCastMapper->SetBlendMode(v);
-                            }
-                        }
-                        if (float v = pGPUVolumeRayCastMapper->GetImageSampleDistance(); ImGui::SliderFloat("ImageSampleDistance", &v, 0., 10.))
-                        {
-                            pGPUVolumeRayCastMapper->SetImageSampleDistance(v);
-                        }
-                        if (float v = pGPUVolumeRayCastMapper->GetSampleDistance(); ImGui::SliderFloat("SampleDistance", &v, 0.01, 3.)) // 调到0.001会崩溃且变卡
-                        {
-                            pGPUVolumeRayCastMapper->SetSampleDistance(v);
-                        }
-                        if (bool v = pGPUVolumeRayCastMapper->GetAutoAdjustSampleDistances(); ImGui::Checkbox("AutoAdjustSampleDistances", &v))
-                        {
-                            pGPUVolumeRayCastMapper->SetAutoAdjustSampleDistances(v);
-                        }
-                        if (bool v = pGPUVolumeRayCastMapper->GetUseJittering(); ImGui::Checkbox("UseJittering", &v))
-                        {
-                            pGPUVolumeRayCastMapper->SetUseJittering(v);
-                        }
-                        ImGui::TreePop();
-                    }
+                    vtkObjSetup("Mapper", pVolume->GetMapper(), ImGuiTreeNodeFlags_DefaultOpen);
                     // property
                     if (const auto pVolumeProperty = pVolume->GetProperty(); pVolumeProperty && ImGui::TreeNodeEx("vtkVolumeProperty", ImGuiTreeNodeFlags_DefaultOpen))
                     {
@@ -938,9 +1113,7 @@ A value greater than 1 is a zoom-in, a value less than 1 is a zoom-out.
 
                     ImGui::TreePop();
                 }
-
-                ImGui::TreePop();
-}
+            }
 
             ImGui::TreePop();
         }

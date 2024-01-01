@@ -24,9 +24,17 @@
 #include "vtkPolyData.h"
 #include "vtkPolyDataMapper.h"
 #include <vtkImageSlab.h>
+#include <vtkLineWidget2.h>
+#include <vtkSplineWidget2.h>
+#include <vtkLineRepresentation.h>
+#include <vtkTransform.h>
+#include <vtkLinearTransform.h>
 #include <vtkImageSlabReslice.h>
 #include <vtkPolyDataMapper2D.h>
 #include <vtkResliceCursorWidget.h>
+#include <vtkBoxRepresentation.h>
+#include <vtkBoxWidget2.h>
+#include <vtkVolumeOutlineSource.h>
 #include "vtkRenderer.h"
 #include "vtkMatrix4x4.h"
 #include "vtkImageData.h"
@@ -42,6 +50,7 @@
 #include <vtkOpenGLActor.h>
 #include <vtkVolumeProperty.h>
 #include <vtkImageFlip.h>
+#include <vtkSplineRepresentation.h>
 #include <vtkPiecewiseFunction.h>
 #include <vtkAnnotatedCubeActor.h>
 #include <vtkColorTransferFunction.h>

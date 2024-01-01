@@ -2,6 +2,38 @@
 
 ImGuiNs::LogView logView;
 
+namespace {
+    // This does the actual work.
+    // Callback for the interaction
+    class vtkLineCallback : public vtkCommand
+    {
+    public:
+        static vtkLineCallback* New()
+        {
+            return new vtkLineCallback;
+        }
+
+        virtual void Execute(vtkObject* caller, unsigned long, void*)
+        {
+
+            vtkLineWidget2* lineWidget = reinterpret_cast<vtkLineWidget2*>(caller);
+
+            // Get the actual box coordinates of the line
+            vtkNew<vtkPolyData> polydata;
+            static_cast<vtkLineRepresentation*>(lineWidget->GetRepresentation())
+                ->GetPolyData(polydata);
+
+            // Display one of the points, just so we know it's working
+            double p[3];
+            polydata->GetPoint(0, p);
+            std::cout << "P: " << p[0] << " " << p[1] << " " << p[2] << std::endl;
+        }
+        vtkLineCallback()
+        {
+        }
+    };
+} // namespace
+
 class MyActorStyle : public vtkInteractorStyleTrackballActor
 {
 public:
@@ -78,12 +110,32 @@ int main(int argc, char* argv[])
     lineActor->GetProperty()->SetColor(0, 1, 0);
     ren->AddActor(lineActor);
 
+    vtkNew<vtkLineWidget2> lineWidget;
+    {
+        lineWidget->SetInteractor(iren);
+        lineWidget->CreateDefaultRepresentation();
+        double pt1[3]{ 50.0, 60.0, 0.0 };
+        double pt2[3]{ 90.0, 60.0, 0.0 };
+        lineWidget->GetLineRepresentation()->SetPoint1WorldPosition(pt1);
+        lineWidget->GetLineRepresentation()->SetPoint2WorldPosition(pt2);
+        vtkNew<vtkLineCallback> lineCallback;
+        lineWidget->AddObserver(vtkCommand::InteractionEvent, lineCallback);
+        renWin->Render();
+        lineWidget->On();
+    }
+
+    ::pWindow = renWin;
     ::imgui_render_callback = [&]
         {
-            ::logView.Draw();
+            if (ImGui::TreeNode("Log"))
+            {
+                ::logView.Draw();
+                ImGui::TreePop();
+            }
             ImGuiNs::vtkObjSetup("Source", lineSource, ImGuiTreeNodeFlags_DefaultOpen);
             ImGuiNs::vtkObjSetup("Mapper", lineMapper, ImGuiTreeNodeFlags_DefaultOpen);
             ImGuiNs::vtkObjSetup("Actor", lineActor, ImGuiTreeNodeFlags_DefaultOpen);
+            ImGuiNs::vtkObjSetup("LineWidget2", lineWidget, ImGuiTreeNodeFlags_DefaultOpen);
         };
 
     // Start rendering app

@@ -3,6 +3,27 @@
 
 ImGuiNs::LogView logView;
 
+namespace {
+    class vtkBoxCallback : public vtkCommand
+    {
+    public:
+        static vtkBoxCallback* New()
+        {
+            return new vtkBoxCallback;
+        }
+
+        void Execute(vtkObject* caller, unsigned long, void*) override
+        {
+            auto boxWidget = vtkBoxWidget2::SafeDownCast(caller);
+            vtkNew<vtkTransform> t;
+            vtkBoxRepresentation::SafeDownCast(boxWidget->GetRepresentation())->GetTransform(t);
+            this->m_actor->SetUserTransform(t);
+        }
+
+        vtkSmartPointer<vtkProp3D> m_actor;
+    };
+} // namespace
+
 int main(int argc, char* argv[])
 {
     vtkNew<vtkRenderer> ren;
@@ -62,6 +83,36 @@ int main(int argc, char* argv[])
     pVolume->SetProperty(pProperty);
     ren->AddVolume(pVolume);
 
+    vtkNew<vtkVolumeOutlineSource> pVOS;
+    {
+        pVOS->SetVolumeMapper(pMapper);
+
+        vtkNew<vtkPolyDataMapper> mapper;
+        mapper->SetInputConnection(pVOS->GetOutputPort());
+
+        vtkNew<vtkActor> actor;
+        actor->SetMapper(mapper);
+
+        ren->AddActor(actor);
+    }
+
+    vtkNew<vtkBoxWidget2> boxWidget;
+    {
+        boxWidget->SetInteractor(iren);
+        boxWidget->GetRepresentation()->SetPlaceFactor(1); // Default is 0.5
+        boxWidget->GetRepresentation()->PlaceWidget(pVolume->GetBounds());
+        boxWidget->RotationEnabledOff();
+
+        vtkNew<vtkBoxCallback> boxCallback;
+        boxCallback->m_actor = pVolume;
+        boxWidget->AddObserver(vtkCommand::InteractionEvent, boxCallback);
+
+        boxWidget->On();
+    }
+
+    ren->ResetCamera();
+
+    ::pWindow = renWin;
     ::imgui_render_callback = [&]
         {
             if (ImGui::TreeNode("Log"))
@@ -69,21 +120,9 @@ int main(int argc, char* argv[])
                 logView.Draw();
                 ImGui::TreePop();
             }
-            //if (ImGui::TreeNodeEx("Volume", ImGuiTreeNodeFlags_DefaultOpen))
-            {
-                ImGuiNs::vtkObjSetup("Volume", pVolume);
-                //ImGui::TreePop();
-            }
-            //if (ImGui::TreeNodeEx("Renderer"))
-            {
-                ImGuiNs::vtkObjSetup("Renderer", ren);
-                //ImGui::TreePop();
-            }
-            //f (ImGui::TreeNodeEx("Camera", ImGuiTreeNodeFlags_DefaultOpen))
-            {
-                ImGuiNs::vtkObjSetup("Camera", ren->GetActiveCamera());
-                //ImGui::TreePop();
-            }
+            ImGuiNs::vtkObjSetup("Volume", pVolume, ImGuiTreeNodeFlags_DefaultOpen);
+            ImGuiNs::vtkObjSetup("OutlineSrc", pVOS, ImGuiTreeNodeFlags_DefaultOpen);
+            ImGuiNs::vtkObjSetup("Box", boxWidget, ImGuiTreeNodeFlags_DefaultOpen);
             //ImPlot::ShowDemoWindow();
         };
 
