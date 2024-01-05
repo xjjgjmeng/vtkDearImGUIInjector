@@ -53,7 +53,15 @@ namespace ImGuiNs
                 // 继承自vtkObject
                 if (const auto pProp = vtkProp::SafeDownCast(vtkObj); pProp && ImGui::CollapsingHeader("vtkProp", ImGuiTreeNodeFlags_DefaultOpen))
                 {
-                    ImGui::InputScalarN("Bounds", ImGuiDataType_Double, pProp->GetBounds(), 6, nullptr, nullptr, nullptr, ImGuiInputTextFlags_ReadOnly);
+                    if (pProp->GetBounds())
+                    {
+                        ImGui::InputScalarN("Bounds", ImGuiDataType_Double, pProp->GetBounds(), 6, nullptr, nullptr, nullptr, ImGuiInputTextFlags_ReadOnly);
+                    }
+                    else
+                    {
+                        ImGui::Text("Bounds nullptr");
+                    }
+
                     if (pProp->GetMatrix())
                     {
                         ImGui::InputScalarN("Matrix0", ImGuiDataType_Double, pProp->GetMatrix()->GetData() + 0, 4, nullptr, nullptr, nullptr, ImGuiInputTextFlags_ReadOnly);
@@ -575,6 +583,8 @@ A value greater than 1 is a zoom-in, a value less than 1 is a zoom-out.
                         pImageViewer2->SetOffScreenRendering(v);
                     }
 
+                    ImGuiNs::vtkObjSetup("ImageActor", pImageViewer2->GetImageActor(), ImGuiTreeNodeFlags_DefaultOpen);
+
                     if (const auto pResliceImageViewer = vtkResliceImageViewer::SafeDownCast(vtkObj); pResliceImageViewer && ImGui::TreeNodeEx("vtkResliceImageViewer", ImGuiTreeNodeFlags_DefaultOpen))
                     {
                         if (bool v = pResliceImageViewer->GetSliceScrollOnMouseWheel(); ImGui::Checkbox("SliceScrollOnMouseWheel", &v))
@@ -621,15 +631,26 @@ A value greater than 1 is a zoom-in, a value less than 1 is a zoom-out.
                     }
                     ImGui::TreePop();
                 }
-                else if (const auto pInteractorObserver = vtkInteractorObserver::SafeDownCast(vtkObj); pInteractorObserver && ImGui::TreeNodeEx("vtkInteractorObserver", ImGuiTreeNodeFlags_DefaultOpen))
+                else if (const auto pInteractorObserver = vtkInteractorObserver::SafeDownCast(vtkObj); pInteractorObserver && ImGui::CollapsingHeader("vtkInteractorObserver", ImGuiTreeNodeFlags_DefaultOpen))
                 {
                     if (bool v = pInteractorObserver->GetEnabled(); ImGui::Checkbox("Enabled ", &v))
                     {
                         pInteractorObserver->SetEnabled(v);
                     }
 
-                    if (const auto pAbstractWidget = vtkAbstractWidget::SafeDownCast(vtkObj); pAbstractWidget && ImGui::TreeNodeEx("vtkAbstractWidget", ImGuiTreeNodeFlags_DefaultOpen))
+                    if (ImGui::Button("On")) pInteractorObserver->On(); ImGui::SameLine();
+                    if (ImGui::Button("Off")) pInteractorObserver->Off();
+
+                    if (const auto pAbstractWidget = vtkAbstractWidget::SafeDownCast(vtkObj); pAbstractWidget && ImGui::CollapsingHeader("vtkAbstractWidget", ImGuiTreeNodeFlags_DefaultOpen))
                     {
+                        if (bool v = pAbstractWidget->GetManagesCursor(); ImGui::Checkbox("ManagesCursor ", &v))
+                        {
+                            pAbstractWidget->SetManagesCursor(v);
+                        }
+                        if (bool v = pAbstractWidget->GetProcessEvents(); ImGui::Checkbox("ProcessEvents ", &v))
+                        {
+                            pAbstractWidget->SetProcessEvents(v);
+                        }
                         vtkObjSetup("Representation", pAbstractWidget->GetRepresentation(), ImGuiTreeNodeFlags_DefaultOpen);
                         if (const auto pResliceCursorWidget = vtkResliceCursorWidget::SafeDownCast(vtkObj); pResliceCursorWidget && ImGui::TreeNodeEx("vtkResliceCursorWidget", ImGuiTreeNodeFlags_DefaultOpen))
                         {
@@ -659,11 +680,25 @@ A value greater than 1 is a zoom-in, a value less than 1 is a zoom-out.
                         {
                             //vtkObjSetup("LineRepresentation", pLineWidget2->GetLineRepresentation(), ImGuiTreeNodeFlags_DefaultOpen);
                         }
-
-                        ImGui::TreePop();
+                        else if (const auto pDistanceWidget = vtkDistanceWidget::SafeDownCast(vtkObj); pDistanceWidget && ImGui::CollapsingHeader("vtkDistanceWidget", ImGuiTreeNodeFlags_DefaultOpen))
+                        {
+                            {
+                                const char* modeText[] = { "Start", "Define", "Manipulate" };
+                                ImGui::Text(fmt::format("WidgetState: {}", modeText[pDistanceWidget->GetWidgetState()]).c_str());
+                            }
+                        }
+                        else if (const auto pBorderWidget = vtkBorderWidget::SafeDownCast(vtkObj); pBorderWidget && ImGui::CollapsingHeader("vtkBorderWidget", ImGuiTreeNodeFlags_DefaultOpen))
+                        {
+                            if (bool v = pBorderWidget->GetResizable(); ImGui::Checkbox("Resizable ", &v))
+                            {
+                                pBorderWidget->SetResizable(v);
+                            }
+                            if (bool v = pBorderWidget->GetSelectable(); ImGui::Checkbox("Selectable ", &v))
+                            {
+                                pBorderWidget->SetSelectable(v);
+                            }
+                        }
                     }
-
-                    ImGui::TreePop();
                 }
                 else if (const auto pAlgorithm = vtkAlgorithm::SafeDownCast(vtkObj); pAlgorithm && ImGui::CollapsingHeader("vtkAlgorithm", ImGuiTreeNodeFlags_DefaultOpen))
                 {
@@ -845,6 +880,111 @@ A value greater than 1 is a zoom-in, a value less than 1 is a zoom-out.
                         }
                     }
                 }
+                else if (const auto pTextProperty = vtkTextProperty::SafeDownCast(vtkObj); pTextProperty && ImGui::CollapsingHeader("vtkTextProperty", ImGuiTreeNodeFlags_DefaultOpen))
+                {
+                    if (float v[3] = { pTextProperty->GetColor()[0],pTextProperty->GetColor()[1],pTextProperty->GetColor()[2] }; ImGui::ColorEdit3("Color", v))
+                    {
+                        pTextProperty->SetColor(v[0], v[1], v[2]);
+                    }
+                    if (double v = pTextProperty->GetOpacity(); ImGui::DragScalar("Opacity", ImGuiDataType_Double, &v, 0.01f))
+                    {
+                        pTextProperty->SetOpacity(v);
+                    }
+                    if (float v[3] = { pTextProperty->GetBackgroundColor()[0],pTextProperty->GetBackgroundColor()[1],pTextProperty->GetBackgroundColor()[2] }; ImGui::ColorEdit3("BackgroundColor", v))
+                    {
+                        pTextProperty->SetBackgroundColor(v[0], v[1], v[2]);
+                    }
+                    if (double v = pTextProperty->GetBackgroundOpacity(); ImGui::DragScalar("BackgroundOpacity", ImGuiDataType_Double, &v, 0.01f))
+                    {
+                        pTextProperty->SetBackgroundOpacity(v);
+                    }
+                    {
+                        double vRGBA[4];
+                        pTextProperty->GetBackgroundRGBA(vRGBA);
+                        if (float v[4] = { vRGBA[0],vRGBA[1],vRGBA[2],vRGBA[3] }; ImGui::ColorEdit4("BackgroundRGBA", v))
+                        {
+                            pTextProperty->SetBackgroundRGBA(v[0], v[1], v[2], v[3]);
+                        }
+                    }
+                    if (float v[3] = { pTextProperty->GetFrameColor()[0],pTextProperty->GetFrameColor()[1],pTextProperty->GetFrameColor()[2] }; ImGui::ColorEdit3("FrameColor", v))
+                    {
+                        pTextProperty->SetFrameColor(v[0], v[1], v[2]);
+                    }
+                    if (int v = pTextProperty->GetFrameWidth(); ImGui::DragInt("FrameWidth", &v))
+                    {
+                        pTextProperty->SetFrameWidth(v);
+                    }
+                    if (bool v = pTextProperty->GetFrame(); ImGui::Checkbox("Frame ", &v))
+                    {
+                        pTextProperty->SetFrame(v);
+                    }
+                    if (bool v = pTextProperty->GetBold(); ImGui::Checkbox("Bold ", &v))
+                    {
+                        pTextProperty->SetBold(v);
+                    }
+                    ImGui::SameLine();
+                    if (bool v = pTextProperty->GetItalic(); ImGui::Checkbox("Italic ", &v))
+                    {
+                        pTextProperty->SetItalic(v);
+                    }
+                    if (bool v = pTextProperty->GetInteriorLinesVisibility(); ImGui::Checkbox("InteriorLinesVisibility ", &v))
+                    {
+                        pTextProperty->SetInteriorLinesVisibility(v);
+                    }
+                    if (int v = pTextProperty->GetInteriorLinesWidth(); ImGui::DragInt("InteriorLinesWidth", &v))
+                    {
+                        pTextProperty->SetInteriorLinesWidth(v);
+                    }
+                    if (float v[3] = { pTextProperty->GetInteriorLinesColor()[0],pTextProperty->GetInteriorLinesColor()[1],pTextProperty->GetInteriorLinesColor()[2] }; ImGui::ColorEdit3("InteriorLinesColor", v))
+                    {
+                        pTextProperty->SetInteriorLinesColor(v[0], v[1], v[2]);
+                    }
+                    if (double v = pTextProperty->GetCellOffset(); ImGui::DragScalar("CellOffset", ImGuiDataType_Double, &v, 0.01f))
+                    {
+                        pTextProperty->SetCellOffset(v);
+                    }
+                    if (float v = pTextProperty->GetFontSize(); ImGui::SliderFloat("FontSize", &v, 0, 100))
+                    {
+                        pTextProperty->SetFontSize(v);
+                    }
+                    if (ImGui::Button("SetFontFamilyToArial")) pTextProperty->SetFontFamilyToArial();
+                    if (ImGui::Button("SetFontFamilyToCourier")) pTextProperty->SetFontFamilyToCourier();
+                    if (ImGui::Button("SetFontFamilyToTimes")) pTextProperty->SetFontFamilyToTimes();
+                }
+                else if (const auto pProperty2D = vtkProperty2D::SafeDownCast(vtkObj); pProperty2D && ImGui::CollapsingHeader("vtkProperty2D", ImGuiTreeNodeFlags_DefaultOpen))
+                {
+                    if (float v[3] = { pProperty2D->GetColor()[0],pProperty2D->GetColor()[1],pProperty2D->GetColor()[2] }; ImGui::ColorEdit3("Color", v))
+                    {
+                        pProperty2D->SetColor(v[0], v[1], v[2]);
+                    }
+                    if (double v = pProperty2D->GetOpacity(); ImGui::DragScalar("Opacity", ImGuiDataType_Double, &v, 0.01f))
+                    {
+                        pProperty2D->SetOpacity(v);
+                    }
+                    if (float v = pProperty2D->GetPointSize(); ImGui::DragFloat("PointSize", &v, 0.01f))
+                    {
+                        pProperty2D->SetPointSize(v);
+                    }
+                    if (float v = pProperty2D->GetLineWidth(); ImGui::DragFloat("LineWidth", &v, 0.01f))
+                    {
+                        pProperty2D->SetLineWidth(v);
+                    }
+                    if (int v = pProperty2D->GetLineStipplePattern(); ImGui::DragInt("LineStipplePattern", &v))
+                    {
+                        pProperty2D->SetLineStipplePattern(v);
+                    }
+                    if (int v = pProperty2D->GetLineStippleRepeatFactor(); ImGui::DragInt("LineStippleRepeatFactor", &v))
+                    {
+                        pProperty2D->SetLineStippleRepeatFactor(v);
+                    }
+                    {
+                        const char* modeText[] = { "VTK_BACKGROUND_LOCATION", "VTK_FOREGROUND_LOCATION" };
+                        if (auto v = pProperty2D->GetDisplayLocation(); ImGui::Combo("DisplayLocation", &v, modeText, IM_ARRAYSIZE(modeText)))
+                        {
+                            pProperty2D->SetDisplayLocation(v);
+                        }
+                    }
+                }
 
                 // 继承自vtkProp
                 if (const auto pProp3D = vtkProp3D::SafeDownCast(vtkObj); pProp3D && ImGui::CollapsingHeader("vtkProp3D", ImGuiTreeNodeFlags_DefaultOpen))
@@ -922,6 +1062,88 @@ A value greater than 1 is a zoom-in, a value less than 1 is a zoom-out.
                     }
                     ImGui::Text(fmt::format("InteractionState: {}", pWidgetRepresentation->GetInteractionState()).c_str());
                 }
+                else if (const auto pActor2D = vtkActor2D::SafeDownCast(vtkObj); pActor2D && ImGui::CollapsingHeader("vtkActor2D", ImGuiTreeNodeFlags_DefaultOpen))
+                {
+                    if (float v = pActor2D->GetWidth(); ImGui::SliderFloat("Width", &v, 0, 100))
+                    {
+                        pActor2D->SetWidth(v);
+                    }
+                    if (float v = pActor2D->GetHeight(); ImGui::SliderFloat("Height", &v, 0, 100))
+                    {
+                        pActor2D->SetHeight(v);
+                    }
+                    if (float v[2]{ pActor2D->GetPosition()[0], pActor2D->GetPosition()[1] }; ImGui::DragFloat2("Position", v, 0.01f))
+                    {
+                        pActor2D->SetPosition(v[0], v[1]);
+                    }
+                    if (float v[2]{ pActor2D->GetPosition2()[0], pActor2D->GetPosition2()[1] }; ImGui::DragFloat2("Position2", v, 0.01f))
+                    {
+                        pActor2D->SetPosition2(v[0], v[1]);
+                    }
+                }
+
+                // 继承自vtkActor2D
+                if (const auto pAxisActor2D = vtkAxisActor2D::SafeDownCast(vtkObj); pAxisActor2D && ImGui::CollapsingHeader("vtkAxisActor2D", ImGuiTreeNodeFlags_DefaultOpen))
+                {
+                    ImGui::Text(fmt::format("Title: {}", pAxisActor2D->GetTitle()).c_str());
+                    if (float v[2]{ pAxisActor2D->GetPoint1()[0], pAxisActor2D->GetPoint1()[1] }; ImGui::DragFloat2("Point1", v, 0.01f))
+                    {
+                        pAxisActor2D->SetPoint1(v[0], v[1]);
+                    }
+                    if (float v[2]{ pAxisActor2D->GetPoint2()[0], pAxisActor2D->GetPoint2()[1] }; ImGui::DragFloat2("Point2", v, 0.01f))
+                    {
+                        pAxisActor2D->SetPoint2(v[0], v[1]);
+                    }
+                    if (bool v = pAxisActor2D->GetRulerMode(); ImGui::Checkbox("RulerMode ", &v))
+                    {
+                        pAxisActor2D->SetRulerMode(v);
+                    }
+                    if (bool v = pAxisActor2D->GetAdjustLabels(); ImGui::Checkbox("AdjustLabels ", &v))
+                    {
+                        pAxisActor2D->SetAdjustLabels(v);
+                    }
+                    if (bool v = pAxisActor2D->GetAxisVisibility(); ImGui::Checkbox("AxisVisibility ", &v))
+                    {
+                        pAxisActor2D->SetAxisVisibility(v);
+                    }
+                    if (bool v = pAxisActor2D->GetTickVisibility(); ImGui::Checkbox("TickVisibility ", &v))
+                    {
+                        pAxisActor2D->SetTickVisibility(v);
+                    }
+                    if (bool v = pAxisActor2D->GetLabelVisibility(); ImGui::Checkbox("LabelVisibility ", &v))
+                    {
+                        pAxisActor2D->SetLabelVisibility(v);
+                    }
+                    if (bool v = pAxisActor2D->GetTitleVisibility(); ImGui::Checkbox("TitleVisibility ", &v))
+                    {
+                        pAxisActor2D->SetTitleVisibility(v);
+                    }
+                    if (float v = pAxisActor2D->GetRulerDistance(); ImGui::SliderFloat("RulerDistance", &v, 0., 20.))
+                    {
+                        pAxisActor2D->SetRulerDistance(v);
+                    }
+                    if (int v = pAxisActor2D->GetNumberOfLabels(); ImGui::DragInt("NumberOfLabels", &v))
+                    {
+                        pAxisActor2D->SetNumberOfLabels(v);
+                    }
+                    if (int v = pAxisActor2D->GetTickOffset(); ImGui::DragInt("TickOffset", &v))
+                    {
+                        pAxisActor2D->SetTickOffset(v);
+                    }
+                    if (int v = pAxisActor2D->GetTickLength(); ImGui::DragInt("TickLength", &v))
+                    {
+                        pAxisActor2D->SetTickLength(v);
+                    }
+                    if (bool v = pAxisActor2D->GetUseFontSizeFromProperty(); ImGui::Checkbox("UseFontSizeFromProperty ", &v))
+                    {
+                        pAxisActor2D->SetUseFontSizeFromProperty(v);
+                    }
+                    if (double v = pAxisActor2D->GetFontFactor(); ImGui::DragScalar("FontFactor", ImGuiDataType_Double, &v, 0.01f))
+                    {
+                        pAxisActor2D->SetFontFactor(v); // 需要手动刷新？？
+                    }
+                    vtkObjSetup("TitleTextProperty", pAxisActor2D->GetTitleTextProperty());
+                }
 
                 // 继承自vtkWidgetRepresentation
                 if (const auto pBoxRepresentation = vtkBoxRepresentation::SafeDownCast(vtkObj); pBoxRepresentation && ImGui::CollapsingHeader("vtkBoxRepresentation", ImGuiTreeNodeFlags_DefaultOpen))
@@ -979,16 +1201,218 @@ A value greater than 1 is a zoom-in, a value less than 1 is a zoom-out.
                     vtkObjSetup("SelectedLineProperty", pLineRepresentation->GetSelectedLineProperty());
                     vtkObjSetup("DistanceAnnotationProperty", pLineRepresentation->GetDistanceAnnotationProperty());
                 }
+                else if (const auto pDistanceRepresentation = vtkDistanceRepresentation::SafeDownCast(vtkObj); pDistanceRepresentation && ImGui::CollapsingHeader("vtkDistanceRepresentation", ImGuiTreeNodeFlags_DefaultOpen))
+                {
+                    {
+                        const char* modeText[] = { "Outside", "NearP1", "NearP2" };
+                        ImGui::Text(fmt::format("InteractionState: {}", modeText[pDistanceRepresentation->GetInteractionState()]).c_str());
+                    }
+                    ImGui::Text(fmt::format("Distance: {}", pDistanceRepresentation->GetDistance()).c_str());
+                    if (bool v = pDistanceRepresentation->GetRulerMode(); ImGui::Checkbox("RulerMode ", &v))
+                    {
+                        pDistanceRepresentation->SetRulerMode(v);
+                    }
+                    if (float v = pDistanceRepresentation->GetRulerDistance(); ImGui::SliderFloat("RulerDistance", &v, 0., 20.))
+                    {
+                        pDistanceRepresentation->SetRulerDistance(v);
+                    }
+                    if (int v = pDistanceRepresentation->GetNumberOfRulerTicks(); ImGui::SliderInt("NumberOfRulerTicks", &v, 0., 20.))
+                    {
+                        pDistanceRepresentation->SetNumberOfRulerTicks(v);
+                    }
+                    if (float v = pDistanceRepresentation->GetScale(); ImGui::SliderFloat("Scale", &v, 0., 10.))
+                    {
+                        pDistanceRepresentation->SetScale(v);
+                    }
+                    if (double v[3]; pDistanceRepresentation->GetPoint1WorldPosition(v), ImGui::DragScalarN("Point1WorldPosition", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), 0.0001f))
+                    {
+                        pDistanceRepresentation->SetPoint1WorldPosition(v);
+                    }
+                    if (double v[3]; pDistanceRepresentation->GetPoint2WorldPosition(v), ImGui::DragScalarN("Point2WorldPosition", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), 0.0001f))
+                    {
+                        pDistanceRepresentation->SetPoint2WorldPosition(v);
+                    }
+                    if (double v[3]; pDistanceRepresentation->GetPoint1DisplayPosition(v), ImGui::DragScalarN("Point1DisplayPosition", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), 0.1f))
+                    {
+                        pDistanceRepresentation->SetPoint1DisplayPosition(v);
+                    }
+                    if (double v[3]; pDistanceRepresentation->GetPoint2DisplayPosition(v), ImGui::DragScalarN("Point2DisplayPosition", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), 0.1f))
+                    {
+                        pDistanceRepresentation->SetPoint2DisplayPosition(v);
+                    }
+                    if (int v = pDistanceRepresentation->GetTolerance(); ImGui::DragInt("Tolerance", &v))
+                    {
+                        pDistanceRepresentation->SetTolerance(v);
+                    }
+                    vtkObjSetup("Point1Representation", pDistanceRepresentation->GetPoint1Representation());
+                    vtkObjSetup("Point2Representation", pDistanceRepresentation->GetPoint2Representation());
+                }
+                else if (const auto pBorderRepresentation = vtkBorderRepresentation::SafeDownCast(vtkObj); pBorderRepresentation && ImGui::CollapsingHeader("vtkBorderRepresentation", ImGuiTreeNodeFlags_DefaultOpen))
+                {
+                    if (float v[2]{ pBorderRepresentation->GetPosition()[0], pBorderRepresentation->GetPosition()[1] }; ImGui::DragFloat2("Position", v, 0.01f))
+                    {
+                        pBorderRepresentation->SetPosition(v[0], v[1]);
+                    }
+                    if (float v[2]{ pBorderRepresentation->GetPosition2()[0], pBorderRepresentation->GetPosition2()[1] }; ImGui::DragFloat2("Position2", v, 0.01f))
+                    {
+                        pBorderRepresentation->SetPosition2(v[0], v[1]);
+                    }
+                    if (float v[3] = { pBorderRepresentation->GetBorderColor()[0],pBorderRepresentation->GetBorderColor()[1],pBorderRepresentation->GetBorderColor()[2] }; ImGui::ColorEdit3("BorderColor", v))
+                    {
+                        pBorderRepresentation->SetBorderColor(v[0], v[1], v[2]);
+                    }
+                    if (float v[3] = { pBorderRepresentation->GetPolygonColor()[0],pBorderRepresentation->GetPolygonColor()[1],pBorderRepresentation->GetPolygonColor()[2] }; ImGui::ColorEdit3("PolygonColor", v))
+                    {
+                        pBorderRepresentation->SetPolygonColor(v[0], v[1], v[2]);
+                    }
+                    if (double v = pBorderRepresentation->GetPolygonOpacity(); ImGui::DragScalar("PolygonOpacity", ImGuiDataType_Double, &v, 0.01f))
+                    {
+                        pBorderRepresentation->SetPolygonOpacity(v);
+                    }
+                    {
+                        double vPolygonRGBA[4];
+                        pBorderRepresentation->GetPolygonRGBA(vPolygonRGBA);
+                        if (float v[4] = { vPolygonRGBA[0],vPolygonRGBA[1],vPolygonRGBA[2],vPolygonRGBA[3] }; ImGui::ColorEdit4("PolygonRGBA", v))
+                        {
+                            pBorderRepresentation->SetPolygonRGBA(v[0], v[1], v[2], v[3]);
+                        }
+                    }
+                    if (double v = pBorderRepresentation->GetCornerRadiusStrength(); ImGui::DragScalar("CornerRadiusStrength", ImGuiDataType_Double, &v, 0.01f))
+                    {
+                        pBorderRepresentation->SetCornerRadiusStrength(v);
+                    }
+                    if (int v = pBorderRepresentation->GetCornerResolution(); ImGui::DragInt("CornerResolution", &v))
+                    {
+                        pBorderRepresentation->SetCornerResolution(v);
+                    }
+                    if (float v = pBorderRepresentation->GetBorderThickness(); ImGui::DragFloat("BorderThickness", &v, 0.01f))
+                    {
+                        pBorderRepresentation->SetBorderThickness(v);
+                    }
+                    if (int v = pBorderRepresentation->GetTolerance(); ImGui::DragInt("Tolerance", &v))
+                    {
+                        pBorderRepresentation->SetTolerance(v);
+                    }
+                    {
+                        const char* modeText[] = { "AnyLocation", "LowerLeftCorner", "LowerRightCorner", "LowerCenter", "UpperLeftCorner", "UpperRightCorner", "UpperCenter" };
+                        if (auto v = pBorderRepresentation->GetWindowLocation(); ImGui::Combo("WindowLocation", &v, modeText, IM_ARRAYSIZE(modeText)))
+                        {
+                            pBorderRepresentation->SetWindowLocation(v);
+                        }
+                    }
+                    {
+                        double v[2];
+                        ImGui::Text(fmt::format("Size: {}", (pBorderRepresentation->GetSize(v), v)).c_str()); // ??
+                    }
+                    ImGui::Text(fmt::format("ShowBorderMinValue: {}", pBorderRepresentation->GetShowBorderMinValue()).c_str());
+                    ImGui::Text(fmt::format("ShowBorderMaxValue: {}", pBorderRepresentation->GetShowBorderMaxValue()).c_str());
+                    ImGui::Text(fmt::format("Moving: {}", pBorderRepresentation->GetMoving()).c_str());
+                    {
+                        const char* modeText[] = { "BORDER_OFF", "BORDER_ON", "BORDER_ACTIVE" };
+                        if (auto v = pBorderRepresentation->GetShowBorder(); ImGui::Combo("ShowBorder", &v, modeText, IM_ARRAYSIZE(modeText)))
+                        {
+                            pBorderRepresentation->SetShowBorder(v);
+                        }
+                    }
+                    {
+                        const char* modeText[] = { "BORDER_OFF", "BORDER_ON", "BORDER_ACTIVE" };
+                        if (auto v = pBorderRepresentation->GetShowVerticalBorder(); ImGui::Combo("ShowVerticalBorder", &v, modeText, IM_ARRAYSIZE(modeText)))
+                        {
+                            pBorderRepresentation->SetShowVerticalBorder(v);
+                        }
+                    }
+                    {
+                        const char* modeText[] = { "BORDER_OFF", "BORDER_ON", "BORDER_ACTIVE" };
+                        if (auto v = pBorderRepresentation->GetShowHorizontalBorder(); ImGui::Combo("ShowHorizontalBorder", &v, modeText, IM_ARRAYSIZE(modeText)))
+                        {
+                            pBorderRepresentation->SetShowHorizontalBorder(v);
+                        }
+                    }
+                    {
+                        const char* modeText[] = { "BORDER_OFF", "BORDER_ON", "BORDER_ACTIVE" };
+                        if (auto v = pBorderRepresentation->GetShowPolygonBackground(); ImGui::Combo("ShowPolygonBackground", &v, modeText, IM_ARRAYSIZE(modeText)))
+                        {
+                            pBorderRepresentation->SetShowPolygonBackground(v);
+                        }
+                    }
+                    {
+                        const char* modeText[] = { "BORDER_OFF", "BORDER_ON", "BORDER_ACTIVE" };
+                        if (auto v = pBorderRepresentation->GetShowPolygon(); ImGui::Combo("ShowPolygon", &v, modeText, IM_ARRAYSIZE(modeText)))
+                        {
+                            pBorderRepresentation->SetShowPolygon(v);
+                        }
+                    }
+                }
+                else if (const auto pHandleRepresentation = vtkHandleRepresentation::SafeDownCast(vtkObj); pHandleRepresentation && ImGui::CollapsingHeader("vtkHandleRepresentation", ImGuiTreeNodeFlags_DefaultOpen))
+                {
+                    {
+                        char* v[] = {"Outside","Nearby", "Selecting", "Translating", "Scaling"};
+                        ImGui::Text(fmt::format("InteractionState: {}", v[pHandleRepresentation->GetInteractionState()]).c_str());
+                    }
+                    {
+                        double dv[3];
+                        if (float v[3]; pHandleRepresentation->GetDisplayPosition(dv), v[0] = dv[0], v[1] = dv[1], v[2] = dv[2], ImGui::DragFloat3("DisplayPosition", v, 0.1f))
+                        {
+                            dv[0] = v[0];
+                            dv[1] = v[1];
+                            dv[2] = v[2];
+                            pHandleRepresentation->SetDisplayPosition(dv);
+                        }
+                    }
+                    {
+                        double dv[3];
+                        if (float v[3]; pHandleRepresentation->GetWorldPosition(dv), v[0] = dv[0], v[1] = dv[1], v[2] = dv[2], ImGui::DragFloat3("WorldPosition", v, 0.1f))
+                        {
+                            dv[0] = v[0];
+                            dv[1] = v[1];
+                            dv[2] = v[2];
+                            pHandleRepresentation->SetWorldPosition(dv);
+                        }
+                    }
+                    if (int v = pHandleRepresentation->GetTolerance(); ImGui::DragInt("Tolerance", &v))
+                    {
+                        pHandleRepresentation->SetTolerance(v);
+                    }
+                    if (bool v = pHandleRepresentation->GetActiveRepresentation(); ImGui::Checkbox("ActiveRepresentation", &v))
+                    {
+                        pHandleRepresentation->SetActiveRepresentation(v);
+                    }
+                    if (bool v = pHandleRepresentation->GetConstrained(); ImGui::Checkbox("Constrained", &v))
+                    {
+                        pHandleRepresentation->SetConstrained(v);
+                    }
+                    {
+                        double v[2]{ 0.1, 0.1 };
+                        if (ImGui::Button("Translate")) pHandleRepresentation->Translate(v);
+                    }
+                }
+
+                // 继承自vtkHandleRepresentation
+                if (const auto pPointHandleRepresentation2D = vtkPointHandleRepresentation2D::SafeDownCast(vtkObj); pPointHandleRepresentation2D && ImGui::CollapsingHeader("vtkPointHandleRepresentation2D", ImGuiTreeNodeFlags_DefaultOpen))
+                {
+                    if (ImGui::Button("Highlight")) pPointHandleRepresentation2D->Highlight(1);
+                }
+
+                // 继承自vtkDistanceRepresentation
+                if (const auto pDistanceRepresentation2D = vtkDistanceRepresentation2D::SafeDownCast(vtkObj); pDistanceRepresentation2D && ImGui::CollapsingHeader("vtkDistanceRepresentation2D", ImGuiTreeNodeFlags_DefaultOpen))
+                {
+                    vtkObjSetup("Axis", pDistanceRepresentation2D->GetAxis());
+                    vtkObjSetup("AxisProperty", pDistanceRepresentation2D->GetAxisProperty());
+                }
+                else if (const auto pDistanceRepresentation3D = vtkDistanceRepresentation3D::SafeDownCast(vtkObj); pDistanceRepresentation3D && ImGui::CollapsingHeader("vtkDistanceRepresentation3D", ImGuiTreeNodeFlags_DefaultOpen))
+                {
+
+                }
 
                 if (const auto pActor = vtkActor::SafeDownCast(vtkObj); pActor && ImGui::CollapsingHeader("vtkActor", ImGuiTreeNodeFlags_DefaultOpen))
                 {
                     vtkObjSetup("Property", pActor->GetProperty(), ImGuiTreeNodeFlags_DefaultOpen);
                 }
-                else if (const auto pImageSlice = vtkImageSlice::SafeDownCast(vtkObj); pImageSlice && ImGui::TreeNodeEx("vtkImageSlice"))
+                else if (const auto pImageSlice = vtkImageSlice::SafeDownCast(vtkObj); pImageSlice && ImGui::TreeNodeEx("vtkImageSlice", ImGuiTreeNodeFlags_DefaultOpen))
                 {
-                    if (const auto pImageActor = vtkImageActor::SafeDownCast(vtkObj); pImageActor && ImGui::TreeNodeEx("vtkImageActor"))
+                    if (const auto pImageActor = vtkImageActor::SafeDownCast(vtkObj); pImageActor && ImGui::TreeNodeEx("vtkImageActor", ImGuiTreeNodeFlags_DefaultOpen))
                     {
-                        if (int v[6]; pImageActor->GetDisplayExtent(v), ImGui::DragScalarN("DisplayExtent", ImGuiDataType_S32, v, std::size(v), 0.01f))
+                        if (int v[6]; pImageActor->GetDisplayExtent(v), ImGui::DragScalarN("DisplayExtent", ImGuiDataType_S32, v, std::size(v)))
                         {
                             pImageActor->SetDisplayExtent(v);
                         }

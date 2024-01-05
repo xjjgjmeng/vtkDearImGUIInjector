@@ -26,6 +26,9 @@
 #include <vtkImageSlab.h>
 #include <vtkLineWidget2.h>
 #include <vtkSplineWidget2.h>
+#include <vtkProperty2D.h>
+#include <vtkHandleRepresentation.h>
+#include <vtkPointHandleRepresentation2D.h>
 #include <vtkLineRepresentation.h>
 #include <vtkTransform.h>
 #include <vtkLinearTransform.h>
@@ -34,6 +37,15 @@
 #include <vtkResliceCursorWidget.h>
 #include <vtkBoxRepresentation.h>
 #include <vtkBoxWidget2.h>
+#include <vtkDistanceWidget.h>
+#include <vtkDistanceRepresentation.h>
+#include <vtkDistanceRepresentation2D.h>
+#include <vtkDistanceRepresentation3D.h>
+#include <vtkBorderRepresentation.h>
+#include <vtkBorderWidget.h>
+#include <vtkWidgetEvent.h>
+#include <vtkAxisActor2D.h>
+#include <vtkWidgetCallbackMapper.h>
 #include <vtkVolumeOutlineSource.h>
 #include "vtkRenderer.h"
 #include "vtkMatrix4x4.h"

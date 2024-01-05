@@ -1,4 +1,4 @@
-set(ProId SplineWidget2)
+set(ProId Widget_BorderWidget)
 
 file(GLOB_RECURSE header_file "*.h")
 file(GLOB source_file "*.cpp" "*.cxx")
