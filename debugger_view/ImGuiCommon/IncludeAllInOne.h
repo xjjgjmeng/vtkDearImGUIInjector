@@ -116,6 +116,13 @@
 #include <vtkImageActorPointPlacer.h>
 #include <vtkParametricSpline.h>
 #include <vtkParametricFunctionSource.h>
+#include <vtkJPEGReader.h>
+#include <vtkCylinderSource.h>
+#include <vtkLight.h>
+#include <vtkCaptionRepresentation.h>
+#include <vtkCaptionActor2D.h>
+#include <vtkCaptionWidget.h>
+#include <vtkOutlineFilter.h>
 #include <vtkWeakPointer.h>
 #include <vtkAxesActor.h>
 #include <vtkOrientationMarkerWidget.h>
