@@ -7,6 +7,7 @@
 #include <string_view>
 #include <functional>
 #include <filesystem>
+#include <thread>
 
 #include "vtkDearImGuiInjector.h"
 
@@ -23,7 +24,13 @@
 #include "vtkImageReslice.h"
 #include "vtkPolyData.h"
 #include "vtkPolyDataMapper.h"
+#include <vtkShortArray.h>
+#include <vtkLine.h>
 #include <vtkImageSlab.h>
+#include <vtkImageSliceMapper.h>
+#include <vtkImageProperty.h>
+#include <vtkFlyingEdges3D.h>
+#include <vtkMarchingCubes.h>
 #include <vtkLineWidget2.h>
 #include <vtkSplineWidget2.h>
 #include <vtkProperty2D.h>
@@ -33,6 +40,7 @@
 #include <vtkTransform.h>
 #include <vtkLinearTransform.h>
 #include <vtkImageSlabReslice.h>
+#include <vtkKdTreePointLocator.h>
 #include <vtkPolyDataMapper2D.h>
 #include <vtkResliceCursorWidget.h>
 #include <vtkBoxRepresentation.h>
@@ -91,6 +99,7 @@
 #include <vtkTextProperty.h>
 #include <vtkPlaneSource.h>
 #include <vtkPropAssembly.h>
+#include <vtkPolyLine.h>
 #include <vtkInformation.h>
 #include <vtkMath.h>
 #include <vtkTexture.h>
@@ -99,7 +108,9 @@
 #include <vtkImageGaussianSmooth.h>
 #include <vtkImageMathematics.h>
 #include <vtkPolygon.h>
+#include <vtkExtractVOI.h>
 #include <vtkRendererCollection.h>
+#include <vtkImageThreshold.h>
 #include <vtkTriangle.h>
 #include <vtkCellArray.h>
 #include <vtkProp3DCollection.h>

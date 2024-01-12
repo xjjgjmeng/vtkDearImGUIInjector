@@ -1,5 +1,24 @@
 ﻿#include "ImGuiCommon.h"
 
+namespace
+{
+    void vtkFlyingEdges3D_setup(vtkFlyingEdges3D* obj)
+    {
+        if (double v = obj->GetValue(0); ImGui::InputDouble("Value", &v, 100.f, 100.0f, "%.8f"))
+        {
+            obj->SetValue(0, v);
+        }
+    }
+
+    void vtkMarchingCubes_setup(vtkMarchingCubes* obj)
+    {
+        if (double v = obj->GetValue(0); ImGui::InputDouble("Value", &v, 100.f, 100.0f, "%.8f"))
+        {
+            obj->SetValue(0, v);
+        }
+    }
+}
+
 namespace ImGuiNs
 {
     void HelpMarker(const char* desc)
@@ -729,7 +748,51 @@ A value greater than 1 is a zoom-in, a value less than 1 is a zoom-out.
 
                                 ImGui::TreePop();
                             }
+                            else if (const auto pImageThreshold = vtkImageThreshold::SafeDownCast(vtkObj); pImageThreshold && ImGui::CollapsingHeader("vtkImageThreshold", ImGuiTreeNodeFlags_DefaultOpen))
+                            {
+                                ImGui::Text("OutputScalarType: %d", pImageThreshold->GetOutputScalarType());
+                                if (bool v = pImageThreshold->GetReplaceIn(); ImGui::Checkbox("ReplaceIn ", &v))
+                                {
+                                    pImageThreshold->SetReplaceIn(v);
+                                }
+                                if (bool v = pImageThreshold->GetReplaceOut(); ImGui::Checkbox("ReplaceOut ", &v))
+                                {
+                                    pImageThreshold->SetReplaceOut(v);
+                                }
+                                if (float v = pImageThreshold->GetInValue(); ImGui::DragFloat("InValue", &v))
+                                {
+                                    pImageThreshold->SetInValue(v);
+                                }
+                                if (float v = pImageThreshold->GetOutValue(); ImGui::DragFloat("OutValue", &v))
+                                {
+                                    pImageThreshold->SetOutValue(v);
+                                }
+                                {
+                                    float l = pImageThreshold->GetLowerThreshold();
+                                    float u = pImageThreshold->GetUpperThreshold();
+                                    if (ImGui::DragFloatRange2("ThresholdBetween", &l, &u))
+                                    {
+                                        pImageThreshold->ThresholdBetween(l, u);
+                                    }
+                                    if (ImGui::DragFloat("ThresholdByLower", &u))
+                                    {
+                                        pImageThreshold->ThresholdByLower(u);
+                                    }
+                                    if (ImGui::DragFloat("ThresholdByUpper", &l))
+                                    {
+                                        pImageThreshold->ThresholdByUpper(l);
+                                    }
+                                }
+                            }
                             ImGui::TreePop();
+                        }
+                        else if (const auto pExtractVOI = vtkExtractVOI::SafeDownCast(vtkObj); pExtractVOI && ImGui::CollapsingHeader("vtkExtractVOI", ImGuiTreeNodeFlags_DefaultOpen))
+                        {
+                            if (int v[6]; pExtractVOI->GetVOI(v), ImGui::DragScalarN("VOI", ImGuiDataType_S32, v, IM_ARRAYSIZE(v)))
+                            {
+                                pExtractVOI->SetVOI(v);
+                                pExtractVOI->Update();
+                            }
                         }
                         ImGui::TreePop();
                     }
@@ -791,6 +854,14 @@ A value greater than 1 is a zoom-in, a value less than 1 is a zoom-out.
                                 pVolumeOutlineSource->SetActivePlaneId(v);
                             }
                             ImGui::TreePop();
+                        }
+                        else if (const auto pFlyingEdges3D = vtkFlyingEdges3D::SafeDownCast(vtkObj); pFlyingEdges3D && ImGui::CollapsingHeader("vtkFlyingEdges3D", ImGuiTreeNodeFlags_DefaultOpen))
+                        {
+                            ::vtkFlyingEdges3D_setup(pFlyingEdges3D);
+                        }
+                        else if (const auto pMarchingCubes = vtkMarchingCubes::SafeDownCast(vtkObj); pMarchingCubes && ImGui::CollapsingHeader("vtkMarchingCubes", ImGuiTreeNodeFlags_DefaultOpen))
+                        {
+                            ::vtkMarchingCubes_setup(pMarchingCubes);
                         }
                         ImGui::TreePop();
                     }
@@ -1404,6 +1475,45 @@ A value greater than 1 is a zoom-in, a value less than 1 is a zoom-out.
 
                 }
 
+                // vtkImageMapper3D
+                if (const auto pImageSliceMapper = vtkImageSliceMapper::SafeDownCast(vtkObj); pImageSliceMapper && ImGui::CollapsingHeader("vtkImageSliceMapper", ImGuiTreeNodeFlags_DefaultOpen))
+                {
+                    ImGui::Text("Orientation: %d", pImageSliceMapper->GetOrientation()); ImGui::SameLine();
+                    if (ImGui::Button("OX")) pImageSliceMapper->SetOrientationToX(); ImGui::SameLine();
+                    if (ImGui::Button("OY")) pImageSliceMapper->SetOrientationToY(); ImGui::SameLine();
+                    if (ImGui::Button("OZ")) pImageSliceMapper->SetOrientationToZ(); ImGui::SameLine();
+                    if (ImGui::Button("OI")) pImageSliceMapper->SetOrientationToI(); ImGui::SameLine();
+                    if (ImGui::Button("OJ")) pImageSliceMapper->SetOrientationToJ(); ImGui::SameLine();
+                    if (ImGui::Button("OK")) pImageSliceMapper->SetOrientationToK();
+                    ImGui::Text("SliceNumberMinValue: %d", pImageSliceMapper->GetSliceNumberMinValue());
+                    ImGui::Text("SliceNumberMaxValue: %d", pImageSliceMapper->GetSliceNumberMaxValue());
+                    {
+                        double v[6];
+                        pImageSliceMapper->GetIndexBounds(v);
+                        ImGui::InputScalarN("IndexBounds", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), nullptr, nullptr, nullptr, ImGuiInputTextFlags_ReadOnly);
+                    }
+                    if (int v = pImageSliceMapper->GetSliceNumber(); ImGui::DragInt("SliceNumber", &v))
+                    {
+                        pImageSliceMapper->SetSliceNumber(v);
+                    }
+                    //if (int v[6]; pImageSliceMapper->GetDisplayExtent(v), ImGui::DragScalarN("DisplayExtent", ImGuiDataType_S32, v, std::size(v)))
+                    //{
+                    //    pImageSliceMapper->SetDisplayExtent(v);
+                    //}
+                    if (double v[6]; pImageSliceMapper->GetBounds(v), ImGui::DragScalarN("Bounds", ImGuiDataType_Double, v, std::size(v), 0.01f))
+                    {
+                        //pImageActor->SetBounds(v);
+                    }
+                    if (bool v = pImageSliceMapper->GetCropping(); ImGui::Checkbox("Cropping", &v))
+                    {
+                        pImageSliceMapper->SetCropping(v);
+                    }
+                    if (int v[6]; pImageSliceMapper->GetCroppingRegion(v), ImGui::DragScalarN("CroppingRegion", ImGuiDataType_S32, v, std::size(v)))
+                    {
+                        pImageSliceMapper->SetCroppingRegion(v);
+                    }
+                }
+
                 if (const auto pActor = vtkActor::SafeDownCast(vtkObj); pActor && ImGui::CollapsingHeader("vtkActor", ImGuiTreeNodeFlags_DefaultOpen))
                 {
                     vtkObjSetup("Property", pActor->GetProperty(), ImGuiTreeNodeFlags_DefaultOpen);
@@ -1461,6 +1571,8 @@ A value greater than 1 is a zoom-in, a value less than 1 is a zoom-out.
                         {
                             pVolumeProperty->SetSpecularPower(v);
                         }
+                        ImGui::Text("ColorChannels: %d", pVolumeProperty->GetColorChannels());
+
                         // InterpolationType
                         {
                             const char* modeText[] = { "VTK_NEAREST_INTERPOLATION", "VTK_LINEAR_INTERPOLATION", "VTK_CUBIC_INTERPOLATION" };
@@ -1485,6 +1597,12 @@ A value greater than 1 is a zoom-in, a value less than 1 is a zoom-out.
                                         pPiecewiseFunction->SetNodeValue(i, nodeValue);
                                     }
                                 }
+
+                                if (bool v = pPiecewiseFunction->GetClamping(); ImGui::Checkbox("Clamping", &v))
+                                {
+                                    pPiecewiseFunction->SetClamping(v);
+                                }
+
                                 ImGui::TreePop();
                             }
                         }
@@ -1508,11 +1626,11 @@ A value greater than 1 is a zoom-in, a value less than 1 is a zoom-out.
 #else
                                         pColorTransferFunction->AddRGBPoint(nodeValue[0], v[0], v[1], v[2]);
 #endif
+                                    }
                                 }
-                            }
                                 ImGui::TreePop();
+                            }
                         }
-                    }
                         ImGui::TreePop();
                 }
                     ImGui::TreePop();

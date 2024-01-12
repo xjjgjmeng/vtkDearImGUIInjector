@@ -36,64 +36,40 @@ int main(int argc, char* argv[])
     reader->SetDirectoryName(ImguiVtkNs::getDicomDir());
     reader->Update();
 
-    vtkNew<vtkVolumeProperty> pProperty;
-    {
-        vtkNew<vtkPiecewiseFunction> pOpacity;
-        vtkNew<vtkColorTransferFunction> pColor;
-        pProperty->ShadeOn();
-        pProperty->SetAmbient(0.30);
-        pProperty->SetDiffuse(0.50);
-        pProperty->SetSpecular(0.25);
-        pProperty->SetSpecularPower(37.5);
-        pProperty->SetDisableGradientOpacity(1);
-
-        pProperty->SetInterpolationType(VTK_LINEAR_INTERPOLATION);
-        pProperty->SetScalarOpacity(pOpacity);
-        pProperty->SetColor(pColor);
-
-        pOpacity->AddPoint(-50.0, 0.0);
-        pOpacity->AddPoint(625.49, 0.0);
-        pOpacity->AddPoint(1286.34, 0.0);
-        pOpacity->AddPoint(1917.15, 0.70);
-        pOpacity->AddPoint(2300, 1.0);
-        pOpacity->AddPoint(4043.31, 1.0);
-        pOpacity->AddPoint(5462.06, 1.0);
-
-        pColor->AddRGBPoint(-50.38,  60/255.,  0,        255/255.);
-        pColor->AddRGBPoint(595.45,  91/255.,  76/255.,  141/255.);
-        pColor->AddRGBPoint(1196.22, 170/255., 0/255.,   0/255.);
-        pColor->AddRGBPoint(1568.38, 208/255., 131/255., 79/255.);
-        pColor->AddRGBPoint(2427.80, 235/255., 222/255., 133/255.);
-        pColor->AddRGBPoint(2989.06, 255/255., 255/255., 255/255.);
-        pColor->AddRGBPoint(4680.69, 1.0,      1.0,      1.0);
-    }
     vtkNew<vtkVolume> pVolume;
     vtkNew<vtkGPUVolumeRayCastMapper> pMapper;
-#if 1
-    pMapper->SetInputData(reader->GetOutput());
-#else
+
+#define vtkImageFlip_flag 0
+#define vtkExtractVOI_flag 0
+
+#if 1 == vtkImageFlip_flag
     vtkNew<vtkImageFlip> flipImage;
     flipImage->SetInputData(reader->GetOutput());
     flipImage->SetFilteredAxis(2);
     flipImage->Update();
-    volumeMapper->SetInputData(flipImage->GetOutput());
+    pMapper->SetInputData(flipImage->GetOutput());
+#elif 1 == vtkExtractVOI_flag
+    vtkNew<vtkExtractVOI> pExtractVOI;
+    pExtractVOI->SetInputData(reader->GetOutput());
+    pExtractVOI->SetVOI(200, 600, 200, 600, 200, 600);
+    pExtractVOI->Update();
+    pMapper->SetInputData(pExtractVOI->GetOutput());
+#else
+    pMapper->SetInputData(reader->GetOutput());
 #endif
     pMapper->SetBlendModeToComposite();
     pVolume->SetMapper(pMapper);
-    pVolume->SetProperty(pProperty);
+    ::setupDefaultVolumeProperty(pVolume);
     ren->AddVolume(pVolume);
 
     vtkNew<vtkVolumeOutlineSource> pVOS;
+    vtkNew<vtkActor> vosActor;
     {
         pVOS->SetVolumeMapper(pMapper);
-
         vtkNew<vtkPolyDataMapper> mapper;
         mapper->SetInputConnection(pVOS->GetOutputPort());
-
-        vtkNew<vtkActor> actor;
-        actor->SetMapper(mapper);
-
-        ren->AddActor(actor);
+        vosActor->SetMapper(mapper);
+        ren->AddActor(vosActor);
     }
 
     vtkNew<vtkBoxWidget2> boxWidget;
@@ -123,6 +99,11 @@ int main(int argc, char* argv[])
             ImGuiNs::vtkObjSetup("Volume", pVolume, ImGuiTreeNodeFlags_DefaultOpen);
             ImGuiNs::vtkObjSetup("OutlineSrc", pVOS, ImGuiTreeNodeFlags_DefaultOpen);
             ImGuiNs::vtkObjSetup("Box", boxWidget, ImGuiTreeNodeFlags_DefaultOpen);
+#if 1 == vtkExtractVOI_flag
+            ImGuiNs::vtkObjSetup("ExtractVOI", pExtractVOI, ImGuiTreeNodeFlags_DefaultOpen);
+#endif
+            ImGuiNs::vtkObjSetup("vosActor", vosActor);
+            ImGuiNs::vtkObjSetup("Mapper", pMapper);
             //ImPlot::ShowDemoWindow();
         };
 

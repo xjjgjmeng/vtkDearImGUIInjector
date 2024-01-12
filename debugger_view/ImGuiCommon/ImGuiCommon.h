@@ -4,6 +4,360 @@
 #include "ImageSharpenFilter.h"
 #include "DrawFreeLineStyle.h"
 
+namespace
+{
+	void setupDefaultVolumeProperty(vtkVolume* pVolume)
+	{
+		vtkNew<vtkVolumeProperty> pProperty;
+		{
+			vtkNew<vtkPiecewiseFunction> pOpacity;
+			vtkNew<vtkColorTransferFunction> pColor;
+			pProperty->ShadeOn();
+			pProperty->SetAmbient(0.30);
+			pProperty->SetDiffuse(0.50);
+			pProperty->SetSpecular(0.25);
+			pProperty->SetSpecularPower(37.5);
+			pProperty->SetDisableGradientOpacity(1);
+
+			pProperty->SetInterpolationType(VTK_LINEAR_INTERPOLATION);
+			pProperty->SetScalarOpacity(pOpacity);
+			pProperty->SetColor(pColor);
+
+			pOpacity->AddPoint(-50.0, 0.0);
+			pOpacity->AddPoint(625.49, 0.0);
+			pOpacity->AddPoint(1286.34, 0.0);
+			pOpacity->AddPoint(1917.15, 0.70);
+			pOpacity->AddPoint(2300, 1.0);
+			pOpacity->AddPoint(4043.31, 1.0);
+			pOpacity->AddPoint(5462.06, 1.0);
+
+			pColor->AddRGBPoint(-50.38, 60 / 255., 0, 255 / 255.);
+			pColor->AddRGBPoint(595.45, 91 / 255., 76 / 255., 141 / 255.);
+			pColor->AddRGBPoint(1196.22, 170 / 255., 0 / 255., 0 / 255.);
+			pColor->AddRGBPoint(1568.38, 208 / 255., 131 / 255., 79 / 255.);
+			pColor->AddRGBPoint(2427.80, 235 / 255., 222 / 255., 133 / 255.);
+			pColor->AddRGBPoint(2989.06, 255 / 255., 255 / 255., 255 / 255.);
+			pColor->AddRGBPoint(4680.69, 1.0, 1.0, 1.0);
+		}
+		pVolume->SetProperty(pProperty);
+	}
+
+	auto convertPointsToPolyline(vtkPoints* inputPoints)
+	{
+		vtkNew<vtkPolyLine> polyLine;
+		polyLine->GetPointIds()->SetNumberOfIds(inputPoints->GetNumberOfPoints());
+		for (unsigned int i = 0; i < inputPoints->GetNumberOfPoints(); i++)
+		{
+			polyLine->GetPointIds()->SetId(i, i);
+		}
+
+		// Create a cell array to store the lines in and add the lines to it
+		vtkNew<vtkCellArray> cells;
+		cells->InsertNextCell(polyLine);
+
+		// Create a polydata to store everything in
+		auto polyData = vtkSmartPointer<vtkPolyData>::New();
+
+		// Add the points to the dataset
+		polyData->SetPoints(inputPoints);
+
+		// Add the lines to the dataset
+		polyData->SetLines(cells);
+
+		return polyData;
+	}
+
+	double GetCurveLength(vtkPoints* curvePoints, bool closedCurve, vtkIdType startCurvePointIndex, vtkIdType numberOfCurvePoints)
+	{
+		if (!curvePoints || curvePoints->GetNumberOfPoints() < 2)
+		{
+			return 0.0;
+		}
+		if (startCurvePointIndex < 0)
+		{
+			std::cout << "Invalid startCurvePointIndex=" << startCurvePointIndex << ", using 0 instead" << std::endl;
+
+			startCurvePointIndex = 0;
+		}
+		vtkIdType lastCurvePointIndex = curvePoints->GetNumberOfPoints() - 1;
+		if (numberOfCurvePoints >= 0 && startCurvePointIndex + numberOfCurvePoints - 1 < lastCurvePointIndex)
+		{
+			lastCurvePointIndex = startCurvePointIndex + numberOfCurvePoints - 1;
+		}
+
+		double length = 0.0;
+		double previousPoint[3] = { 0.0 };
+		double nextPoint[3] = { 0.0 };
+		curvePoints->GetPoint(startCurvePointIndex, previousPoint);
+		for (vtkIdType curvePointIndex = startCurvePointIndex + 1; curvePointIndex <= lastCurvePointIndex; curvePointIndex++)
+		{
+			curvePoints->GetPoint(curvePointIndex, nextPoint);
+			length += sqrt(vtkMath::Distance2BetweenPoints(previousPoint, nextPoint));
+			previousPoint[0] = nextPoint[0];
+			previousPoint[1] = nextPoint[1];
+			previousPoint[2] = nextPoint[2];
+		}
+		// Add length of closing segment
+		if (closedCurve && (numberOfCurvePoints < 0 || numberOfCurvePoints >= curvePoints->GetNumberOfPoints()))
+		{
+			curvePoints->GetPoint(0, nextPoint);
+			length += sqrt(vtkMath::Distance2BetweenPoints(previousPoint, nextPoint));
+		}
+		return length;
+	}
+
+	bool GetPositionAndClosestPointIndexAlongCurve(double foundCurvePosition[3], vtkIdType& foundClosestPointIndex, vtkIdType startCurvePointId, double distanceFromStartPoint, vtkPoints* curvePoints, bool closedCurve)
+	{
+		vtkIdType numberOfCurvePoints = (curvePoints != nullptr ? curvePoints->GetNumberOfPoints() : 0);
+
+		if (numberOfCurvePoints == 0)
+		{
+			std::cout << "AirwayInteractorStyle::GetPositionAndClosestPointIndexAlongCurve failed: invalid input points" << std::endl;
+			foundClosestPointIndex = -1;
+			return false;
+		}
+		if (startCurvePointId < 0 || startCurvePointId >= numberOfCurvePoints)
+		{
+			std::cout << "AirwayInteractorStyle::GetPositionAndClosestPointIndexAlongCurve failed: startCurvePointId is out of range" << std::endl;
+			foundClosestPointIndex = -1;
+			return false;
+		}
+		if (numberOfCurvePoints == 1 || distanceFromStartPoint == 0)
+		{
+			curvePoints->GetPoint(startCurvePointId, foundCurvePosition);
+			foundClosestPointIndex = startCurvePointId;
+			if (distanceFromStartPoint > 0.0)
+			{
+				std::cout << "AirwayInteractorStyle::GetPositionAndClosestPointIndexAlongCurve failed: non-zero distance"
+					" is requested but only 1 point is available" << std::endl;
+				return false;
+			}
+			else
+			{
+				return true;
+			}
+		}
+
+		vtkIdType idIncrement = (distanceFromStartPoint > 0 ? 1 : -1);
+		double remainingDistanceFromStartPoint = abs(distanceFromStartPoint);
+		double previousPoint[3] = { 0.0 };
+		curvePoints->GetPoint(startCurvePointId, previousPoint);
+		vtkIdType pointId = startCurvePointId;
+		bool curveConfirmedToBeNonZeroLength = false;
+		double lastSegmentLength = 0;
+
+		while (true)
+		{
+			pointId += idIncrement;
+
+			// if reach the end then wrap around for closed curve, terminate search for open curve
+			if (pointId < 0 || pointId >= numberOfCurvePoints)
+			{
+				if (closedCurve)
+				{
+					if (!curveConfirmedToBeNonZeroLength)
+					{
+						if (GetCurveLength(curvePoints, closedCurve, -1, numberOfCurvePoints) == 0.0)
+						{
+							foundClosestPointIndex = -1;
+							return false;
+						}
+						curveConfirmedToBeNonZeroLength = true;
+					}
+					pointId = (pointId < 0 ? numberOfCurvePoints : -1);
+					continue;
+				}
+				else
+				{
+					// reached end of curve before getting at the requested distance
+					// return closest
+					foundClosestPointIndex = (pointId < 0 ? 0 : numberOfCurvePoints - 1);
+					curvePoints->GetPoint(foundClosestPointIndex, foundCurvePosition);
+					return false;
+				}
+			}
+
+			// determine how much closer we are now
+			double* nextPoint = curvePoints->GetPoint(pointId);
+			lastSegmentLength = sqrt(vtkMath::Distance2BetweenPoints(nextPoint, previousPoint));
+			remainingDistanceFromStartPoint -= lastSegmentLength;
+
+			if (remainingDistanceFromStartPoint <= 0)
+			{
+				// reached the requested distance (and probably a bit more)
+				for (int i = 0; i < 3; i++)
+				{
+					foundCurvePosition[i] = nextPoint[i] +
+						remainingDistanceFromStartPoint * (nextPoint[i] - previousPoint[i]) / lastSegmentLength;
+				}
+				if (fabs(remainingDistanceFromStartPoint) <= fabs(remainingDistanceFromStartPoint + lastSegmentLength))
+				{
+					foundClosestPointIndex = pointId;
+				}
+				else
+				{
+					foundClosestPointIndex = pointId - 1;
+				}
+				break;
+			}
+
+			previousPoint[0] = nextPoint[0];
+			previousPoint[1] = nextPoint[1];
+			previousPoint[2] = nextPoint[2];
+		}
+		return true;
+	}
+	bool ResamplePoints(vtkPoints* originalPoints, vtkPoints* sampledPoints, double samplingDistance, bool closedCurve)
+	{
+		if (!originalPoints || !sampledPoints || samplingDistance <= 0)
+		{
+			vtkGenericWarningMacro("AirwayInteractorStyle::ResamplePoints failed: invalid inputs");
+
+			return false;
+		}
+
+		if (originalPoints->GetNumberOfPoints() < 2)
+		{
+			sampledPoints->DeepCopy(originalPoints);
+
+			return true;
+		}
+
+		double distanceFromLastSampledPoint = 0;
+		double remainingSegmentLength = 0;
+		double previousCurvePoint[3] = { 0.0 };
+		originalPoints->GetPoint(0, previousCurvePoint);
+		sampledPoints->Reset();
+		sampledPoints->InsertNextPoint(previousCurvePoint);
+
+		vtkIdType numberOfOriginalPoints = originalPoints->GetNumberOfPoints();
+		bool addClosingSegment = closedCurve; // for closed curves, add a closing segment that connects last and first points
+		double* currentCurvePoint = nullptr;
+		for (vtkIdType originalPointIndex = 0; originalPointIndex < numberOfOriginalPoints || addClosingSegment; originalPointIndex++)
+		{
+			if (originalPointIndex >= numberOfOriginalPoints)
+			{
+				// this is the closing segment
+				addClosingSegment = false;
+				currentCurvePoint = originalPoints->GetPoint(0);
+			}
+			else
+			{
+				currentCurvePoint = originalPoints->GetPoint(originalPointIndex);
+			}
+
+			double segmentLength = sqrt(vtkMath::Distance2BetweenPoints(currentCurvePoint, previousCurvePoint));
+			if (segmentLength <= 0.0)
+			{
+				continue;
+			}
+			remainingSegmentLength = distanceFromLastSampledPoint + segmentLength;
+			if (remainingSegmentLength >= samplingDistance)
+			{
+				double segmentDirectionVector[3] =
+				{
+					(currentCurvePoint[0] - previousCurvePoint[0]) / segmentLength,
+					(currentCurvePoint[1] - previousCurvePoint[1]) / segmentLength,
+					(currentCurvePoint[2] - previousCurvePoint[2]) / segmentLength
+				};
+				// distance of new sampled point from previous curve point
+				double distanceFromLastInterpolatedPoint = samplingDistance - distanceFromLastSampledPoint;
+				while (remainingSegmentLength >= samplingDistance)
+				{
+					double newSampledPoint[3] =
+					{
+						previousCurvePoint[0] + segmentDirectionVector[0] * distanceFromLastInterpolatedPoint,
+						previousCurvePoint[1] + segmentDirectionVector[1] * distanceFromLastInterpolatedPoint,
+						previousCurvePoint[2] + segmentDirectionVector[2] * distanceFromLastInterpolatedPoint
+					};
+					sampledPoints->InsertNextPoint(newSampledPoint);
+					distanceFromLastSampledPoint = 0;
+					distanceFromLastInterpolatedPoint += samplingDistance;
+
+					remainingSegmentLength -= samplingDistance;
+				}
+				distanceFromLastSampledPoint = remainingSegmentLength;
+			}
+			else
+			{
+				distanceFromLastSampledPoint += segmentLength;
+			}
+			previousCurvePoint[0] = currentCurvePoint[0];
+			previousCurvePoint[1] = currentCurvePoint[1];
+			previousCurvePoint[2] = currentCurvePoint[2];
+		}
+
+		// Make sure the resampled curve has the same size as the original
+		// but avoid having very long or very short line segments at the end.
+		if (closedCurve)
+		{
+			// Closed curve
+			// Ideally, remainingSegmentLength would be equal to samplingDistance.
+			if (remainingSegmentLength < samplingDistance * 0.5)
+			{
+				// last segment would be too short, so remove the last point and adjust position of second last point
+				double lastPointPosition[3] = { 0.0 };
+				vtkIdType lastPointOriginalPointIndex = 0;
+				if (GetPositionAndClosestPointIndexAlongCurve(lastPointPosition, lastPointOriginalPointIndex,
+					0, -(2.0 * samplingDistance + remainingSegmentLength) / 2.0, originalPoints, closedCurve))
+				{
+					sampledPoints->SetNumberOfPoints(sampledPoints->GetNumberOfPoints() - 1);
+					sampledPoints->SetPoint(sampledPoints->GetNumberOfPoints() - 1, lastPointPosition);
+				}
+				else
+				{
+					// something went wrong, we could not add a point, therefore just remove the last point
+					sampledPoints->SetNumberOfPoints(sampledPoints->GetNumberOfPoints() - 1);
+				}
+			}
+			else
+			{
+				// last segment is only slightly shorter than the sampling distance
+				// so just adjust the position of the last point
+				double lastPointPosition[3] = { 0.0 };
+				vtkIdType lastPointOriginalPointIndex = 0;
+				if (GetPositionAndClosestPointIndexAlongCurve(lastPointPosition, lastPointOriginalPointIndex,
+					0, -(samplingDistance + remainingSegmentLength) / 2.0, originalPoints, closedCurve))
+				{
+					sampledPoints->SetPoint(sampledPoints->GetNumberOfPoints() - 1, lastPointPosition);
+				}
+			}
+		}
+		else
+		{
+			// Open curve
+			// Ideally, remainingSegmentLength would be equal to 0.
+			if (remainingSegmentLength > samplingDistance * 0.5)
+			{
+				// last segment would be much longer than the sampling distance, so add an extra point
+				double secondLastPointPosition[3] = { 0.0 };
+				vtkIdType secondLastPointOriginalPointIndex = 0;
+				if (GetPositionAndClosestPointIndexAlongCurve(secondLastPointPosition, secondLastPointOriginalPointIndex,
+					originalPoints->GetNumberOfPoints() - 1, -(samplingDistance + remainingSegmentLength) / 2.0, originalPoints, closedCurve))
+				{
+					sampledPoints->SetPoint(sampledPoints->GetNumberOfPoints() - 1, secondLastPointPosition);
+					sampledPoints->InsertNextPoint(originalPoints->GetPoint(originalPoints->GetNumberOfPoints() - 1));
+				}
+				else
+				{
+					// something went wrong, we could not add a point, therefore just adjust the last point position
+					sampledPoints->SetPoint(sampledPoints->GetNumberOfPoints() - 1,
+						originalPoints->GetPoint(originalPoints->GetNumberOfPoints() - 1));
+				}
+			}
+			else
+			{
+				// last segment is only slightly longer than the sampling distance
+				// so we just adjust the position of last point
+				sampledPoints->SetPoint(sampledPoints->GetNumberOfPoints() - 1,
+					originalPoints->GetPoint(originalPoints->GetNumberOfPoints() - 1));
+			}
+		}
+
+		return true;
+	}
+}
+
 namespace ImGuiNs
 {
     void HelpMarker(const char* desc);
@@ -230,8 +584,8 @@ namespace ImguiVtkNs
 
 	static const char* getDicomFile()
 	{
-		//const char* retval = "D:/test_data/series/I0000000200.dcm";
-		const char* retval = "C:\\Users\\123\\Desktop\\series\\I0000000200.dcm";
+		const char* retval = "D:/test_data/series/I0000000200.dcm";
+		//const char* retval = "C:\\Users\\123\\Desktop\\series\\I0000000200.dcm";
 		if (!std::filesystem::exists(retval))
 		{
 			throw "dicom file does not exist!";
@@ -241,8 +595,8 @@ namespace ImguiVtkNs
 
 	static const char* getDicomDir()
 	{
-		//const char* retval = "D:/test_data/series";
-		const char* retval = "C:\\Users\\123\\Desktop\\series";
+		const char* retval = "D:/test_data/series";
+		//const char* retval = "C:\\Users\\123\\Desktop\\series";
 		if (!std::filesystem::exists(retval))
 		{
 			throw "dicom dir does not exist!";
