@@ -17,6 +17,295 @@ namespace
             obj->SetValue(0, v);
         }
     }
+
+    void vtkDataObject_setup(vtkDataObject* obj)
+    {
+        ImGui::Text(fmt::format("ActualMemorySize: {}", obj->GetActualMemorySize()).c_str());
+        ImGui::Text(fmt::format("DataObjectType: {}", obj->GetDataObjectType()).c_str());
+        ImGui::Text(fmt::format("ExtentType: {}", obj->GetExtentType()).c_str());
+    }
+
+    void vtkDataSet_setup(vtkDataSet* obj)
+    {
+        ImGui::Text(fmt::format("NumberOfPoints: {}", obj->GetNumberOfPoints()).c_str());
+        ImGui::Text(fmt::format("NumberOfCells: {}", obj->GetNumberOfCells()).c_str());
+        ImGui::Text(fmt::format("Length: {}", obj->GetLength()).c_str());
+        ImGui::Text(fmt::format("Length2: {}", obj->GetLength2()).c_str());
+        ImGui::Text(fmt::format("HasAnyBlankPoints: {}", obj->HasAnyBlankPoints()).c_str());
+        ImGui::Text(fmt::format("HasAnyBlankCells: {}", obj->HasAnyBlankCells()).c_str());
+        ImGui::Text(fmt::format("HasAnyGhostPoints: {}", obj->HasAnyGhostPoints()).c_str());
+        ImGui::Text(fmt::format("HasAnyGhostCells: {}", obj->HasAnyGhostCells()).c_str());
+        if (ImGui::Button("ComputeBounds")) obj->ComputeBounds();
+        //ImGui::Text(fmt::format("NumberOfElements: {}", obj->GetNumberOfElements()).c_str());
+        {
+            double v[6];
+            obj->GetBounds(v);
+            ImGui::Text(fmt::format("Bounds: {::.2f}", v).c_str());
+        }
+        {
+            double v[3];
+            obj->GetCenter(v);
+            ImGui::Text(fmt::format("Center: {::.2f}", v).c_str());
+        }
+        {
+            double v[2];
+            obj->GetScalarRange(v);
+            ImGui::Text(fmt::format("ScalarRange: {::.2f}", v).c_str());
+        }
+    }
+
+    void vtkImageData_setup(vtkImageData* obj)
+    {
+        ImGui::Text(fmt::format("DataDimension: {}", obj->GetDataDimension()).c_str());
+        ImGui::Text(fmt::format("ScalarType: {}", obj->GetScalarTypeAsString()).c_str());
+        ImGui::Text(fmt::format("ScalarSize: {}", obj->GetScalarSize()).c_str());
+        {
+            int v[3];
+            obj->GetDimensions(v);
+            ImGui::Text(fmt::format("Dimensions: {}", v).c_str());
+        }
+        {
+            int v[3];
+            obj->GetCellDims(v);
+            ImGui::Text(fmt::format("CellDims: {}", v).c_str());
+        }
+        if (int v[6]; obj->GetExtent(v), ImGui::DragScalarN("Extent", ImGuiDataType_S32, v, IM_ARRAYSIZE(v)))
+        {
+            obj->SetExtent(v);
+        }
+        if (double v[3]; obj->GetSpacing(v), ImGui::DragScalarN("Spacing", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), .1f))
+        {
+            obj->SetSpacing(v);
+        }
+        if (double v[3]; obj->GetOrigin(v), ImGui::DragScalarN("Origin", ImGuiDataType_Double, v, IM_ARRAYSIZE(v)))
+        {
+            obj->SetOrigin(v);
+        }
+        {
+            static int v[3]{};
+            static int r{};
+            ImGui::DragScalarN(std::to_string(r).c_str(), ImGuiDataType_S32, v, IM_ARRAYSIZE(v)); // 这里id有问题！！
+            ImGui::SameLine();
+            if (ImGui::Button("GetScalarIndex")) r = obj->GetScalarIndex(v);
+        }
+        {
+            static int v[6]{};
+            static int r{};
+            ImGui::DragScalarN(std::to_string(r).c_str(), ImGuiDataType_S32, v, IM_ARRAYSIZE(v));
+            ImGui::SameLine();
+            if (ImGui::Button("GetScalarIndexForExtent")) r = obj->GetScalarIndexForExtent(v);
+        }
+    }
+
+    void vtkImageResliceMapper_setup(vtkImageResliceMapper* obj)
+    {
+        {
+            const char* modeText[] = { "VTK_IMAGE_SLAB_MIN", "VTK_IMAGE_SLAB_MAX", "VTK_IMAGE_SLAB_MEAN", "VTK_IMAGE_SLAB_SUM" };
+            if (int v = obj->GetSlabType(); ImGui::Combo("SlabType", &v, modeText, IM_ARRAYSIZE(modeText)))
+            {
+                obj->SetSlabType(v);
+            }
+            ImGui::Text("SlabTypeAsString: %s", obj->GetSlabTypeAsString());
+        }
+        if (float v = obj->GetSlabThickness(); ImGui::DragFloat("SlabThickness", &v, .01f, 0.f))
+        {
+            obj->SetSlabThickness(v);
+        }
+        if (bool v = obj->GetJumpToNearestSlice(); ImGui::Checkbox("JumpToNearestSlice", &v))
+        {
+            obj->SetJumpToNearestSlice(v);
+        }
+        if (bool v = obj->GetAutoAdjustImageQuality(); ImGui::Checkbox("AutoAdjustImageQuality", &v))
+        {
+            obj->SetAutoAdjustImageQuality(v);
+        }
+        if (bool v = obj->GetResampleToScreenPixels(); ImGui::Checkbox("ResampleToScreenPixels", &v))
+        {
+            obj->SetResampleToScreenPixels(v);
+        }
+        if (bool v = obj->GetSeparateWindowLevelOperation(); ImGui::Checkbox("SeparateWindowLevelOperation", &v))
+        {
+            obj->SetSeparateWindowLevelOperation(v);
+        }
+        if (int v = obj->GetSlabSampleFactor(); ImGui::DragInt("SlabSampleFactor", &v))
+        {
+            obj->SetSlabSampleFactor(v);
+        }
+        if (int v = obj->GetImageSampleFactor(); ImGui::DragInt("ImageSampleFactor", &v, 1, obj->GetImageSampleFactorMinValue(), obj->GetImageSampleFactorMaxValue()))
+        {
+            obj->SetImageSampleFactor(v);
+        }
+    }
+
+    void vtkImageMapper3D_setup(vtkImageMapper3D* obj)
+    {
+        if (bool v = obj->GetBorder(); ImGui::Checkbox("Border", &v))
+        {
+            obj->SetBorder(v);
+        }
+        if (bool v = obj->GetBackground(); ImGui::Checkbox("Background", &v))
+        {
+            obj->SetBackground(v);
+        }
+        if (bool v = obj->GetStreaming(); ImGui::Checkbox("Streaming", &v))
+        {
+            obj->SetStreaming(v);
+        }
+        if (bool v = obj->GetSliceFacesCamera(); ImGui::Checkbox("SliceFacesCamera", &v))
+        {
+            obj->SetSliceFacesCamera(v);
+        }
+        if (bool v = obj->GetSliceAtFocalPoint(); ImGui::Checkbox("SliceAtFocalPoint", &v))
+        {
+            obj->SetSliceAtFocalPoint(v);
+        }
+        {
+            double v[6];
+            obj->GetIndexBounds(v);
+            ImGui::Text(fmt::format("IndexBounds: {::.2f}", v).c_str());
+        }
+
+        ImGuiNs::vtkObjSetup("SlicePlane", obj->GetSlicePlane(), ImGuiTreeNodeFlags_DefaultOpen);
+    }
+
+    void vtkImplicitFunction_setup(vtkImplicitFunction* obj)
+    {
+    
+    }
+
+    void vtkPlane_setup(vtkPlane* obj)
+    {
+        {
+            ImGui::Text("Push:");
+            ImGui::SameLine();
+            ImGui::PushButtonRepeat(true);
+            if (ImGui::ArrowButton("##Push-", ImGuiDir_Left)) { obj->Push(-.5); }
+            ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
+            if (ImGui::ArrowButton("##Push+", ImGuiDir_Right)) { obj->Push(.5); }
+            ImGui::PopButtonRepeat();
+        }
+
+        if (double v[3]; obj->GetOrigin(v), ImGui::DragScalarN("Origin", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), 0.01f))
+        {
+            obj->SetOrigin(v);
+        }
+
+        if (double v[3]; obj->GetNormal(v), ImGui::DragScalarN("Normal", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), 0.01f))
+        {
+            obj->SetNormal(v);
+        }
+    }
+
+    void vtkImageSlice_setup(vtkImageSlice* obj)
+    {
+        ImGui::Text(fmt::format("MinXBound: {}", obj->GetMinXBound()).c_str());
+        ImGui::Text(fmt::format("MaxXBound: {}", obj->GetMaxXBound()).c_str());
+        ImGui::Text(fmt::format("MinYBound: {}", obj->GetMinYBound()).c_str());
+        ImGui::Text(fmt::format("MaxYBound: {}", obj->GetMaxYBound()).c_str());
+        ImGui::Text(fmt::format("MinZBound: {}", obj->GetMinZBound()).c_str());
+        ImGui::Text(fmt::format("MaxZBound: {}", obj->GetMaxZBound()).c_str());
+        if (bool v = obj->GetForceTranslucent(); ImGui::Checkbox("ForceTranslucent", &v))
+        {
+            obj->SetForceTranslucent(v);
+        }
+        ImGuiNs::vtkObjSetup("Property", obj->GetProperty());
+    }
+
+    void vtkImageProperty_setup(vtkImageProperty* obj)
+    {
+        if (double v = obj->GetColorLevel(); ImGui::DragScalar("ColorLevel", ImGuiDataType_Double, &v))
+        {
+            obj->SetColorLevel(v);
+        }
+        if (double v = obj->GetColorWindow(); ImGui::DragScalar("ColorWindow", ImGuiDataType_Double, &v))
+        {
+            obj->SetColorWindow(v);
+        }
+        if (float v = obj->GetOpacity(); ImGui::DragFloat("Opacity", &v, .01, 0., 1.))
+        {
+            obj->SetOpacity(v);
+        }
+        if (int v = obj->GetLayerNumber(); ImGui::DragInt("LayerNumber", &v))
+        {
+            obj->SetLayerNumber(v);
+        }
+        if (bool v = obj->GetCheckerboard(); ImGui::Checkbox("Checkerboard", &v))
+        {
+            obj->SetCheckerboard(v);
+        }
+        if (double v[2]; obj->GetCheckerboardSpacing(v), ImGui::DragScalarN("CheckerboardSpacing", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), 0.01f))
+        {
+            obj->SetCheckerboardSpacing(v);
+        }
+        if (double v[2]; obj->GetCheckerboardOffset(v), ImGui::DragScalarN("CheckerboardOffset", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), 0.01f))
+        {
+            obj->SetCheckerboardOffset(v);
+        }
+        if (bool v = obj->GetBacking(); ImGui::Checkbox("Backing", &v))
+        {
+            obj->SetBacking(v);
+        }
+        if (float v[3] = { obj->GetBackingColor()[0],obj->GetBackingColor()[1],obj->GetBackingColor()[2] }; ImGui::ColorEdit3("BackingColor", v))
+        {
+            obj->SetBackingColor(v[0], v[1], v[2]);
+        }
+        if (float v = obj->GetAmbient(); ImGui::SliderFloat("Ambient", &v, 0., 1.))
+        {
+            obj->SetAmbient(v);
+        }
+        if (float v = obj->GetDiffuse(); ImGui::SliderFloat("Diffuse", &v, 0., 1.))
+        {
+            obj->SetDiffuse(v);
+        }
+        ImGui::Text(fmt::format("InterpolationType: {}", obj->GetInterpolationTypeAsString()).c_str());
+        {
+            const char* modeText[] = { "VTK_NEAREST_INTERPOLATION", "VTK_LINEAR_INTERPOLATION", "VTK_CUBIC_INTERPOLATION" };
+            if (auto v = obj->GetInterpolationType(); ImGui::Combo("InterpolationType", &v, modeText, IM_ARRAYSIZE(modeText)))
+            {
+                obj->SetInterpolationType(v);
+            }
+        }
+        ImGuiNs::vtkObjSetup("LookupTable", obj->GetLookupTable());
+    }
+
+    void vtkImageActor_setup(vtkImageActor* obj)
+    {
+        if (bool v = obj->GetForceOpaque(); ImGui::Checkbox("ForceOpaque", &v))
+        {
+            obj->SetForceOpaque(v);
+        }
+        if (bool v = obj->GetInterpolate(); ImGui::Checkbox("Interpolate", &v))
+        {
+            obj->SetInterpolate(v);
+        }
+        if (float v = obj->GetOpacity(); ImGui::DragFloat("Opacity", &v, .01, obj->GetOpacityMinValue(), obj->GetOpacityMaxValue()))
+        {
+            obj->SetOpacity(v);
+        }
+        if (int v[6]; obj->GetDisplayExtent(v), ImGui::DragScalarN("DisplayExtent", ImGuiDataType_S32, v, std::size(v)))
+        {
+            obj->SetDisplayExtent(v);
+        }
+        if (double v[6]; obj->GetBounds(v), ImGui::DragScalarN("Bounds", ImGuiDataType_Double, v, std::size(v), 0.01f))
+        {
+            //pImageActor->SetBounds(v);
+        }
+        if (double v[6]; obj->GetDisplayBounds(v), ImGui::DragScalarN("DisplayBounds", ImGuiDataType_Double, v, std::size(v), 0.01f))
+        {
+            //pImageActor->SetBounds(v);
+        }
+        // 需要mapper是vtkImageSliceMapper
+        ImGui::Text(fmt::format("SliceNumber: {}", obj->GetSliceNumber()).c_str());
+        ImGui::Text(fmt::format("SliceNumberMin: {}", obj->GetSliceNumberMin()).c_str());
+        ImGui::Text(fmt::format("SliceNumberMax: {}", obj->GetSliceNumberMax()).c_str());
+        ImGui::Text(fmt::format("WholeZMin: {}", obj->GetWholeZMin()).c_str());
+        ImGui::Text(fmt::format("WholeZMax: {}", obj->GetWholeZMax()).c_str());
+        if (int v = obj->GetZSlice(); ImGui::DragInt("ZSlice", &v))
+        {
+            obj->SetZSlice(v);
+        }
+        ImGuiNs::vtkObjSetup("Input", obj->GetInput());
+    }
 }
 
 namespace ImGuiNs
@@ -62,10 +351,17 @@ namespace ImGuiNs
 
     void vtkObjSetup(std::string_view objName, vtkSmartPointer<vtkObject> vtkObj, const ImGuiTreeNodeFlags flags)
     {
+        if (!vtkObj)
+        {
+            ImGui::Text("%s is nullptr", objName.data());
+            return;
+        }
+
         if (ImGui::TreeNodeEx(objName.data(), flags))
         {
             if (ImGui::CollapsingHeader("vtkObject", ImGuiTreeNodeFlags_DefaultOpen))
             {
+                ImGui::Text("Pointer: %0x", vtkObj.Get());
                 ImGui::Text("MTime: %ld", vtkObj->GetMTime());
                 ImGui::Text("Name: %s", vtkObj->GetClassName());
 
@@ -269,7 +565,7 @@ The result is a horizontal rotation of the scene.
                         pCamera->GetClippingRange(rangeVal);
                         near_ = rangeVal[0];
                         far_ = rangeVal[1];
-                        if (ImGui::DragFloatRange2("ClippingRange", &near_, &far_, 0.1f, 0.0f, 100.0f, "Near: %lf", "Far: %lf"))
+                        if (ImGui::DragFloatRange2("ClippingRange", &near_, &far_, 0.1f, 0.0f, 10000.0f, "Near: %lf", "Far: %lf"))
                         {
                             rangeVal[0] = near_;
                             rangeVal[1] = far_;
@@ -319,7 +615,7 @@ The result is a horizontal rotation of the scene.
                         pCamera->SetViewAngle(v);
                     }
 #endif
-                    if (float v = pCamera->GetParallelScale(); ImGui::SliderFloat("ParallelScale", &v, 0.001, 10.))
+                    if (float v = pCamera->GetParallelScale(); ImGui::SliderFloat("ParallelScale", &v, 0.001, 100))
                     {
                         pCamera->SetParallelScale(v);
                     }
@@ -412,15 +708,13 @@ A value greater than 1 is a zoom-in, a value less than 1 is a zoom-out.
                 }
                 else if (const auto pDataObject = vtkDataObject::SafeDownCast(vtkObj); pDataObject && ImGui::CollapsingHeader("vtkDataObject", ImGuiTreeNodeFlags_DefaultOpen))
                 {
+                    vtkDataObject_setup(pDataObject);
                     if (const auto pDataSet = vtkDataSet::SafeDownCast(vtkObj); pDataSet && ImGui::CollapsingHeader("vtkDataSet", ImGuiTreeNodeFlags_DefaultOpen))
                     {
+                        vtkDataSet_setup(pDataSet);
                         if (const auto pImageData = vtkImageData::SafeDownCast(vtkObj); pImageData && ImGui::CollapsingHeader("vtkImageData", ImGuiTreeNodeFlags_DefaultOpen))
                         {
-                            {
-                                int dims[3];
-                                pImageData->GetDimensions(dims);
-                                ImGui::Text(fmt::format("Dimensions: {}", dims).c_str());
-                            }
+                            vtkImageData_setup(pImageData);
                         }
                     }
                 }
@@ -721,6 +1015,15 @@ A value greater than 1 is a zoom-in, a value less than 1 is a zoom-out.
                 }
                 else if (const auto pAlgorithm = vtkAlgorithm::SafeDownCast(vtkObj); pAlgorithm && ImGui::CollapsingHeader("vtkAlgorithm", ImGuiTreeNodeFlags_DefaultOpen))
                 {
+                    if (ImGui::Button("Update"))
+                    {
+                        pAlgorithm->Update();
+                    }
+
+                    if (ImGui::Button("UpdateInformation"))
+                    {
+                        pAlgorithm->UpdateInformation();
+                    }
                     if (const auto pImageAlgorithm = vtkImageAlgorithm::SafeDownCast(vtkObj); pImageAlgorithm && ImGui::TreeNodeEx("vtkImageAlgorithm", ImGuiTreeNodeFlags_DefaultOpen))
                     {
                         if (const auto pThreadedImageAlgorithm = vtkThreadedImageAlgorithm::SafeDownCast(vtkObj); pThreadedImageAlgorithm && ImGui::TreeNodeEx("vtkThreadedImageAlgorithm", ImGuiTreeNodeFlags_DefaultOpen))
@@ -867,87 +1170,22 @@ A value greater than 1 is a zoom-in, a value less than 1 is a zoom-out.
                     }
                     else if (const auto pAbstractMapper = vtkAbstractMapper::SafeDownCast(vtkObj); pAbstractMapper && ImGui::CollapsingHeader("vtkAbstractMapper", ImGuiTreeNodeFlags_DefaultOpen))
                     {
+                        ImGui::Text(fmt::format("NumberOfClippingPlanes: {}", pAbstractMapper->GetNumberOfClippingPlanes()).c_str());
                         if (const auto pAbstractMapper3D = vtkAbstractMapper3D::SafeDownCast(vtkObj); pAbstractMapper3D && ImGui::CollapsingHeader("vtkAbstractMapper3D", ImGuiTreeNodeFlags_DefaultOpen))
                         {
-                            if (const auto pMapper = vtkMapper::SafeDownCast(vtkObj); pMapper && ImGui::CollapsingHeader("vtkMapper", ImGuiTreeNodeFlags_DefaultOpen))
                             {
-                                if (const auto pPolyDataMapper = vtkPolyDataMapper::SafeDownCast(vtkObj); pPolyDataMapper && ImGui::CollapsingHeader("vtkPolyDataMapper", ImGuiTreeNodeFlags_DefaultOpen))
-                                {
-                                    ImGui::InputScalarN("Bounds", ImGuiDataType_Double, pPolyDataMapper->GetBounds(), 6, nullptr, nullptr, nullptr, ImGuiInputTextFlags_ReadOnly);
-                                }
+                                double v[6];
+                                pAbstractMapper3D->GetBounds(v);
+                                ImGui::Text(fmt::format("Bounds: {::.2f}", v).c_str());
                             }
-                            else if (const auto pAbstractVolumeMapper = vtkAbstractVolumeMapper::SafeDownCast(vtkObj); pAbstractVolumeMapper && ImGui::CollapsingHeader("vtkAbstractVolumeMapper", ImGuiTreeNodeFlags_DefaultOpen))
                             {
-                                if (const auto pVolumeMapper = vtkVolumeMapper::SafeDownCast(vtkObj); pVolumeMapper && ImGui::CollapsingHeader("vtkVolumeMapper", ImGuiTreeNodeFlags_DefaultOpen))
-                                {
-                                    // BlendMode
-                                    {
-                                        const char* modeText[] = { "COMPOSITE_BLEND", "MAXIMUM_INTENSITY_BLEND", "MINIMUM_INTENSITY_BLEND", "AVERAGE_INTENSITY_BLEND", "ADDITIVE_BLEND", "ISOSURFACE_BLEND", "SLICE_BLEND" };
-                                        if (auto v = pVolumeMapper->GetBlendMode(); ImGui::Combo("BlendMode", &v, modeText, IM_ARRAYSIZE(modeText)))
-                                        {
-                                            pVolumeMapper->SetBlendMode(v);
-                                        }
-                                    }
-#if 0
-                                    {
-                                        const char* items[] = { "VTK_CROP_SUBVOLUME", "VTK_CROP_FENCE", "VTK_CROP_INVERTED_FENCE", "VTK_CROP_CROSS", "VTK_CROP_INVERTED_CROSS" };
-                                        int dataArray[] = { VTK_CROP_SUBVOLUME, VTK_CROP_FENCE, VTK_CROP_INVERTED_FENCE, VTK_CROP_CROSS, VTK_CROP_INVERTED_CROSS };
-                                        static int currentIdx = -1;
-                                        if (ImGui::Combo("CroppingRegionFlags", &currentIdx, items, IM_ARRAYSIZE(items)))
-                                        {
-                                            const auto n = dataArray[currentIdx] / ::spacing[2];
-                                            ::reslice->SetSlabNumberOfSlices(n);
-                                            ::colorMap->Update();
-                                        }
-                                    }
-#else
-                                    {
-                                        std::map<int, char*> myMap
-                                        {
-                                            {VTK_CROP_SUBVOLUME,"VTK_CROP_SUBVOLUME"},
-                                            {VTK_CROP_FENCE,"VTK_CROP_FENCE"},
-                                            {VTK_CROP_INVERTED_FENCE,"VTK_CROP_INVERTED_FENCE"},
-                                            {VTK_CROP_CROSS,"VTK_CROP_CROSS"},
-                                            {VTK_CROP_INVERTED_CROSS,"VTK_CROP_INVERTED_CROSS"}
-                                        };
-                                        for (auto i : myMap)
-                                        {
-                                            if (ImGui::Button(i.second)) pVolumeMapper->SetCroppingRegionFlags(i.first); ImGui::SameLine();
-                                        }
-                                        ImGui::Text(myMap[pVolumeMapper->GetCroppingRegionFlags()]);
-                                    }
-#endif
-                                    
-                                    if (bool v = pVolumeMapper->GetCropping(); ImGui::Checkbox("Cropping", &v))
-                                    {
-                                        pVolumeMapper->SetCropping(v);
-                                    }
-                                    if (double v[6]; pVolumeMapper->GetCroppingRegionPlanes(v), ImGui::DragScalarN("CroppingRegionPlanes", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), 0.1f))
-                                    {
-                                        pVolumeMapper->SetCroppingRegionPlanes(v);
-                                    }
-                                    if (const auto pGPUVolumeRayCastMapper = vtkGPUVolumeRayCastMapper::SafeDownCast(vtkObj); pGPUVolumeRayCastMapper && ImGui::TreeNodeEx("vtkGPUVolumeRayCastMapper", ImGuiTreeNodeFlags_DefaultOpen))
-                                    {
-                                        if (float v = pGPUVolumeRayCastMapper->GetImageSampleDistance(); ImGui::SliderFloat("ImageSampleDistance", &v, 0., 10.))
-                                        {
-                                            pGPUVolumeRayCastMapper->SetImageSampleDistance(v);
-                                        }
-                                        if (float v = pGPUVolumeRayCastMapper->GetSampleDistance(); ImGui::SliderFloat("SampleDistance", &v, 0.01, 3.)) // 调到0.001会崩溃且变卡
-                                        {
-                                            pGPUVolumeRayCastMapper->SetSampleDistance(v);
-                                        }
-                                        if (bool v = pGPUVolumeRayCastMapper->GetAutoAdjustSampleDistances(); ImGui::Checkbox("AutoAdjustSampleDistances", &v))
-                                        {
-                                            pGPUVolumeRayCastMapper->SetAutoAdjustSampleDistances(v);
-                                        }
-                                        if (bool v = pGPUVolumeRayCastMapper->GetUseJittering(); ImGui::Checkbox("UseJittering", &v))
-                                        {
-                                            pGPUVolumeRayCastMapper->SetUseJittering(v);
-                                        }
-                                        ImGui::TreePop();
-                                    }
-                                }
+                                double v[3];
+                                pAbstractMapper3D->GetCenter(v);
+                                ImGui::Text(fmt::format("Center: {::.2f}", v).c_str());
                             }
+                            ImGui::Text(fmt::format("Length: {}", pAbstractMapper3D->GetLength()).c_str());
+                            ImGui::Text(fmt::format("IsARayCastMapper: {}", pAbstractMapper3D->IsARayCastMapper()).c_str());
+                            ImGui::Text(fmt::format("IsARenderIntoImageMapper: {}", pAbstractMapper3D->IsARenderIntoImageMapper()).c_str());
                         }
                     }
                 }
@@ -1055,6 +1293,105 @@ A value greater than 1 is a zoom-in, a value less than 1 is a zoom-out.
                             pProperty2D->SetDisplayLocation(v);
                         }
                     }
+                }
+                else if (const auto pImplicitFunction = vtkImplicitFunction::SafeDownCast(vtkObj); pImplicitFunction && ImGui::CollapsingHeader("vtkImplicitFunction", ImGuiTreeNodeFlags_DefaultOpen))
+                {
+                    vtkImplicitFunction_setup(pImplicitFunction);
+                }
+                else if (const auto pImageProperty = vtkImageProperty::SafeDownCast(vtkObj); pImageProperty && ImGui::CollapsingHeader("vtkImageProperty", ImGuiTreeNodeFlags_DefaultOpen))
+                {
+                    vtkImageProperty_setup(pImageProperty);
+                }
+
+                // vtkAbstractMapper3D
+                if (const auto pMapper = vtkMapper::SafeDownCast(vtkObj); pMapper && ImGui::CollapsingHeader("vtkMapper", ImGuiTreeNodeFlags_DefaultOpen))
+                {
+                    if (const auto pPolyDataMapper = vtkPolyDataMapper::SafeDownCast(vtkObj); pPolyDataMapper && ImGui::CollapsingHeader("vtkPolyDataMapper", ImGuiTreeNodeFlags_DefaultOpen))
+                    {
+                        ImGui::InputScalarN("Bounds", ImGuiDataType_Double, pPolyDataMapper->GetBounds(), 6, nullptr, nullptr, nullptr, ImGuiInputTextFlags_ReadOnly);
+                    }
+                }
+                else if (const auto pAbstractVolumeMapper = vtkAbstractVolumeMapper::SafeDownCast(vtkObj); pAbstractVolumeMapper && ImGui::CollapsingHeader("vtkAbstractVolumeMapper", ImGuiTreeNodeFlags_DefaultOpen))
+                {
+                    if (const auto pVolumeMapper = vtkVolumeMapper::SafeDownCast(vtkObj); pVolumeMapper && ImGui::CollapsingHeader("vtkVolumeMapper", ImGuiTreeNodeFlags_DefaultOpen))
+                    {
+                        // BlendMode
+                        {
+                            const char* modeText[] = { "COMPOSITE_BLEND", "MAXIMUM_INTENSITY_BLEND", "MINIMUM_INTENSITY_BLEND", "AVERAGE_INTENSITY_BLEND", "ADDITIVE_BLEND", "ISOSURFACE_BLEND", "SLICE_BLEND" };
+                            if (auto v = pVolumeMapper->GetBlendMode(); ImGui::Combo("BlendMode", &v, modeText, IM_ARRAYSIZE(modeText)))
+                            {
+                                pVolumeMapper->SetBlendMode(v);
+                            }
+                        }
+#if 0
+                        {
+                            const char* items[] = { "VTK_CROP_SUBVOLUME", "VTK_CROP_FENCE", "VTK_CROP_INVERTED_FENCE", "VTK_CROP_CROSS", "VTK_CROP_INVERTED_CROSS" };
+                            int dataArray[] = { VTK_CROP_SUBVOLUME, VTK_CROP_FENCE, VTK_CROP_INVERTED_FENCE, VTK_CROP_CROSS, VTK_CROP_INVERTED_CROSS };
+                            static int currentIdx = -1;
+                            if (ImGui::Combo("CroppingRegionFlags", &currentIdx, items, IM_ARRAYSIZE(items)))
+                            {
+                                const auto n = dataArray[currentIdx] / ::spacing[2];
+                                ::reslice->SetSlabNumberOfSlices(n);
+                                ::colorMap->Update();
+                            }
+                        }
+#else
+                        {
+                            std::map<int, char*> myMap
+                            {
+                                {VTK_CROP_SUBVOLUME,"VTK_CROP_SUBVOLUME"},
+                                {VTK_CROP_FENCE,"VTK_CROP_FENCE"},
+                                {VTK_CROP_INVERTED_FENCE,"VTK_CROP_INVERTED_FENCE"},
+                                {VTK_CROP_CROSS,"VTK_CROP_CROSS"},
+                                {VTK_CROP_INVERTED_CROSS,"VTK_CROP_INVERTED_CROSS"}
+                            };
+                            for (auto i : myMap)
+                            {
+                                if (ImGui::Button(i.second)) pVolumeMapper->SetCroppingRegionFlags(i.first); ImGui::SameLine();
+                            }
+                            ImGui::Text(myMap[pVolumeMapper->GetCroppingRegionFlags()]);
+                        }
+#endif
+
+                        if (bool v = pVolumeMapper->GetCropping(); ImGui::Checkbox("Cropping", &v))
+                        {
+                            pVolumeMapper->SetCropping(v);
+                        }
+                        if (double v[6]; pVolumeMapper->GetCroppingRegionPlanes(v), ImGui::DragScalarN("CroppingRegionPlanes", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), 0.1f))
+                        {
+                            pVolumeMapper->SetCroppingRegionPlanes(v);
+                        }
+                        if (const auto pGPUVolumeRayCastMapper = vtkGPUVolumeRayCastMapper::SafeDownCast(vtkObj); pGPUVolumeRayCastMapper && ImGui::TreeNodeEx("vtkGPUVolumeRayCastMapper", ImGuiTreeNodeFlags_DefaultOpen))
+                        {
+                            if (float v = pGPUVolumeRayCastMapper->GetImageSampleDistance(); ImGui::SliderFloat("ImageSampleDistance", &v, 0., 10.))
+                            {
+                                pGPUVolumeRayCastMapper->SetImageSampleDistance(v);
+                            }
+                            if (float v = pGPUVolumeRayCastMapper->GetSampleDistance(); ImGui::SliderFloat("SampleDistance", &v, 0.01, 3.)) // 调到0.001会崩溃且变卡
+                            {
+                                pGPUVolumeRayCastMapper->SetSampleDistance(v);
+                            }
+                            if (bool v = pGPUVolumeRayCastMapper->GetAutoAdjustSampleDistances(); ImGui::Checkbox("AutoAdjustSampleDistances", &v))
+                            {
+                                pGPUVolumeRayCastMapper->SetAutoAdjustSampleDistances(v);
+                            }
+                            if (bool v = pGPUVolumeRayCastMapper->GetUseJittering(); ImGui::Checkbox("UseJittering", &v))
+                            {
+                                pGPUVolumeRayCastMapper->SetUseJittering(v);
+                            }
+                            ImGui::TreePop();
+                        }
+                    }
+                }
+                else if (const auto pImageMapper3D = vtkImageMapper3D::SafeDownCast(vtkObj); pImageMapper3D && ImGui::CollapsingHeader("vtkImageMapper3D", ImGuiTreeNodeFlags_DefaultOpen))
+                {
+                    vtkImageMapper3D_setup(pImageMapper3D);
+                }
+
+                // vtkImplicitFunction
+                if (const auto pPlane = vtkPlane::SafeDownCast(vtkObj); pPlane && ImGui::CollapsingHeader("vtkPlane", ImGuiTreeNodeFlags_DefaultOpen))
+                {
+                    vtkPlane_setup(pPlane);
                 }
 
                 // 继承自vtkProp
@@ -1475,6 +1812,14 @@ A value greater than 1 is a zoom-in, a value less than 1 is a zoom-out.
 
                 }
 
+                // vtkDataObject
+#if 0
+                if (const auto pDataSet = vtkDataSet::SafeDownCast(vtkObj); pDataSet && ImGui::CollapsingHeader("vtkDataSet", ImGuiTreeNodeFlags_DefaultOpen))
+                {
+ 
+                }
+#endif
+
                 // vtkImageMapper3D
                 if (const auto pImageSliceMapper = vtkImageSliceMapper::SafeDownCast(vtkObj); pImageSliceMapper && ImGui::CollapsingHeader("vtkImageSliceMapper", ImGuiTreeNodeFlags_DefaultOpen))
                 {
@@ -1513,6 +1858,10 @@ A value greater than 1 is a zoom-in, a value less than 1 is a zoom-out.
                         pImageSliceMapper->SetCroppingRegion(v);
                     }
                 }
+                else if (const auto pImageResliceMapper = vtkImageResliceMapper::SafeDownCast(vtkObj); pImageResliceMapper && ImGui::CollapsingHeader("vtkImageResliceMapper", ImGuiTreeNodeFlags_DefaultOpen))
+                {
+                    ::vtkImageResliceMapper_setup(pImageResliceMapper);
+                }
 
                 if (const auto pActor = vtkActor::SafeDownCast(vtkObj); pActor && ImGui::CollapsingHeader("vtkActor", ImGuiTreeNodeFlags_DefaultOpen))
                 {
@@ -1520,20 +1869,11 @@ A value greater than 1 is a zoom-in, a value less than 1 is a zoom-out.
                 }
                 else if (const auto pImageSlice = vtkImageSlice::SafeDownCast(vtkObj); pImageSlice && ImGui::TreeNodeEx("vtkImageSlice", ImGuiTreeNodeFlags_DefaultOpen))
                 {
+                    vtkImageSlice_setup(pImageSlice);
+
                     if (const auto pImageActor = vtkImageActor::SafeDownCast(vtkObj); pImageActor && ImGui::TreeNodeEx("vtkImageActor", ImGuiTreeNodeFlags_DefaultOpen))
                     {
-                        if (int v[6]; pImageActor->GetDisplayExtent(v), ImGui::DragScalarN("DisplayExtent", ImGuiDataType_S32, v, std::size(v)))
-                        {
-                            pImageActor->SetDisplayExtent(v);
-                        }
-                        if (double v[6]; pImageActor->GetBounds(v), ImGui::DragScalarN("Bounds", ImGuiDataType_Double, v, std::size(v), 0.01f))
-                        {
-                            //pImageActor->SetBounds(v);
-                        }
-                        if (double v[6]; pImageActor->GetDisplayBounds(v), ImGui::DragScalarN("DisplayBounds", ImGuiDataType_Double, v, std::size(v), 0.01f))
-                        {
-                            //pImageActor->SetBounds(v);
-                        }
+                        vtkImageActor_setup(pImageActor);
 
                         ImGui::TreePop();
                     }

@@ -1,7 +1,5 @@
 ﻿#include <ImGuiCommon.h>
 
-ImGuiNs::LogView logView;
-
 namespace {
     // This does the actual work.
     // Callback for the interaction
@@ -66,7 +64,7 @@ public:
 
     void SetPosition(double pos[3]) override
     {
-        ::logView.Add(fmt::format("{}: {} {} {}", __func__, pos[0], pos[1], pos[2]));
+        ::pLogView->Add(fmt::format("{}: {} {} {}", __func__, pos[0], pos[1], pos[2]));
         // 只能垂直移动
 #if 1
         pos[0] = this->Position[0];
@@ -124,14 +122,10 @@ int main(int argc, char* argv[])
         lineWidget->On();
     }
 
+    ::showLogView = true;
     ::pWindow = renWin;
     ::imgui_render_callback = [&]
         {
-            if (ImGui::TreeNode("Log"))
-            {
-                ::logView.Draw();
-                ImGui::TreePop();
-            }
             ImGuiNs::vtkObjSetup("Source", lineSource, ImGuiTreeNodeFlags_DefaultOpen);
             ImGuiNs::vtkObjSetup("Mapper", lineMapper, ImGuiTreeNodeFlags_DefaultOpen);
             ImGuiNs::vtkObjSetup("Actor", lineActor, ImGuiTreeNodeFlags_DefaultOpen);

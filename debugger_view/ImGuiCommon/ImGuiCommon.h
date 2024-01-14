@@ -494,6 +494,12 @@ namespace ImGuiNs
 
 static std::function<void()> imgui_render_callback;
 static vtkWeakPointer<vtkRenderWindow> pWindow;
+static bool showLogView = false;
+static ImGuiNs::LogView* getLogView()
+{
+	static ImGuiNs::LogView o;
+	return &o;
+}
 
 namespace ImguiVtkNs
 {
@@ -509,6 +515,8 @@ namespace ImguiVtkNs
 			ImGui::SetNextWindowSize(ImVec2(450, 650), ImGuiCond_Once);
 			ImGui::Begin("VTK");
 			{
+				ImGui::Checkbox("ShowLogView", &::showLogView);
+
 				if (::pWindow.Get())
 				{
 					if (ImGui::BeginTabBar("MyTabBar666"))
@@ -555,6 +563,13 @@ namespace ImguiVtkNs
 				}
 			}
 			ImGui::End();
+
+			if (::showLogView)
+			{
+				ImGui::Begin("Log");
+				::getLogView()->Draw();
+				ImGui::End();
+			}
 		};
 		uiDraw->SetCallback(uiDrawFunction);
 		overlay->AddObserver(vtkDearImGuiInjector::ImGuiDrawEvent, uiDraw);

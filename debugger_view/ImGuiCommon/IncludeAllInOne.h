@@ -25,7 +25,13 @@
 #include "vtkPolyData.h"
 #include "vtkPolyDataMapper.h"
 #include <vtkShortArray.h>
+#include <vtkGenericOutlineFilter.h>
+#include <vtkImageDataOutlineFilter.h>
+#include <vtkImageCursor3D.h>
 #include <vtkLine.h>
+#include <vtkXMLImageDataReader.h>
+#include <vtkPlane.h>
+#include <vtkImageResliceMapper.h>
 #include <vtkImageSlab.h>
 #include <vtkImageSliceMapper.h>
 #include <vtkImageProperty.h>
@@ -33,6 +39,7 @@
 #include <vtkMarchingCubes.h>
 #include <vtkLineWidget2.h>
 #include <vtkSplineWidget2.h>
+#include <vtkImplicitFunction.h>
 #include <vtkProperty2D.h>
 #include <vtkHandleRepresentation.h>
 #include <vtkPointHandleRepresentation2D.h>
