@@ -65,6 +65,46 @@ int main(int argc, char* argv[])
     pActor->Update();
     ren->AddActor(pActor);
 
+    // Y
+    vtkNew<vtkImageActor> pYActor;
+    vtkNew<vtkImageResliceMapper> pYMapper;
+    {
+        pYMapper->SetInputData(pImageData);
+        pYMapper->SliceFacesCameraOff();
+        pYMapper->SliceAtFocalPointOff();
+        {
+            auto pPlane = pYMapper->GetSlicePlane();
+            pPlane->SetOrigin(pImageData->GetCenter());
+            pPlane->SetNormal(0, 1, 0);
+        }
+        pYMapper->UpdateInformation();
+        pYMapper->Modified();
+        pYActor->SetMapper(pYMapper);
+    }
+    pYActor->Update();
+    ren->AddActor(pYActor);
+    pYActor->VisibilityOff();
+
+    // Z
+    vtkNew<vtkImageActor> pZActor;
+    vtkNew<vtkImageResliceMapper> pZMapper;
+    {
+        pZMapper->SetInputData(pImageData);
+        pZMapper->SliceFacesCameraOff();
+        pZMapper->SliceAtFocalPointOff();
+        {
+            auto pPlane = pZMapper->GetSlicePlane();
+            pPlane->SetOrigin(pImageData->GetCenter());
+            pPlane->SetNormal(0, 0, 1);
+        }
+        pZMapper->UpdateInformation();
+        pZMapper->Modified();
+        pZActor->SetMapper(pZMapper);
+    }
+    pZActor->Update();
+    ren->AddActor(pZActor);
+    pZActor->VisibilityOff();
+
     ren->GetActiveCamera()->ParallelProjectionOn();
     ren->GetActiveCamera()->SetViewUp(0,1,0);
     ren->GetActiveCamera()->SetFocalPoint(pImageData->GetCenter());
@@ -83,8 +123,8 @@ int main(int argc, char* argv[])
         ren->AddActor(pActor);
     }
     // VR
+    vtkNew<vtkVolume> pVolume;
     {
-        vtkNew<vtkVolume> pVolume;
         vtkNew<vtkGPUVolumeRayCastMapper> pMapper;
         pMapper->SetInputData(pImageData);
         pMapper->SetBlendModeToComposite();
@@ -114,11 +154,19 @@ int main(int argc, char* argv[])
     ::pWindow = renWin;
     ::imgui_render_callback = [&]
         {
+            ImGui::Text("Visibility: "); ImGui::SameLine();
+            if (bool v = pActor->GetVisibility(); ImGui::Checkbox("XActor", &v)) pActor->SetVisibility(v); ImGui::SameLine();
+            if (bool v = pYActor->GetVisibility(); ImGui::Checkbox("YActor", &v)) pYActor->SetVisibility(v); ImGui::SameLine();
+            if (bool v = pZActor->GetVisibility(); ImGui::Checkbox("ZActor", &v)) pZActor->SetVisibility(v); ImGui::SameLine();
+            if (bool v = pVolume->GetVisibility(); ImGui::Checkbox("VRVisibility", &v)) pVolume->SetVisibility(v);
+
             //ImGui::Begin("666");
             ImGuiNs::vtkObjSetup("ImageData", reader->GetOutput());
             ImGuiNs::vtkObjSetup("ImageActor", pActor);
             //ImGui::End();
             ImGuiNs::vtkObjSetup("Mapper", pMapper, ImGuiTreeNodeFlags_DefaultOpen);
+            ImGuiNs::vtkObjSetup("YMapper", pYMapper);
+            ImGuiNs::vtkObjSetup("ZMapper", pZMapper);
         };
 
     // Start rendering app

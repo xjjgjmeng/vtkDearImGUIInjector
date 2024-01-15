@@ -31,6 +31,7 @@
 #include <vtkLine.h>
 #include <vtkXMLImageDataReader.h>
 #include <vtkPlane.h>
+#include <vtkPointWidget.h>
 #include <vtkImageResliceMapper.h>
 #include <vtkImageSlab.h>
 #include <vtkImageSliceMapper.h>

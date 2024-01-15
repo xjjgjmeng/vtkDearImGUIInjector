@@ -36,6 +36,7 @@ int main(int argc, char* argv[])
     vtkNew<vtkDICOMImageReader> reader;
     reader->SetDirectoryName(ImguiVtkNs::getDicomDir());
     reader->Update();
+    auto pImageData = reader->GetOutput();
 
     vtkNew<vtkImageSliceMapper> pXMapper;
     pXMapper->SetInputConnection(reader->GetOutputPort());
@@ -57,6 +58,32 @@ int main(int argc, char* argv[])
     vtkNew<vtkImageActor> zActor;
     zActor->SetMapper(pZMapper);
     renderer->AddActor(zActor);
+
+    // 整体影像的轮廓
+    {
+        vtkNew<vtkImageDataOutlineFilter> pOutline;
+        pOutline->SetInputData(pImageData);
+        pOutline->Update();
+        vtkNew<vtkPolyDataMapper> pMapper;
+        pMapper->SetInputData(pOutline->GetOutput());
+        vtkNew<vtkActor> pActor;
+        pActor->SetMapper(pMapper);
+        renderer->AddActor(pActor);
+    }
+    // VR
+    {
+        vtkNew<vtkVolume> pVolume;
+        vtkNew<vtkGPUVolumeRayCastMapper> pMapper;
+        pMapper->SetInputData(pImageData);
+        pMapper->SetBlendModeToComposite();
+        pVolume->SetMapper(pMapper);
+        ::setupDefaultVolumeProperty(pVolume);
+        pVolume->GetProperty()->GetScalarOpacity()->RemoveAllPoints();
+        // 调节透明度让slice更清楚
+        pVolume->GetProperty()->GetScalarOpacity()->AddPoint(1000, 0.);
+        pVolume->GetProperty()->GetScalarOpacity()->AddPoint(3000, 0.5);
+        renderer->AddVolume(pVolume);
+    }
 
     renderer->ResetCamera();
 

@@ -306,6 +306,76 @@ namespace
         }
         ImGuiNs::vtkObjSetup("Input", obj->GetInput());
     }
+
+    void vtkImageFlip_setup(vtkImageFlip* obj)
+    {
+        if (bool v = obj->GetFlipAboutOrigin(); ImGui::Checkbox("FlipAboutOrigin", &v))
+        {
+            obj->SetFlipAboutOrigin(v);
+        }
+        if (bool v = obj->GetPreserveImageExtent(); ImGui::Checkbox("PreserveImageExtent", &v))
+        {
+            obj->SetPreserveImageExtent(v);
+        }
+
+        for (const auto i : { 0,1,2 })
+        {
+            if (ImGui::Button(std::to_string(i).c_str()))
+            {
+                obj->SetFilteredAxes(i);
+                obj->Update();
+            }
+            ImGui::SameLine();
+        }
+        ImGui::Text(fmt::format("FilteredAxes: {}", obj->GetFilteredAxes()).c_str());
+    }
+
+    void vtk3DWidget_setup(vtk3DWidget* obj)
+    {
+        if (double v = obj->GetPlaceFactor(); ImGui::DragScalar("PlaceFactor", ImGuiDataType_Double, &v, 0.1f))
+        {
+            obj->SetPlaceFactor(v);
+        }
+        if (double v = obj->GetHandleSize(); ImGui::DragScalar("HandleSize", ImGuiDataType_Double, &v, 0.1f))
+        {
+            obj->SetHandleSize(v);
+        }
+    }
+
+    void vtkPointWidget_setup(vtkPointWidget* obj)
+    {
+        if (bool v = obj->GetOutline(); ImGui::Checkbox("Outline", &v))
+        {
+            obj->SetOutline(v);
+        }
+        if (bool v = obj->GetXShadows(); ImGui::Checkbox("XShadows", &v))
+        {
+            obj->SetXShadows(v);
+        }
+        if (bool v = obj->GetYShadows(); ImGui::Checkbox("YShadows", &v))
+        {
+            obj->SetYShadows(v);
+        }
+        if (bool v = obj->GetZShadows(); ImGui::Checkbox("ZShadows", &v))
+        {
+            obj->SetZShadows(v);
+        }
+        if (bool v = obj->GetTranslationMode(); ImGui::Checkbox("TranslationMode", &v))
+        {
+            obj->SetTranslationMode(v);
+        }
+        if (ImGui::Button("AllOff")) obj->AllOff(); ImGui::SameLine(); if (ImGui::Button("AllOn")) obj->AllOn();
+        if (double v[3]; obj->GetPosition(v), ImGui::DragScalarN("Position", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), 0.1f))
+        {
+            obj->SetPosition(v);
+        }
+        if (double v = obj->GetHotSpotSize(); ImGui::DragScalar("HotSpotSize", ImGuiDataType_Double, &v, 0.1f))
+        {
+            obj->SetHotSpotSize(v);
+        }
+        ImGuiNs::vtkObjSetup("Property", obj->GetProperty());
+        ImGuiNs::vtkObjSetup("SelectedProperty", obj->GetSelectedProperty());
+    }
 }
 
 namespace ImGuiNs
@@ -1012,6 +1082,10 @@ A value greater than 1 is a zoom-in, a value less than 1 is a zoom-out.
                             }
                         }
                     }
+                    else if (const auto p3DWidget = vtk3DWidget::SafeDownCast(vtkObj); p3DWidget && ImGui::CollapsingHeader("p3DWidget", ImGuiTreeNodeFlags_DefaultOpen))
+                    {
+                        vtk3DWidget_setup(p3DWidget);
+                    }
                 }
                 else if (const auto pAlgorithm = vtkAlgorithm::SafeDownCast(vtkObj); pAlgorithm && ImGui::CollapsingHeader("vtkAlgorithm", ImGuiTreeNodeFlags_DefaultOpen))
                 {
@@ -1392,6 +1466,12 @@ A value greater than 1 is a zoom-in, a value less than 1 is a zoom-out.
                 if (const auto pPlane = vtkPlane::SafeDownCast(vtkObj); pPlane && ImGui::CollapsingHeader("vtkPlane", ImGuiTreeNodeFlags_DefaultOpen))
                 {
                     vtkPlane_setup(pPlane);
+                }
+
+                // vtk3DWidget
+                if (const auto pPointWidget = vtkPointWidget::SafeDownCast(vtkObj); pPointWidget && ImGui::CollapsingHeader("vtkPointWidget", ImGuiTreeNodeFlags_DefaultOpen))
+                {
+                    vtkPointWidget_setup(pPointWidget);
                 }
 
                 // 继承自vtkProp
@@ -1810,6 +1890,12 @@ A value greater than 1 is a zoom-in, a value less than 1 is a zoom-out.
                 else if (const auto pDistanceRepresentation3D = vtkDistanceRepresentation3D::SafeDownCast(vtkObj); pDistanceRepresentation3D && ImGui::CollapsingHeader("vtkDistanceRepresentation3D", ImGuiTreeNodeFlags_DefaultOpen))
                 {
 
+                }
+
+                // vtkImageReslice
+                if (const auto pImageFlip = vtkImageFlip::SafeDownCast(vtkObj); pImageFlip && ImGui::CollapsingHeader("vtkImageFlip", ImGuiTreeNodeFlags_DefaultOpen))
+                {
+                    vtkImageFlip_setup(pImageFlip);
                 }
 
                 // vtkDataObject

@@ -1,8 +1,6 @@
 ﻿#include <ImGuiCommon.h>
 #include <implot.h>
 
-ImGuiNs::LogView logView;
-
 namespace {
     class vtkBoxCallback : public vtkCommand
     {
@@ -43,11 +41,11 @@ int main(int argc, char* argv[])
 #define vtkExtractVOI_flag 0
 
 #if 1 == vtkImageFlip_flag
-    vtkNew<vtkImageFlip> flipImage;
-    flipImage->SetInputData(reader->GetOutput());
-    flipImage->SetFilteredAxis(2);
-    flipImage->Update();
-    pMapper->SetInputData(flipImage->GetOutput());
+    vtkNew<vtkImageFlip> pImageFlip;
+    pImageFlip->SetInputData(reader->GetOutput());
+    pImageFlip->SetFilteredAxis(2);
+    pImageFlip->Update();
+    pMapper->SetInputData(pImageFlip->GetOutput());
 #elif 1 == vtkExtractVOI_flag
     vtkNew<vtkExtractVOI> pExtractVOI;
     pExtractVOI->SetInputData(reader->GetOutput());
@@ -91,15 +89,12 @@ int main(int argc, char* argv[])
     ::pWindow = renWin;
     ::imgui_render_callback = [&]
         {
-            if (ImGui::TreeNode("Log"))
-            {
-                logView.Draw();
-                ImGui::TreePop();
-            }
             ImGuiNs::vtkObjSetup("Volume", pVolume, ImGuiTreeNodeFlags_DefaultOpen);
             ImGuiNs::vtkObjSetup("OutlineSrc", pVOS, ImGuiTreeNodeFlags_DefaultOpen);
             ImGuiNs::vtkObjSetup("Box", boxWidget, ImGuiTreeNodeFlags_DefaultOpen);
-#if 1 == vtkExtractVOI_flag
+#if 1 == vtkImageFlip_flag
+            ImGuiNs::vtkObjSetup("ImageFlip", pImageFlip, ImGuiTreeNodeFlags_DefaultOpen);
+#elif 1 == vtkExtractVOI_flag
             ImGuiNs::vtkObjSetup("ExtractVOI", pExtractVOI, ImGuiTreeNodeFlags_DefaultOpen);
 #endif
             ImGuiNs::vtkObjSetup("vosActor", vosActor);
