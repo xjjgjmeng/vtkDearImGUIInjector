@@ -118,6 +118,7 @@ int main(int argc, char* argv[])
   myStyle->m_placer = placer;
   iren->SetInteractorStyle(myStyle);
 
+  ::pWindow = renWin;
   ::imgui_render_callback = [&]
       {
           if (ImGui::TreeNode("Log"))

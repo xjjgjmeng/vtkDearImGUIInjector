@@ -376,6 +376,16 @@ namespace
         ImGuiNs::vtkObjSetup("Property", obj->GetProperty());
         ImGuiNs::vtkObjSetup("SelectedProperty", obj->GetSelectedProperty());
     }
+
+    void vtkWindow_setup(vtkWindow* obj)
+    {
+    
+    }
+
+    void vtkRenderWindow_setup(vtkRenderWindow* obj)
+    {
+        ImGui::Text(fmt::format("NumberOfLayers: {}", obj->GetNumberOfLayers()).c_str());
+    }
 }
 
 namespace ImGuiNs
@@ -1375,6 +1385,16 @@ A value greater than 1 is a zoom-in, a value less than 1 is a zoom-out.
                 else if (const auto pImageProperty = vtkImageProperty::SafeDownCast(vtkObj); pImageProperty && ImGui::CollapsingHeader("vtkImageProperty", ImGuiTreeNodeFlags_DefaultOpen))
                 {
                     vtkImageProperty_setup(pImageProperty);
+                }
+                else if (const auto pWindow = vtkWindow::SafeDownCast(vtkObj); pWindow && ImGui::CollapsingHeader("vtkWindow", ImGuiTreeNodeFlags_DefaultOpen))
+                {
+                    vtkWindow_setup(pWindow);
+                }
+
+                // vtkWindow
+                if (const auto pRenderWindow = vtkRenderWindow::SafeDownCast(vtkObj); pRenderWindow && ImGui::CollapsingHeader("vtkRenderWindow", ImGuiTreeNodeFlags_DefaultOpen))
+                {
+                    vtkRenderWindow_setup(pRenderWindow);
                 }
 
                 // vtkAbstractMapper3D
