@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <Windows.h>
 
@@ -134,6 +134,7 @@
 #include <vtkXMLImageDataWriter.h>
 #include <vtkImageActorPointPlacer.h>
 #include <vtkParametricSpline.h>
+#include <vtkImageChangeInformation.h>
 #include <vtkParametricFunctionSource.h>
 #include <vtkJPEGReader.h>
 #include <vtkCylinderSource.h>
