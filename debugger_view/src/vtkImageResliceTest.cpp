@@ -111,6 +111,8 @@ int main(int argc, char* argv[])
     renderWindow->AddRenderer(renderer);
     iren->SetRenderWindow(renderWindow);
 
+    ImguiVtkNs::labelWorldZero(renderer);
+
     reader = vtkSmartPointer<vtkDICOMImageReader>::New();
     reader->SetDirectoryName(ImguiVtkNs::getDicomDir());
     reader->Update();
@@ -125,6 +127,8 @@ int main(int argc, char* argv[])
     reslice->SetInputConnection(reader->GetOutputPort());
     reslice->SetOutputDimensionality(2);
     {
+        // ResliceAxesOrigin设置reslice坐标系的原点在世界坐标系中的位置，生成的slice的origin是相对这个点而言的
+        // 如果调用了SetOutputOrigin，则输出的slice的origin只被此接口控制
 #if 1
         auto resliceAxes = vtkSmartPointer<vtkMatrix4x4>::New();
         {
@@ -157,6 +161,16 @@ int main(int argc, char* argv[])
 #endif
     }
     reslice->SetInterpolationModeToLinear();
+    reslice->SetOutputOrigin(0, 0, 0); // 指定了输出的数据的extent(0,0,0)的世界坐标
+    reslice->SetOutputExtent(0,100,0,100,0,100); // 指定了数据数据extent的范围，可以从0开始，也可以大于或小于0
+    reslice->SetOutputSpacing(1., 1., 1.); // 指定了数据点之间的世界坐标中的距离
+    // 某个voxel在世界中的位置: origin指定的世界点 + ijk * spacing指定的间距
+
+    // 总结:
+    // 在输出数据为二维的时候:
+    // 根据ResliceAxes截取一个slice，将slice放置在XY平面上，将ResliceAxesOrigin对应的voxel或ijk和世界坐标的(0,0,0)对其
+    // 再根据设置的OutputOrigin，OutputExtent（和OutputSpacing）在这个平面上滑动选取想要的区域
+    // OutputExtent（和OutputSpacing）确定最终区域的大小，OutputOrigin确定这个区域（ijk为0，0，0）的起点
 
     colorMap = vtkSmartPointer<vtkImageMapToColors>::New();
     {
@@ -185,16 +199,9 @@ int main(int argc, char* argv[])
     ::pWindow = renderWindow;
     ::imgui_render_callback = [&]
     {
-        //f (ImGui::TreeNode("vtkImageData"))
-        {
-            ImGuiNs::vtkObjSetup("vtkImageData", ::reader->GetOutput());
-            //ImGui::TreePop();
-        }
-        //if (ImGui::TreeNode("vtkImageActor"))
-        {
-            ImGuiNs::vtkObjSetup("vtkImageActor", ::actor);
-            //ImGui::TreePop();
-        }
+        ImGuiNs::vtkObjSetup("vtkImageData", ::reader->GetOutput());
+        ImGuiNs::vtkObjSetup("vtkImageData_New", reslice->GetOutput());
+        ImGuiNs::vtkObjSetup("vtkImageActor", ::actor);
 
         auto lookupmap = colorMap->GetLookupTable();
         double* pRange = lookupmap->GetRange();
@@ -293,6 +300,22 @@ int main(int argc, char* argv[])
                 ::reslice->SetResliceAxesOrigin(o);
                 ::colorMap->Update();
             }
+
+            int outputExtent[6];
+            ::reslice->GetOutputExtent(outputExtent);
+            if (ImGui::DragScalarN("OutputExtent", ImGuiDataType_S32, outputExtent, IM_ARRAYSIZE(outputExtent)))
+            {
+                ::reslice->SetOutputExtent(outputExtent);
+                ::colorMap->Update();
+            }
+
+            double outputOrigin[3];
+            ::reslice->GetOutputOrigin(outputOrigin);
+            if (ImGui::DragScalarN("OutputOrigin", ImGuiDataType_Double, outputOrigin, IM_ARRAYSIZE(outputOrigin)))
+            {
+                ::reslice->SetOutputOrigin(outputOrigin);
+                ::colorMap->Update();
+            }
         }
         {
             if (auto wrap = ::reslice->GetWrap(); ImGui::Button(fmt::format("Wrap: {}", wrap).c_str()))
@@ -375,6 +398,12 @@ int main(int argc, char* argv[])
     // You can draw custom user interface elements using ImGui:: namespace.
     ImguiVtkNs::DrawUI(dearImGuiOverlay);
     /// Change to your code ends here. ///
+
+    vtkNew<vtkCameraOrientationWidget> camManipulator;
+    camManipulator->SetParentRenderer(renderer);
+    camManipulator->On();
+    auto rep = vtkCameraOrientationRepresentation::SafeDownCast(camManipulator->GetRepresentation());
+    rep->AnchorToLowerRight();
 
     // Start event loop
 #if 0

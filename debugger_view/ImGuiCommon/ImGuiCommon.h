@@ -618,4 +618,51 @@ namespace ImguiVtkNs
 		}
 		return retval;
 	}
+
+	static void labelWorldZero(vtkRenderer* pRen)
+	{
+		// 在世界原点放置一个标记
+		{
+			vtkNew<vtkSphereSource> pointSource;
+			pointSource->SetCenter(0, 0, 0);
+			//pointSource->SetNumberOfPoints(1);
+			pointSource->SetRadius(5.0);
+			pointSource->Update();
+
+			// Create a mapper and actor.
+			vtkNew<vtkPolyDataMapper> mapper;
+			mapper->SetInputConnection(pointSource->GetOutputPort());
+
+			vtkNew<vtkActor> actor;
+			actor->SetMapper(mapper);
+			actor->GetProperty()->SetColor(1, 0.5, 0);
+			actor->GetProperty()->SetPointSize(5);
+			pRen->AddActor(actor);
+		}
+		// 画三条线表示XYZ轴
+		{
+			struct
+			{
+				double pos[3];
+				double color[3];
+			} xLine{ {30, 0, 0},{1,0,0} }, yLine{ {0,30,0},{0,1,0} }, zLine{ {0,0,30}, {0,0,1} };
+
+			for (const auto& [pos, color] : { xLine, yLine, zLine })
+			{
+				vtkNew<vtkLineSource> pSource;
+				pSource->SetPoint1(0, 0, 0);;
+				pSource->SetPoint2(pos);
+				pSource->Update();
+
+				vtkNew<vtkPolyDataMapper> pMapper;
+				pMapper->SetInputConnection(pSource->GetOutputPort());
+
+				vtkNew<vtkActor> pActor;
+				pActor->SetMapper(pMapper);
+				pActor->GetProperty()->SetColor(const_cast<double*>(color));
+				pActor->GetProperty()->SetPointSize(5);
+				pRen->AddActor(pActor);
+			}
+		}
+	}
 }

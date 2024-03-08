@@ -74,6 +74,7 @@
 #include "vtkImageActor.h"
 #include "vtkInteractorStyleImage.h"
 #include <vtkNamedColors.h>
+#include <vtkOutlineSource.h>
 #include <vtkVolume.h>
 #include <vtkOpenGLActor.h>
 #include <vtkVolumeProperty.h>
@@ -132,6 +133,7 @@
 #include <vtkExtractSelection.h>
 #include <vtkDataSetMapper.h>
 #include <vtkXMLImageDataWriter.h>
+#include <vtkXMLImageDataReader.h>
 #include <vtkImageActorPointPlacer.h>
 #include <vtkParametricSpline.h>
 #include <vtkImageChangeInformation.h>

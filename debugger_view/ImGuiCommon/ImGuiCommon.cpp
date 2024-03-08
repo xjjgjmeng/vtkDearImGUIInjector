@@ -386,6 +386,38 @@ namespace
     {
         ImGui::Text(fmt::format("NumberOfLayers: {}", obj->GetNumberOfLayers()).c_str());
     }
+
+    void vtkCaptionActor2D_setup(vtkCaptionActor2D* obj)
+    {
+        if (bool v = obj->GetBorder(); ImGui::Checkbox("Border", &v))
+        {
+            obj->SetBorder(v);
+        }
+        if (bool v = obj->GetAttachEdgeOnly(); ImGui::Checkbox("AttachEdgeOnly", &v))
+        {
+            obj->SetAttachEdgeOnly(v);
+        }
+        if (bool v = obj->GetLeader(); ImGui::Checkbox("Leader", &v))
+        {
+            obj->SetLeader(v);
+        }
+        if (bool v = obj->GetThreeDimensionalLeader(); ImGui::Checkbox("ThreeDimensionalLeader", &v))
+        {
+            obj->SetThreeDimensionalLeader(v);
+        }
+        if (float v[3]{ obj->GetAttachmentPoint()[0], obj->GetAttachmentPoint()[1], obj->GetAttachmentPoint()[2]}; ImGui::DragScalarN("AttachmentPoint", ImGuiDataType_Float, v, IM_ARRAYSIZE(v), 0.1f))
+        {
+            obj->SetAttachmentPoint(v[0], v[1], v[2]);
+        }
+        if (int v = obj->GetPadding(); ImGui::DragInt("Padding", &v))
+        {
+            obj->SetPadding(v);
+        }
+        if (float v = obj->GetLeaderGlyphSize(); ImGui::DragFloat("LeaderGlyphSize", &v))
+        {
+            obj->SetLeaderGlyphSize(v);
+        }
+    }
 }
 
 namespace ImGuiNs
@@ -1651,6 +1683,10 @@ A value greater than 1 is a zoom-in, a value less than 1 is a zoom-out.
                         pAxisActor2D->SetFontFactor(v); // 需要手动刷新？？
                     }
                     vtkObjSetup("TitleTextProperty", pAxisActor2D->GetTitleTextProperty());
+                }
+                else if (const auto pCaptionActor2D = vtkCaptionActor2D::SafeDownCast(vtkObj); pCaptionActor2D && ImGui::CollapsingHeader("vtkCaptionActor2D", ImGuiTreeNodeFlags_DefaultOpen))
+                {
+                    vtkCaptionActor2D_setup(pCaptionActor2D);
                 }
 
                 // 继承自vtkWidgetRepresentation

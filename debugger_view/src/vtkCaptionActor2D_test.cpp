@@ -1,7 +1,5 @@
 ﻿#include <ImGuiCommon.h>
 
-ImGuiNs::LogView logView;
-
 int main(int argc, char* argv[])
 {
     vtkNew<vtkRenderer> ren;
@@ -10,37 +8,28 @@ int main(int argc, char* argv[])
     vtkNew<vtkRenderWindowInteractor> iren;
     iren->SetRenderWindow(renWin);
 
-    auto img = vtkSmartPointer<vtkImageData>::New();
-    // 设置图像的维度、原点、间隔等信息
-    img->SetDimensions(256, 256, 1);
-    img->SetOrigin(0.0, 0.0, 0.0);
-    img->SetSpacing(1.0, 1.0, 1.0);
+    ImguiVtkNs::labelWorldZero(ren);
 
-    // 分配内存并写入数据
-    img->AllocateScalars(VTK_UNSIGNED_CHAR, 1);
-    unsigned char* data = static_cast<unsigned char*>(img->GetScalarPointer(0, 0, 0));
+    auto pCaptionActor2D = vtkSmartPointer<vtkCaptionActor2D>::New();
+    pCaptionActor2D->SetCaption("123\n456\nhello");
+    pCaptionActor2D->GetPositionCoordinate()->SetCoordinateSystemToWorld();
+    pCaptionActor2D->GetActualPositionCoordinate()->SetCoordinateSystemToWorld();
+    pCaptionActor2D->SetAttachmentPoint(0, 0, 0);
+    pCaptionActor2D->GetTextActor()->SetTextScaleModeToNone();//不设置这句字体大小不起作用   默认SetTextScaleModeToProp
+    pCaptionActor2D->GetCaptionTextProperty()->SetFontSize(15);
+    pCaptionActor2D->GetCaptionTextProperty()->SetColor(1, 1, 1);
+    pCaptionActor2D->GetCaptionTextProperty()->SetBold(1);
+    pCaptionActor2D->GetCaptionTextProperty()->SetItalic(1);
+    pCaptionActor2D->GetCaptionTextProperty()->SetShadow(1);
+    pCaptionActor2D->GetCaptionTextProperty()->SetFontFamilyToArial();
+    ren->AddActor(pCaptionActor2D);
 
-    for (int i = 0; i < 256; i++)
-    {
-        for (int j = 0; j < 256; j++)
-        {
-            data[i * 256 + j] = static_cast<unsigned char>(i + j);
-        }
-    }
-    auto actor = vtkSmartPointer<vtkImageActor>::New();
-    actor->SetInputData(img);
-    ren->AddActor(actor);
+    ren->ResetCamera();
 
     ::pWindow = renWin;
     ::imgui_render_callback = [&]
         {
-            if (ImGui::TreeNode("Log"))
-            {
-                ::logView.Draw();
-                ImGui::TreePop();
-            }
-            ImGuiNs::vtkObjSetup("ImageData", img, ImGuiTreeNodeFlags_DefaultOpen);
-            ImGuiNs::vtkObjSetup("ImageActor", actor, ImGuiTreeNodeFlags_DefaultOpen);
+            ImGuiNs::vtkObjSetup("CaptionActor2D", pCaptionActor2D, ImGuiTreeNodeFlags_DefaultOpen);
         };
 
     // Start rendering app
