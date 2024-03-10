@@ -40,7 +40,7 @@ vtkSmartPointer<vtkImageActor> actor;
 double spacing[3];
 ImageSharpenFilter* pMyFilter = nullptr;
 
-class MyStyle : public vtkInteractorStyleImage
+class MyStyle : public vtkInteractorStyleTrackballCamera
 {
 public:
   static MyStyle* New() { return new MyStyle; }
@@ -193,6 +193,35 @@ int main(int argc, char* argv[])
     colorMap->Update();
 
     actor = vtkSmartPointer<vtkImageActor>::New();
+    vtkNew<vtkActor> pActor;
+    renderer->AddActor(pActor);
+    // 将reslice得到的image用线框表示出来
+    // 后面要改成reslice的output
+    {
+        auto f = [](vtkObject* caller, unsigned long eid, void* clientdata, void* calldata)
+        {
+            //auto pReslice = vtkImageReslice::SafeDownCast(caller);
+            auto pImg = vtkImageData::SafeDownCast(caller);
+            auto pActor = reinterpret_cast<vtkActor*>(clientdata);
+            {
+                vtkNew<vtkImageDataOutlineFilter> pFilter;
+                //pFilter->SetInputData(pReslice->GetOutput());
+                pFilter->SetInputData(pImg);
+                pFilter->Update();
+
+                vtkNew<vtkPolyDataMapper> pMapper;
+                pMapper->SetInputData(pFilter->GetOutput());
+
+                //static vtkNew<vtkActor> pActor;
+                pActor->SetMapper(pMapper);
+                //pRenderer->AddActor(pActor);
+            }
+        };
+        vtkNew<vtkCallbackCommand> pCC;
+        pCC->SetCallback(f);
+        pCC->SetClientData(pActor);
+        colorMap->GetOutput()->AddObserver(vtkCommand::ModifiedEvent, pCC);
+    }
     actor->SetInputData(colorMap->GetOutput());
     renderer->AddActor(actor);
 

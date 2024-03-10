@@ -49,8 +49,10 @@ namespace
                 pRenderer->AddActor(actor);
             }
 
+            // 将最新提取出来的volume的轮廓线显示出来
             {
                 vtkNew<vtkOutlineSource> pSource;
+                // 参数是世界坐标xyz对:xmin,xmax,ymin,ymax,zmin,zmax
                 pSource->SetBounds(xyz[0], xyz2[0], xyz[1], xyz2[1], xyz[2], xyz2[2]);
                 pSource->Update();
 
@@ -60,6 +62,13 @@ namespace
                 pOutlineActor->SetMapper(pMapper);
                 this->pRenderer->AddActor(pOutlineActor);
             }
+
+            {
+                // 显示出来的单层slice在世界坐标和三维数据是对齐的
+                // 通过拖拽vtkImageActor的Mapper的SliceNumber可以看slice在voi的空间范围内移动
+                this->pImgActor->SetInputData(this->pExtractVOI->GetOutput());
+                this->pRenderer->AddActor(this->pImgActor);
+            }
         }
 
         vtkSmartPointer<vtkExtractVOI> pExtractVOI;
@@ -68,6 +77,7 @@ namespace
         vtkNew<vtkActor> pActor;
         vtkNew<vtkActor> pActor2;
         vtkNew<vtkActor> pOutlineActor;
+        vtkSmartPointer<vtkImageActor> pImgActor;
     };
 }
 
@@ -84,6 +94,9 @@ int main(int argc, char* argv[])
     reader->Update();
     auto pImg = reader->GetOutput();
 
+    ImguiVtkNs::genImgOutline(ren, pImg);
+
+#if 0
     vtkNew<vtkVolume> pVolume;
     vtkNew<vtkGPUVolumeRayCastMapper> pMapper;
 
@@ -98,24 +111,44 @@ int main(int argc, char* argv[])
     pVolume->GetProperty()->GetScalarOpacity()->AddPoint(5000, 0.05);
 #endif
     ren->AddVolume(pVolume);
+#endif
 
     vtkNew<vtkExtractVOI> pExtractVOI;
+    vtkNew<vtkImageActor> pImgActor;
     {
         vtkNew<myCmd> pCmd;
         pCmd->pExtractVOI = pExtractVOI;
         pCmd->pImageData = pImg;
         pCmd->pRenderer = ren;
+        pCmd->pImgActor = pImgActor;
         pExtractVOI->AddObserver(vtkCommand::ModifiedEvent, pCmd);
     }
-    pExtractVOI->SetInputData(pImg);
-    pExtractVOI->SetVOI(200, 600, 200, 600, 200, 300);
-    pExtractVOI->Update();
+    // Extract
+    {
+        pExtractVOI->SetInputData(pImg);
+        int ijk[6];
+        pImg->GetExtent(ijk);
+        // 只提取中间300X300X300的volume
+        for (auto minval : { ijk +0, ijk + 2, ijk + 4 })
+        {
+            while ((*(minval + 1) - *minval) > 300)
+            {
+                --(*(minval + 1));
+                ++(*minval);
+            }
+        }
+        // 参数是索引对:imin,imax,jmin,jmax,kmin,kmax
+        // 如果其中有一个索引对是一样的，比如imin等于imax，那么输出的vtkImageData的DataDimension将是2
+        // 如果imin>imax，那么输出的vtkImageData的DataDimension将是0
+        pExtractVOI->SetVOI(ijk[0], ijk[1], ijk[2], ijk[3], ijk[4], ijk[5]);
+        pExtractVOI->Update();
+    }
+    // 将提取的volume渲染出来
     {
         vtkNew<vtkVolume> pVolume;
         vtkNew<vtkGPUVolumeRayCastMapper> pMapper;
 
         pMapper->SetInputConnection(pExtractVOI->GetOutputPort());
-        pMapper->SetInputData(pExtractVOI->GetOutput());
         pMapper->SetBlendModeToComposite();
         pVolume->SetMapper(pMapper);
         ::setupDefaultVolumeProperty(pVolume);
@@ -130,6 +163,7 @@ int main(int argc, char* argv[])
             ImGuiNs::vtkObjSetup("ExtractVOI", pExtractVOI, ImGuiTreeNodeFlags_DefaultOpen);
             ImGuiNs::vtkObjSetup("OriginImg", pImg);
             ImGuiNs::vtkObjSetup("NewImg", pExtractVOI->GetOutput(), ImGuiTreeNodeFlags_DefaultOpen);
+            ImGuiNs::vtkObjSetup("ImgActor", pImgActor);
             //ImGuiNs::vtkObjSetup("Box", boxWidget, ImGuiTreeNodeFlags_DefaultOpen);
             //ImGuiNs::vtkObjSetup("Mapper", pMapper);
         };

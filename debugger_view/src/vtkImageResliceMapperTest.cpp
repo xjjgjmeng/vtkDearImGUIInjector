@@ -1,9 +1,15 @@
 ﻿#include <ImGuiCommon.h>
 
-class MyStyle : public vtkInteractorStyleImage
+class MyStyle : public vtkInteractorStyleTrackballCamera
 {
 public:
     static MyStyle* New() { return new MyStyle; }
+
+    void OnRightButtonDown() override
+    {
+        this->m_move = !this->m_move;
+        __super::OnRightButtonDown();
+    }
 
     void OnMouseMove() override
     {
@@ -20,11 +26,37 @@ public:
         ::getLogView()->Add(fmt::format("worldOrient: {::.2f}\n", worldOrient));
         ::getLogView()->Add(fmt::format("ValidateWorldPosition: {}\n", this->m_placer->ValidateWorldPosition(worldPos)));
     
+        if (m_move)
+        {
+            vtkNew<vtkSphereSource> pointSource;
+            pointSource->SetCenter(worldPos);
+            pointSource->SetRadius(5.0);
+            pointSource->Update();
+
+            vtkNew<vtkPolyDataMapper> mapper;
+            mapper->SetInputConnection(pointSource->GetOutputPort());
+
+            m_actor->SetMapper(mapper);
+            if (this->m_placer->ValidateWorldPosition(worldPos))
+            {
+                m_actor->GetProperty()->SetColor(1, 0, 0);
+            }
+            else
+            {
+                m_actor->GetProperty()->SetColor(1, 1, 1);
+            }
+            m_actor->GetProperty()->SetPointSize(5);
+            m_renderer->AddActor(m_actor);
+        }
+
         __super::OnMouseMove();
     }
 
     vtkNew<vtkImageActorPointPlacer> m_placer;
+    vtkSmartPointer<vtkRenderer> m_renderer;
     std::function<void()> updataDisplayExtent;
+    vtkNew<vtkActor> m_actor;
+    bool m_move = false;
 };
 
 int main(int argc, char* argv[])
@@ -64,7 +96,9 @@ int main(int argc, char* argv[])
     }
     pActor->Update();
     ren->AddActor(pActor);
-
+#define SHOW_Y 0
+#define SHOW_Z 0
+#if 1 == SHOW_Y
     // Y
     vtkNew<vtkImageActor> pYActor;
     vtkNew<vtkImageResliceMapper> pYMapper;
@@ -84,7 +118,8 @@ int main(int argc, char* argv[])
     pYActor->Update();
     ren->AddActor(pYActor);
     pYActor->VisibilityOff();
-
+#endif
+#if 1 == SHOW_Z
     // Z
     vtkNew<vtkImageActor> pZActor;
     vtkNew<vtkImageResliceMapper> pZMapper;
@@ -104,6 +139,7 @@ int main(int argc, char* argv[])
     pZActor->Update();
     ren->AddActor(pZActor);
     pZActor->VisibilityOff();
+#endif
 
     ren->GetActiveCamera()->ParallelProjectionOn();
     ren->GetActiveCamera()->SetViewUp(0,1,0);
@@ -139,6 +175,7 @@ int main(int argc, char* argv[])
 
     auto pStyle = vtkSmartPointer<MyStyle>::New();
     pStyle->m_placer->SetImageActor(pActor);
+    pStyle->m_renderer = ren;
     pStyle->updataDisplayExtent = [&]
         {
             double imgIJK[3];
@@ -156,8 +193,12 @@ int main(int argc, char* argv[])
         {
             ImGui::Text("Visibility: "); ImGui::SameLine();
             if (bool v = pActor->GetVisibility(); ImGui::Checkbox("XActor", &v)) pActor->SetVisibility(v); ImGui::SameLine();
+#if 1 ==SHOW_Y
             if (bool v = pYActor->GetVisibility(); ImGui::Checkbox("YActor", &v)) pYActor->SetVisibility(v); ImGui::SameLine();
+#endif
+#if 1 == SHOW_Z
             if (bool v = pZActor->GetVisibility(); ImGui::Checkbox("ZActor", &v)) pZActor->SetVisibility(v); ImGui::SameLine();
+#endif
             if (bool v = pVolume->GetVisibility(); ImGui::Checkbox("VRVisibility", &v)) pVolume->SetVisibility(v);
 
             //ImGui::Begin("666");
@@ -165,8 +206,12 @@ int main(int argc, char* argv[])
             ImGuiNs::vtkObjSetup("ImageActor", pActor);
             //ImGui::End();
             ImGuiNs::vtkObjSetup("Mapper", pMapper, ImGuiTreeNodeFlags_DefaultOpen);
+#if 1 == SHOW_Y
             ImGuiNs::vtkObjSetup("YMapper", pYMapper);
+#endif
+#if 1 == SHOW_Z
             ImGuiNs::vtkObjSetup("ZMapper", pZMapper);
+#endif
         };
 
     // Start rendering app

@@ -102,6 +102,7 @@
 #include <vtkProperty2D.h>
 #include <vtkSphereSource.h>
 #include <vtkCamera.h>
+#include <vtkImageDataOutlineFilter.h>
 #include <vtkWorldPointPicker.h>
 #include <vtkInformationVector.h>
 #include <vtkTextActor.h>

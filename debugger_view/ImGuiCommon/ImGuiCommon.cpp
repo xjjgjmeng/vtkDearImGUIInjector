@@ -185,12 +185,12 @@ namespace
             ImGui::PopButtonRepeat();
         }
 
-        if (double v[3]; obj->GetOrigin(v), ImGui::DragScalarN("Origin", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), 0.01f))
+        if (double v[3]; obj->GetOrigin(v), ImGui::DragScalarN("Origin", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), 0.1f))
         {
             obj->SetOrigin(v);
         }
 
-        if (double v[3]; obj->GetNormal(v), ImGui::DragScalarN("Normal", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), 0.01f))
+        if (double v[3]; obj->GetNormal(v), ImGui::DragScalarN("Normal", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), 0.1f))
         {
             obj->SetNormal(v);
         }
@@ -209,6 +209,7 @@ namespace
             obj->SetForceTranslucent(v);
         }
         ImGuiNs::vtkObjSetup("Property", obj->GetProperty());
+        ImGuiNs::vtkObjSetup("Mapper", obj->GetMapper());
     }
 
     void vtkImageProperty_setup(vtkImageProperty* obj)

@@ -599,8 +599,8 @@ namespace ImguiVtkNs
 
 	static const char* getDicomFile()
 	{
-		const char* retval = "D:/test_data/series/I0000000200.dcm";
-		//const char* retval = "C:\\Users\\123\\Desktop\\series\\I0000000200.dcm";
+		//const char* retval = "D:/test_data/series/I0000000200.dcm";
+		const char* retval = "C:\\Users\\123\\Desktop\\series666\\I0000000200.dcm";
 		if (!std::filesystem::exists(retval))
 		{
 			throw "dicom file does not exist!";
@@ -610,8 +610,8 @@ namespace ImguiVtkNs
 
 	static const char* getDicomDir()
 	{
-		const char* retval = "D:/test_data/series";
-		//const char* retval = "C:\\Users\\123\\Desktop\\series";
+		//const char* retval = "D:/test_data/series";
+		const char* retval = "C:\\Users\\123\\Desktop\\series666";
 		if (!std::filesystem::exists(retval))
 		{
 			throw "dicom dir does not exist!";
@@ -664,5 +664,19 @@ namespace ImguiVtkNs
 				pRen->AddActor(pActor);
 			}
 		}
+	}
+
+	static void genImgOutline(vtkRenderer* pRenderer, vtkImageData* pData)
+	{
+		vtkNew<vtkImageDataOutlineFilter> pFilter;
+		pFilter->SetInputData(pData);
+		pFilter->Update();
+
+		vtkNew<vtkPolyDataMapper> pMapper;
+		pMapper->SetInputData(pFilter->GetOutput());
+
+		vtkNew<vtkActor> pActor;
+		pActor->SetMapper(pMapper);
+		pRenderer->AddActor(pActor);
 	}
 }
