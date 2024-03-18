@@ -50,7 +50,7 @@ int main(int argc, char* argv[])
     slab->SetOperationToMean();
     slab->SetTrapezoidIntegration(1);
     slab->SetSliceRange(0,3);
-    slab->SetEnableSMP(1);
+    slab->SetEnableSMP(0); // 设置为0更快
     slab->Update();
 
     vtkNew<vtkImageChangeInformation> changer;
@@ -67,16 +67,30 @@ int main(int argc, char* argv[])
     ::pWindow = renWin;
     ::imgui_render_callback = [&]
         {
-            ImGui::Begin("OLD");
-            ImGuiNs::vtkObjSetup("image_I", reader->GetOutput(), ImGuiTreeNodeFlags_DefaultOpen);
-            ImGui::End();
+            {
+                static bool b = false;
+                ImGui::Checkbox("ShowOldImg", &b);
+                if (b)
+                {
+                    ImGui::Begin("OLD");
+                    ImGuiNs::vtkObjSetup("image_I", reader->GetOutput(), ImGuiTreeNodeFlags_DefaultOpen);
+                    ImGui::End();
+                }
+            }
 
-            ImGui::Begin("NEW");
-            ImGuiNs::vtkObjSetup("image_O", changer->GetOutput(), ImGuiTreeNodeFlags_DefaultOpen);
-            ImGui::End();
+            {
+                static bool b = false;
+                ImGui::Checkbox("ShowNewImg", &b);
+                if (b)
+                {
+                    ImGui::Begin("NEW");
+                    ImGuiNs::vtkObjSetup("image_O", changer->GetOutput(), ImGuiTreeNodeFlags_DefaultOpen);
+                    ImGui::End();
+                }
+            }
             
             ImGuiNs::vtkObjSetup("Slab", slab, ImGuiTreeNodeFlags_DefaultOpen);
-            ImGuiNs::vtkObjSetup("Viewer2", pViewer, ImGuiTreeNodeFlags_DefaultOpen);
+            ImGuiNs::vtkObjSetup("Viewer2", pViewer);
         };
 
     // Start rendering app

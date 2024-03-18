@@ -1,8 +1,6 @@
 ﻿#include <ImGuiCommon.h>
 #include <vtkOpenGLActor.h>
 
-ImGuiNs::LogView logView;
-
 // https://vtk.org/pipermail/vtkusers/2004-May/024119.html
 class MyActor : public vtkOpenGLActor
 {
@@ -12,7 +10,7 @@ public:
 
     void Pick() override
     {
-        ::logView.Add("Pick func");
+        ::getLogView()->Add("Pick func");
         __super::Pick();
     }
 };
@@ -26,18 +24,17 @@ public:
 
     void OnLeftButtonDown() override
     {
-        int eventPosition[2];
-        this->GetInteractor()->GetEventPosition(eventPosition[0], eventPosition[1]);
-        ::logView.Add(fmt::format("EventPosition: {}", eventPosition));
-        if (const auto renderer = this->GetInteractor()->FindPokedRenderer(eventPosition[0], eventPosition[1]))
-        //if (const auto renderer = this->GetDefaultRenderer())
-        //if (const auto renderer = this->GetCurrentRenderer())
+        int eventPt[2];
+        this->GetInteractor()->GetEventPosition(eventPt);
+        ::getLogView()->Add(fmt::format("EventPosition: {}", eventPt));
+        if (const auto renderer = this->GetInteractor()->FindPokedRenderer(eventPt[0], eventPt[1]))
         {
-            ImGuiNs::printWorldPt(::logView, renderer, eventPosition[0], eventPosition[1]);
+            ImGuiNs::printWorldPt(*::getLogView(), renderer, eventPt[0], eventPt[1]);
 
-            this->GetInteractor()->GetPicker()->Pick(eventPosition[0], eventPosition[1], 0, renderer);
+            this->GetInteractor()->GetPicker()->Pick(eventPt[0], eventPt[1], 0, renderer);
             double pickedPt[3];
             this->GetInteractor()->GetPicker()->GetPickPosition(pickedPt); // 获取pick的世界坐标
+            ::getLogView()->Add(fmt::format("pickedPt: {}", pickedPt));
             if (vtkPointPicker::SafeDownCast(this->GetInteractor()->GetPicker()) || vtkWorldPointPicker::SafeDownCast(this->GetInteractor()->GetPicker()))
             {
                 // 在点击的位置放置一个点
@@ -50,7 +47,6 @@ public:
                 vtkNew<MyActor> actor;
                 actor->SetMapper(mapper);
                 actor->GetProperty()->SetColor(0, 1, 0);
-                //actor->SetPosition(pickedPt);
                 renderer->AddActor(actor);
             }
             else if (auto pPicker = vtkPropPicker::SafeDownCast(this->GetInteractor()->GetPicker()))
@@ -65,17 +61,17 @@ public:
                 if (lastPickedActor = pPicker->GetActor())
                 {
                     lastPickedProperty->DeepCopy(lastPickedActor->GetProperty());
-                    lastPickedActor->GetProperty()->SetColor(0.3, 0, 0);
+                    lastPickedActor->GetProperty()->SetColor(0.5, 0., 0.);
                 }
             }
             else if (auto pPicker = vtkCellPicker::SafeDownCast(this->GetInteractor()->GetPicker()))
             {
                 //pPicker->SetTolerance(0.0005);
-                if (-1 != pPicker->GetCellId())
+                if (const auto cellId = pPicker->GetCellId(); -1 != cellId && 0)
                 {
                     vtkNew<vtkIdTypeArray> ids;
                     ids->SetNumberOfComponents(1);
-                    ids->InsertNextValue(pPicker->GetCellId());
+                    ids->InsertNextValue(cellId);
 
                     vtkNew<vtkSelectionNode> selectionNode;
                     selectionNode->SetFieldType(vtkSelectionNode::CELL);
@@ -134,8 +130,8 @@ public:
     void OnLeftButtonDown() override
     {
         __super::OnLeftButtonDown(); // 此函数会调用vtkInteractorStyleTrackballActor::FindPickedActor，更新InteractionPicker变量
-        ::logView.Add(fmt::format("InteractionProp: {}", reinterpret_cast<void*>(this->InteractionProp)));
-        ::logView.Add(fmt::format("GetViewProp: {}", reinterpret_cast<void*>(this->InteractionPicker->GetViewProp())));
+        ::getLogView()->Add(fmt::format("InteractionProp: {}", reinterpret_cast<void*>(this->InteractionProp)));
+        ::getLogView()->Add(fmt::format("GetViewProp: {}", reinterpret_cast<void*>(this->InteractionPicker->GetViewProp())));
     }
 };
 vtkStandardNewMacro(MyActorStyle);
@@ -150,6 +146,7 @@ int main(int argc, char* argv[])
 
     vtkNew<vtkNamedColors> colors;
     vtkNew<vtkCubeSource> cubeSource;
+    cubeSource->SetBounds(-10, 10, -10, 10, -10, 10);
     vtkNew<vtkPolyDataMapper> cubeMapper;
     cubeMapper->SetInputConnection(cubeSource->GetOutputPort());
     vtkNew<vtkActor> cubeActor;
@@ -158,26 +155,43 @@ int main(int argc, char* argv[])
         colors->GetColor4d("MediumSeaGreen").GetData());
     ren->AddActor(cubeActor);
 
+    {
+        vtkNew<vtkLineSource> pSource;
+        pSource->SetPoint1(-20, -20, -20);
+        pSource->SetPoint2(20, 20, 20);
+        pSource->Update();
+
+        vtkNew<vtkPolyDataMapper2D> pMapper;
+        {
+            vtkNew<vtkCoordinate> pCoordinate;
+            pCoordinate->SetCoordinateSystemToWorld();
+            pMapper->SetTransformCoordinate(pCoordinate);
+        }
+        pMapper->SetInputData(pSource->GetOutput());
+
+        vtkNew<vtkActor2D> pActor;
+        pActor->SetMapper(pMapper);
+        ren->AddActor(pActor);
+    }
+
+    {
+        vtkNew<vtkDICOMImageReader> reader;
+        reader->SetFileName(ImguiVtkNs::getDicomFile());
+        reader->Update();
+
+        vtkNew<vtkImageActor> pActor;
+        pActor->SetInputData(reader->GetOutput());
+        ren->AddActor(pActor);
+    }
+
     auto myStyle = vtkSmartPointer<MyCameraStyle>::New();
     iren->SetInteractorStyle(myStyle);
 
+    ::showLogView = true;
+    ::pWindow = renWin;
     ::imgui_render_callback = [&]
         {
-            if (ImGui::TreeNodeEx("Log"))
-            {
-                logView.Draw();
-                ImGui::TreePop();
-            }
-            //if (ImGui::TreeNodeEx("Camera"))
-            {
-                ImGuiNs::vtkObjSetup("Camera", ren->GetActiveCamera());
-                //ImGui::TreePop();
-            }
-            //if (ImGui::TreeNodeEx("Cube"))
-            {
-                ImGuiNs::vtkObjSetup("Cube", cubeActor);
-                //ImGui::TreePop();
-            }
+            ImGuiNs::vtkObjSetup("Cube", cubeActor);
             if (ImGui::TreeNodeEx("Picker", ImGuiTreeNodeFlags_DefaultOpen))
             {
                 const auto pPicker = iren->GetPicker(); // pPicker并不是一直有效的，比如SetPicker设置了新的picker后此变量所指之物就失效了
@@ -190,6 +204,7 @@ int main(int argc, char* argv[])
                     }
                 }
                 ImGui::SameLine();
+                // It works for all Prop3Ds ??
                 if (const auto v = vtkCellPicker::SafeDownCast(iren->GetPicker()); ImGui::RadioButton("Cell", v))
                 {
                     if (!v)
@@ -221,35 +236,32 @@ int main(int argc, char* argv[])
             }
             if (ImGui::TreeNodeEx("Style", ImGuiTreeNodeFlags_DefaultOpen))
             {
-                if (const auto v = MyCameraStyle::SafeDownCast(iren->GetInteractorStyle()); ImGui::RadioButton("CameraStyle", v))
+                if (const auto v = MyCameraStyle::SafeDownCast(iren->GetInteractorStyle()); ImGui::RadioButton("Camera", v))
                 {
                     if (!v)
                     {
-                        iren->SetInteractorStyle(vtkSmartPointer<MyCameraStyle>::New());
+                        iren->SetInteractorStyle(vtkNew<MyCameraStyle>{});
                     }
                 }
                 ImGui::SameLine();
-                if (const auto v = MyActorStyle::SafeDownCast(iren->GetInteractorStyle()); ImGui::RadioButton("MyActorStyle", v))
+                if (const auto v = MyActorStyle::SafeDownCast(iren->GetInteractorStyle()); ImGui::RadioButton("Actor", v))
                 {
                     if (!v)
                     {
-                        iren->SetInteractorStyle(vtkSmartPointer<MyActorStyle>::New());
+                        iren->SetInteractorStyle(vtkNew<MyActorStyle>{});
                     }
                 }
-                ImGui::SameLine();
-                if (const auto v = DrawFreeLineStyle::SafeDownCast(iren->GetInteractorStyle()); ImGui::RadioButton("DrawFreeLineStyle", v))
-                {
-                    if (!v)
-                    {
-                        iren->SetInteractorStyle(vtkSmartPointer<DrawFreeLineStyle>::New());
-                    }
-                }
+                //ImGui::SameLine();
+                //if (const auto v = DrawFreeLineStyle::SafeDownCast(iren->GetInteractorStyle()); ImGui::RadioButton("DrawFreeLineStyle", v))
+                //{
+                //    if (!v)
+                //    {
+                //        iren->SetInteractorStyle(vtkSmartPointer<DrawFreeLineStyle>::New());
+                //    }
+                //}
                 ImGui::TreePop();
             }
-            //if (ImGui::CollapsingHeader("Picker_", ImGuiTreeNodeFlags_DefaultOpen))
-            {
-                ImGuiNs::vtkObjSetup("Picker_", iren->GetPicker());
-            }
+            ImGuiNs::vtkObjSetup("CurrentPicker", iren->GetPicker(), ImGuiTreeNodeFlags_DefaultOpen);
         };
 
     // Start rendering app

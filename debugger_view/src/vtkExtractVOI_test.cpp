@@ -96,7 +96,7 @@ int main(int argc, char* argv[])
 
     ImguiVtkNs::genImgOutline(ren, pImg);
 
-#if 0
+#if 1
     vtkNew<vtkVolume> pVolume;
     vtkNew<vtkGPUVolumeRayCastMapper> pMapper;
 

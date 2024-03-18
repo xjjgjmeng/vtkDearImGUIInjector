@@ -110,8 +110,13 @@
 #include <vtkPlaneSource.h>
 #include <vtkPropAssembly.h>
 #include <vtkPolyLine.h>
+#include <vtkBoundedPlanePointPlacer.h>
 #include <vtkInformation.h>
 #include <vtkMath.h>
+#include <vtkBox.h>
+#include <vtkBoundedPointSource.h>
+#include <vtkRegularPolygonSource.h>
+#include <vtkROIStencilSource.h>
 #include <vtkTexture.h>
 #include <vtkResliceCursor.h>
 #include <vtkImageCast.h>

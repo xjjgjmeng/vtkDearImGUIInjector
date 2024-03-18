@@ -846,6 +846,7 @@ A value greater than 1 is a zoom-in, a value less than 1 is a zoom-out.
 
                     if (const auto pAbstractPropPicker = vtkAbstractPropPicker::SafeDownCast(vtkObj); pAbstractPropPicker && ImGui::TreeNodeEx("vtkAbstractPropPicker", ImGuiTreeNodeFlags_DefaultOpen))
                     {
+                        vtkObjSetup("ViewProp", pAbstractPropPicker->GetViewProp());
                         ImGui::Text(fmt::format("ViewProp: {}", reinterpret_cast<void*>(pAbstractPropPicker->GetViewProp())).c_str());
                         ImGui::Text(fmt::format("Prop3D: {}", reinterpret_cast<void*>(pAbstractPropPicker->GetProp3D())).c_str());
                         ImGui::Text(fmt::format("Actor2D: {}", reinterpret_cast<void*>(pAbstractPropPicker->GetActor2D())).c_str());
@@ -874,6 +875,26 @@ A value greater than 1 is a zoom-in, a value less than 1 is a zoom-out.
                                 ImGui::Text(fmt::format("PointId: {}", pCellPicker->GetPointId()).c_str());
                                 ImGui::Text(fmt::format("CellId: {}", pCellPicker->GetCellId()).c_str());
                                 ImGui::Text(fmt::format("SubId: {}", pCellPicker->GetSubId()).c_str());
+                                {
+                                    double v[3];
+                                    pCellPicker->GetPickNormal(v);
+                                    ImGui::Text(fmt::format("PickNormal: {}", v).c_str());
+                                }
+                                {
+                                    int v[3];
+                                    pCellPicker->GetPointIJK(v);
+                                    ImGui::Text(fmt::format("PointIJK: {}", v).c_str());
+                                }
+                                {
+                                    int v[3];
+                                    pCellPicker->GetCellIJK(v);
+                                    ImGui::Text(fmt::format("CellIJK: {}", v).c_str());
+                                }
+                                {
+                                    double v[3];
+                                    pCellPicker->GetPCoords(v);
+                                    ImGui::Text(fmt::format("PCoords: {::.2f}", v).c_str());
+                                }
                                 ImGui::TreePop();
                             }
 

@@ -3,7 +3,8 @@
 class MyStyle : public vtkInteractorStyleTrackballCamera
 {
 public:
-    static MyStyle* New() { return new MyStyle; }
+    static MyStyle* New();
+    vtkTypeMacro(MyStyle, vtkInteractorStyleTrackballCamera);
 
     void OnRightButtonDown() override
     {
@@ -16,20 +17,26 @@ public:
         int currPos[2];
         this->Interactor->GetEventPosition(currPos);
         double displayPos[] = { currPos[0], currPos[1] };
-        double worldPos[3];
+        double worldPt[3];
         double worldOrient[9];
         const auto pRenderer = this->Interactor->FindPokedRenderer(currPos[0], currPos[1]);
-        this->updataDisplayExtent();
-        this->m_placer->ComputeWorldPosition(pRenderer, displayPos, worldPos, worldOrient);
+        // 通过placer获取当前鼠标所在的pixel坐标在当前slice（plane）的xyz坐标
+        this->m_placer->ComputeWorldPosition(pRenderer, displayPos, worldPt, worldOrient);
         ::getLogView()->Add(fmt::format("EventPosition: {}", currPos));
-        ::getLogView()->Add(fmt::format("worldPos: {::.2f}", worldPos));
-        ::getLogView()->Add(fmt::format("worldOrient: {::.2f}\n", worldOrient));
-        ::getLogView()->Add(fmt::format("ValidateWorldPosition: {}\n", this->m_placer->ValidateWorldPosition(worldPos)));
+        ::getLogView()->Add(fmt::format("worldPos: {::.2f}", worldPt));
+        ::getLogView()->Add(fmt::format("worldOrient: {::.2f}", worldOrient));
+        ::getLogView()->Add(fmt::format("ValidateWorldPosition: {}", this->m_placer->ValidateWorldPosition(worldPt)));
+        {
+            // 将确定的slice上的xyz坐标转化为vr中的ijk坐标
+            double ijk[3];
+            this->m_img->TransformPhysicalPointToContinuousIndex(worldPt, ijk);
+            ::getLogView()->Add(fmt::format("ContinuousIndex: {::.2f}", ijk));
+        }
     
         if (m_move)
         {
             vtkNew<vtkSphereSource> pointSource;
-            pointSource->SetCenter(worldPos);
+            pointSource->SetCenter(worldPt);
             pointSource->SetRadius(5.0);
             pointSource->Update();
 
@@ -37,7 +44,7 @@ public:
             mapper->SetInputConnection(pointSource->GetOutputPort());
 
             m_actor->SetMapper(mapper);
-            if (this->m_placer->ValidateWorldPosition(worldPos))
+            if (this->m_placer->ValidateWorldPosition(worldPt))
             {
                 m_actor->GetProperty()->SetColor(1, 0, 0);
             }
@@ -52,12 +59,13 @@ public:
         __super::OnMouseMove();
     }
 
-    vtkNew<vtkImageActorPointPlacer> m_placer;
+    vtkNew<vtkBoundedPlanePointPlacer> m_placer;
     vtkSmartPointer<vtkRenderer> m_renderer;
-    std::function<void()> updataDisplayExtent;
     vtkNew<vtkActor> m_actor;
+    vtkSmartPointer<vtkImageData> m_img;
     bool m_move = false;
 };
+vtkStandardNewMacro(MyStyle);
 
 int main(int argc, char* argv[])
 {
@@ -140,24 +148,17 @@ int main(int argc, char* argv[])
     ren->AddActor(pZActor);
     pZActor->VisibilityOff();
 #endif
-
+#if 0
     ren->GetActiveCamera()->ParallelProjectionOn();
     ren->GetActiveCamera()->SetViewUp(0,1,0);
     ren->GetActiveCamera()->SetFocalPoint(pImageData->GetCenter());
     ren->GetActiveCamera()->SetPosition(pImageData->GetCenter()[0]+1, pImageData->GetCenter()[1], pImageData->GetCenter()[2]);
     ren->ResetCamera(pImageData->GetBounds());
+#endif
 
-    // 整体影像的轮廓
-    {
-        vtkNew<vtkImageDataOutlineFilter> pOutline;
-        pOutline->SetInputData(pImageData);
-        pOutline->Update();
-        vtkNew<vtkPolyDataMapper> pMapper;
-        pMapper->SetInputData(pOutline->GetOutput());
-        vtkNew<vtkActor> pActor;
-        pActor->SetMapper(pMapper);
-        ren->AddActor(pActor);
-    }
+    ImguiVtkNs::genImgOutline(ren, pImageData);
+    ImguiVtkNs::labelWorldZero(ren);
+
     // VR
     vtkNew<vtkVolume> pVolume;
     {
@@ -174,8 +175,11 @@ int main(int argc, char* argv[])
     }
 
     auto pStyle = vtkSmartPointer<MyStyle>::New();
-    pStyle->m_placer->SetImageActor(pActor);
     pStyle->m_renderer = ren;
+    pStyle->m_img = pImageData;
+    pStyle->m_placer->SetProjectionNormalToOblique();
+    pStyle->m_placer->SetObliquePlane(pMapper->GetSlicePlane());
+#if 0
     pStyle->updataDisplayExtent = [&]
         {
             double imgIJK[3];
@@ -185,14 +189,15 @@ int main(int argc, char* argv[])
             v[0] = v[1] = imgIJK[0];
             pActor->SetDisplayExtent(std::round(v[0]), std::round(v[1]), std::round(v[2]), std::round(v[3]), std::round(v[4]), std::round(v[5]));
         };
+#endif
     iren->SetInteractorStyle(pStyle);
 
     // ::showLogView = true;
     ::pWindow = renWin;
     ::imgui_render_callback = [&]
         {
-            ImGui::Text("Visibility: "); ImGui::SameLine();
-            if (bool v = pActor->GetVisibility(); ImGui::Checkbox("XActor", &v)) pActor->SetVisibility(v); ImGui::SameLine();
+            //ImGui::Text("Visibility: "); ImGui::SameLine();
+            if (bool v = pActor->GetVisibility(); ImGui::Checkbox("XActorVisibility", &v)) pActor->SetVisibility(v); ImGui::SameLine();
 #if 1 ==SHOW_Y
             if (bool v = pYActor->GetVisibility(); ImGui::Checkbox("YActor", &v)) pYActor->SetVisibility(v); ImGui::SameLine();
 #endif
@@ -202,7 +207,7 @@ int main(int argc, char* argv[])
             if (bool v = pVolume->GetVisibility(); ImGui::Checkbox("VRVisibility", &v)) pVolume->SetVisibility(v);
 
             //ImGui::Begin("666");
-            ImGuiNs::vtkObjSetup("ImageData", reader->GetOutput());
+            ImGuiNs::vtkObjSetup("OriginImage", reader->GetOutput());
             ImGuiNs::vtkObjSetup("ImageActor", pActor);
             //ImGui::End();
             ImGuiNs::vtkObjSetup("Mapper", pMapper, ImGuiTreeNodeFlags_DefaultOpen);

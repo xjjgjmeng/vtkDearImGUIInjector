@@ -512,7 +512,7 @@ namespace ImguiVtkNs
 			vtkDearImGuiInjector* overlay_ = reinterpret_cast<vtkDearImGuiInjector*>(caller);
 
 			ImGui::SetNextWindowPos(ImVec2(0, 25), ImGuiCond_Once);
-			ImGui::SetNextWindowSize(ImVec2(450, 650), ImGuiCond_Once);
+			// ImGui::SetNextWindowSize(ImVec2(450, 650), ImGuiCond_Once);
 			ImGui::Begin("VTK");
 			{
 				ImGui::Checkbox("ShowLogView", &::showLogView);
@@ -599,8 +599,8 @@ namespace ImguiVtkNs
 
 	static const char* getDicomFile()
 	{
-		//const char* retval = "D:/test_data/series/I0000000200.dcm";
-		const char* retval = "C:\\Users\\123\\Desktop\\series666\\I0000000200.dcm";
+		const char* retval = "D:/test_data/series/I0000000200.dcm";
+		//const char* retval = "C:\\Users\\123\\Desktop\\series666\\I0000000200.dcm";
 		if (!std::filesystem::exists(retval))
 		{
 			throw "dicom file does not exist!";
@@ -610,8 +610,8 @@ namespace ImguiVtkNs
 
 	static const char* getDicomDir()
 	{
-		//const char* retval = "D:/test_data/series";
-		const char* retval = "C:\\Users\\123\\Desktop\\series666";
+		const char* retval = "D:/test_data/series";
+		//const char* retval = "C:\\Users\\123\\Desktop\\series666";
 		if (!std::filesystem::exists(retval))
 		{
 			throw "dicom dir does not exist!";
@@ -666,6 +666,7 @@ namespace ImguiVtkNs
 		}
 	}
 
+	// 整体影像的轮廓
 	static void genImgOutline(vtkRenderer* pRenderer, vtkImageData* pData)
 	{
 		vtkNew<vtkImageDataOutlineFilter> pFilter;
