@@ -32,6 +32,7 @@
 #include <vtkXMLImageDataReader.h>
 #include <vtkPlane.h>
 #include <vtkPointWidget.h>
+#include <vtkLeaderActor2D.h>
 #include <vtkImageResliceMapper.h>
 #include <vtkImageSlab.h>
 #include <vtkImageSliceMapper.h>

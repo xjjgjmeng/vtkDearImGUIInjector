@@ -1,4 +1,8 @@
 ﻿#include <ImGuiCommon.h>
+#include <PolyDataHelper.h>
+
+// 比vtkBoundedPlanePointPlacer更容易获取vtkImageData的空间信息
+// 但是不能处理点击到Image外面的情况
 
 class MyCameraStyle : public vtkInteractorStyleTrackballCamera
 {
@@ -6,7 +10,7 @@ public:
     static MyCameraStyle* New();
     vtkTypeMacro(MyCameraStyle, vtkInteractorStyleTrackballCamera);
 
-    void OnLeftButtonDown() override
+    void OnMouseMove() override
     {
         int eventPt[2];
         this->GetInteractor()->GetEventPosition(eventPt);
@@ -16,14 +20,14 @@ public:
             ImGuiNs::printWorldPt(*::getLogView(), renderer, eventPt[0], eventPt[1]);
 
             this->GetInteractor()->GetPicker()->Pick(eventPt[0], eventPt[1], 0, renderer);
-            double pickedPt[3];
-            this->GetInteractor()->GetPicker()->GetPickPosition(pickedPt); // 获取pick的世界坐标
+            vtkNs::Pt_t pickedPt;
+            this->GetInteractor()->GetPicker()->GetPickPosition(pickedPt.data()); // 获取pick的世界坐标
             ::getLogView()->Add(fmt::format("pickedPt: {}", pickedPt));
 
             if (m_b)
             {
                 vtkNew<vtkSphereSource> pointSource;
-                pointSource->SetCenter(pickedPt);
+                pointSource->SetCenter(pickedPt.data());
                 pointSource->SetRadius(5.0);
                 pointSource->Update();
 
@@ -35,29 +39,51 @@ public:
                 m_actor->GetProperty()->SetPointSize(5);
                 renderer->AddActor(m_actor);
             }
+
+            if (auto pCell = vtkCellPicker::SafeDownCast(this->GetInteractor()->GetPicker()); m_bNormal && pCell)
+            {
+                double normal[3];
+                pCell->GetPickNormal(normal);
+                vtkMath::Normalize(normal);
+                const auto len = 30;
+                //auto pt2 = pickedPt;
+                //pt2[0] += len * normal[0];
+                //pt2[1] += len * normal[1];
+                //pt2[2] += len * normal[2];
+                auto pt2 = vtkNs::advance(pickedPt, normal, len);
+                ::getLogView()->Add(fmt::format("len: {}", std::sqrt(vtkMath::Distance2BetweenPoints(pickedPt.data(), pt2.data()))));
+                this->m_normal->GetProperty()->SetColor(1, 0, 0);
+                this->m_normal->GetProperty()->SetLineWidth(3);
+                this->m_normalPt->GetProperty()->SetColor(0, 1, 0);
+                this->m_normalPt->GetProperty()->SetPointSize(8);
+                vtkNs::makeLines(vtkNs::Pts_t{ pickedPt, pt2 }, this->m_normal.Get());
+                vtkNs::makePoints(vtkNs::Pts_t{ pt2 }, this->m_normalPt.Get());
+                renderer->AddActor(this->m_normal);
+                renderer->AddActor(this->m_normalPt);
+            }
         }
 
-        __super::OnLeftButtonDown();
-    }
-
-    void OnLeftButtonUp() override
-    {
-        __super::OnLeftButtonUp();
-    }
-
-    void OnRightButtonDown() override
-    {
-        m_b = !m_b;
-        __super::OnRightButtonDown();
-    }
-
-    void OnMouseMove() override
-    {
         __super::OnMouseMove();
     }
 
+    void OnLeftButtonDown() override
+    {
+        if (this->GetInteractor()->GetControlKey())
+        {
+            m_bNormal = !m_bNormal;
+        }
+        else if (this->GetInteractor()->GetShiftKey())
+        {
+            m_b = !m_b;
+        }
+        __super::OnLeftButtonDown();
+    }
+
     vtkNew<vtkActor> m_actor;
-    bool m_b = false;;
+    vtkNew<vtkActor> m_normal;
+    vtkNew<vtkActor> m_normalPt;
+    bool m_b = false;
+    bool m_bNormal = false;
 };
 vtkStandardNewMacro(MyCameraStyle);
 
@@ -69,6 +95,14 @@ int main(int argc, char* argv[])
     vtkNew<vtkRenderWindowInteractor> iren;
     iren->SetRenderWindow(renWin);
 
+    // 设置picker
+    {
+        auto pPicker = vtkSmartPointer<vtkCellPicker>::New();
+        pPicker->SetTolerance(0.0005);
+        pPicker->SetPickFromList(1);
+        iren->SetPicker(pPicker);
+    }
+
     {
         vtkNew<vtkDICOMImageReader> reader;
         reader->SetFileName(ImguiVtkNs::getDicomFile());
@@ -77,14 +111,29 @@ int main(int argc, char* argv[])
         vtkNew<vtkImageActor> pActor;
         pActor->SetInputData(reader->GetOutput());
         ren->AddActor(pActor);
+        iren->GetPicker()->AddPickList(pActor);
     }
 
-    vtkNew<vtkImageSlice> pImgSlice;
     {
         vtkNew<vtkDICOMImageReader> reader;
-        reader->SetDirectoryName(ImguiVtkNs::getDicomDir());
+        reader->SetFileName(ImguiVtkNs::getDicomFile());
         reader->Update();
 
+        vtkNew<vtkImageActor> pActor;
+        pActor->SetInputData(reader->GetOutput());
+        pActor->SetScale(0.5);
+        //pActor->RotateZ(45);
+        pActor->SetPosition(100, 100, 100);
+        ren->AddActor(pActor);
+        iren->GetPicker()->AddPickList(pActor);
+    }
+
+    vtkNew<vtkDICOMImageReader> reader;
+    reader->SetDirectoryName(ImguiVtkNs::getDicomDir());
+    reader->Update();
+
+    {
+        vtkNew<vtkImageSlice> pImgSlice;
         vtkNew<vtkImageSliceMapper> pMapper;
         pMapper->SetInputData(reader->GetOutput());
         pMapper->SetOrientationToZ();
@@ -92,15 +141,31 @@ int main(int argc, char* argv[])
         
         pImgSlice->SetMapper(pMapper);
         ren->AddActor(pImgSlice);
+        iren->GetPicker()->AddPickList(pImgSlice);
+    }
+
+    {
+        vtkNew<vtkImageActor> pActor;
+        vtkNew<vtkImageResliceMapper> pMapper;
+        // 设置vtkImageResliceMapper。默认的是vtkImageSliceMapper
+        {
+            pMapper->SetInputData(reader->GetOutput());
+            pMapper->SliceFacesCameraOff();
+            pMapper->SliceAtFocalPointOff();
+            {
+                auto pPlane = pMapper->GetSlicePlane();
+                pPlane->SetOrigin(reader->GetOutput()->GetCenter());
+                pPlane->SetNormal(1, 1, 1);
+            }
+            pMapper->UpdateInformation();
+            pMapper->Modified();
+            pActor->SetMapper(pMapper);
+        }
+        ren->AddActor(pActor);
+        iren->GetPicker()->AddPickList(pActor);
     }
 
     iren->SetInteractorStyle(vtkNew<MyCameraStyle>{});
-
-    {
-        auto pPicker = vtkSmartPointer<vtkCellPicker>::New();
-        pPicker->SetTolerance(0.0005);
-        iren->SetPicker(pPicker);
-    }
 
     //::showLogView = true;
     ::pWindow = renWin;

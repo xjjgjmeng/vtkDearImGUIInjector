@@ -14,20 +14,21 @@ public:
 
     void OnMouseMove() override
     {
-        int currPos[2];
-        this->Interactor->GetEventPosition(currPos);
-        double displayPos[] = { currPos[0], currPos[1] };
+        int eventPt[2];
+        this->Interactor->GetEventPosition(eventPt);
         double worldPt[3];
         double worldOrient[9];
-        const auto pRenderer = this->Interactor->FindPokedRenderer(currPos[0], currPos[1]);
+        const auto pRenderer = this->Interactor->FindPokedRenderer(eventPt[0], eventPt[1]);
         // 通过placer获取当前鼠标所在的pixel坐标在当前slice（plane）的xyz坐标
-        this->m_placer->ComputeWorldPosition(pRenderer, displayPos, worldPt, worldOrient);
-        ::getLogView()->Add(fmt::format("EventPosition: {}", currPos));
+        double eventPt_d[] = { eventPt[0], eventPt[1] };
+        this->m_placer->ComputeWorldPosition(pRenderer, eventPt_d, worldPt, worldOrient);
+        ::getLogView()->Add(fmt::format("EventPosition: {}", eventPt));
         ::getLogView()->Add(fmt::format("worldPos: {::.2f}", worldPt));
         ::getLogView()->Add(fmt::format("worldOrient: {::.2f}", worldOrient));
         ::getLogView()->Add(fmt::format("ValidateWorldPosition: {}", this->m_placer->ValidateWorldPosition(worldPt)));
         {
             // 将确定的slice上的xyz坐标转化为vr中的ijk坐标
+            // 获取当前鼠标所在的voxel
             double ijk[3];
             this->m_img->TransformPhysicalPointToContinuousIndex(worldPt, ijk);
             ::getLogView()->Add(fmt::format("ContinuousIndex: {::.2f}", ijk));
@@ -53,14 +54,13 @@ public:
                 m_actor->GetProperty()->SetColor(1, 1, 1);
             }
             m_actor->GetProperty()->SetPointSize(5);
-            m_renderer->AddActor(m_actor);
+            pRenderer->AddActor(m_actor);
         }
 
         __super::OnMouseMove();
     }
 
-    vtkNew<vtkBoundedPlanePointPlacer> m_placer;
-    vtkSmartPointer<vtkRenderer> m_renderer;
+    vtkNew<vtkBoundedPlanePointPlacer> m_placer; // 用于获取当前点击位置在图像plane的xyz，进而获取ijk
     vtkNew<vtkActor> m_actor;
     vtkSmartPointer<vtkImageData> m_img;
     bool m_move = false;
@@ -175,7 +175,6 @@ int main(int argc, char* argv[])
     }
 
     auto pStyle = vtkSmartPointer<MyStyle>::New();
-    pStyle->m_renderer = ren;
     pStyle->m_img = pImageData;
     pStyle->m_placer->SetProjectionNormalToOblique();
     pStyle->m_placer->SetObliquePlane(pMapper->GetSlicePlane());
