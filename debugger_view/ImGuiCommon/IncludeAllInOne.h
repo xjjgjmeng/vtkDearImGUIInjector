@@ -29,6 +29,7 @@
 #include <vtkImageDataOutlineFilter.h>
 #include <vtkImageCursor3D.h>
 #include <vtkLine.h>
+#include <vtkFloatArray.h>
 #include <vtkXMLImageDataReader.h>
 #include <vtkPlane.h>
 #include <vtkPointWidget.h>
