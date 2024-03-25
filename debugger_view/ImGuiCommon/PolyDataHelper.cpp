@@ -37,7 +37,7 @@ namespace vtkNs
         return pPolyData;
     }
 
-    void makeLines(const std::list<Pt_t>& pts, vtkSmartPointer<vtkActor2D> pActor)
+    void makeLines(const std::list<Pt_t>& pts, vtkActor2D* pActor)
     {
         vtkNew<vtkPolyDataMapper2D> pMapper;
         pMapper->SetInputData(vtkNs::makeLines(pts));
@@ -49,7 +49,7 @@ namespace vtkNs
         pActor->SetMapper(pMapper);
     }
 
-    void makeLines(const std::list<Pt_t>& pts, vtkSmartPointer<vtkActor> pActor)
+    void makeLines(const std::list<Pt_t>& pts, vtkActor* pActor)
     {
         vtkNew<vtkPolyDataMapper> pMapper;
         pMapper->SetInputData(vtkNs::makeLines(pts));
@@ -76,7 +76,7 @@ namespace vtkNs
         return pPolyData;
     }
 
-    void makePoints(const std::list<Pt_t>& pts, vtkSmartPointer<vtkActor2D> pActor)
+    void makePoints(const std::list<Pt_t>& pts, vtkActor2D* pActor)
     {
         vtkNew<vtkPolyDataMapper2D> pMapper;
         pMapper->SetInputData(vtkNs::makePoints(pts));
@@ -89,7 +89,7 @@ namespace vtkNs
         pActor->SetMapper(pMapper);
     }
 
-    void makePoints(const std::list<Pt_t>& pts, vtkSmartPointer<vtkActor> pActor)
+    void makePoints(const std::list<Pt_t>& pts, vtkActor* pActor)
     {
         vtkNew<vtkPolyDataMapper> pMapper;
         pMapper->SetInputData(vtkNs::makePoints(pts));

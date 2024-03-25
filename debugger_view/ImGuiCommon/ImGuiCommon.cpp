@@ -18,6 +18,10 @@ namespace
         }
     }
 
+    void vtkTransformPolyDataFilter_setup(vtkTransformPolyDataFilter* obj)
+    {
+    }
+
     void vtkDataObject_setup(vtkDataObject* obj)
     {
         ImGui::Text(fmt::format("ActualMemorySize: {}", obj->GetActualMemorySize()).c_str());
@@ -51,6 +55,18 @@ namespace
             double v[2];
             obj->GetScalarRange(v);
             ImGui::Text(fmt::format("ScalarRange: {::.2f}", v).c_str());
+        }
+    }
+
+    void vtkPointSet_setup(vtkPointSet* obj)
+    {
+        if (ImGui::TreeNodeEx("Points", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            for (auto i = 0; i < obj->GetNumberOfPoints(); ++i)
+            {
+                ImGui::Text(fmt::format("point: {} {} {}", obj->GetPoint(i)[0], obj->GetPoint(i)[1], obj->GetPoint(i)[2]).c_str());
+            }
+            ImGui::TreePop();
         }
     }
 
@@ -829,6 +845,10 @@ A value greater than 1 is a zoom-in, a value less than 1 is a zoom-out.
                         {
                             vtkImageData_setup(pImageData);
                         }
+                        else if (const auto pPointSet = vtkPointSet::SafeDownCast(vtkObj); pPointSet && ImGui::CollapsingHeader("vtkPointSet", ImGuiTreeNodeFlags_DefaultOpen))
+                        {
+                            ::vtkPointSet_setup(pPointSet);
+                        }
                     }
                 }
                 else if (const auto pAbstractPicker = vtkAbstractPicker::SafeDownCast(vtkObj); pAbstractPicker && ImGui::TreeNodeEx("vtkAbstractPicker", ImGuiTreeNodeFlags_DefaultOpen))
@@ -1239,6 +1259,8 @@ A value greater than 1 is a zoom-in, a value less than 1 is a zoom-out.
                     }
                     else if (const auto pPolyDataAlgorithm = vtkPolyDataAlgorithm::SafeDownCast(vtkObj); pPolyDataAlgorithm && ImGui::TreeNodeEx("vtkPolyDataAlgorithm", ImGuiTreeNodeFlags_DefaultOpen))
                     {
+                        vtkObjSetup("Output", pPolyDataAlgorithm->GetOutput());
+
                         if (const auto pLineSource = vtkLineSource::SafeDownCast(vtkObj); pLineSource && ImGui::TreeNodeEx("vtkLineSource", ImGuiTreeNodeFlags_DefaultOpen))
                         {
                             if (double v[3]; pLineSource->GetPoint1(v), ImGui::DragScalarN("Point1", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), 0.1f))
@@ -1303,6 +1325,10 @@ A value greater than 1 is a zoom-in, a value less than 1 is a zoom-out.
                         else if (const auto pMarchingCubes = vtkMarchingCubes::SafeDownCast(vtkObj); pMarchingCubes && ImGui::CollapsingHeader("vtkMarchingCubes", ImGuiTreeNodeFlags_DefaultOpen))
                         {
                             ::vtkMarchingCubes_setup(pMarchingCubes);
+                        }
+                        else if (const auto pTransformPolyDataFilter = vtkTransformPolyDataFilter::SafeDownCast(vtkObj); pTransformPolyDataFilter && ImGui::CollapsingHeader("vtkTransformPolyDataFilter", ImGuiTreeNodeFlags_DefaultOpen))
+                        {
+                            ::vtkTransformPolyDataFilter_setup(pTransformPolyDataFilter);
                         }
                         ImGui::TreePop();
                     }

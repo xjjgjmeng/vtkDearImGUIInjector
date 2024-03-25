@@ -20,12 +20,12 @@ namespace vtkNs
     constexpr double TextNormalColor[3] = { 1., 1., 1. };
     constexpr double TextSelectionColor[3] = { 1., 1., 0. };
 
-    vtkSmartPointer<vtkPolyData> makeLines(const std::list<Pt_t>& pts);
-    void makeLines(const std::list<Pt_t>& pts, vtkSmartPointer<vtkActor2D> pActor);
-    void makeLines(const std::list<Pt_t>& pts, vtkSmartPointer<vtkActor> pActor);
+    vtkSmartPointer<vtkPolyData> makeLines(const std::list<Pt_t>& pts); // amazing effect!!
+    void makeLines(const std::list<Pt_t>& pts, vtkActor2D* pActor);
+    void makeLines(const std::list<Pt_t>& pts, vtkActor* pActor);
     vtkSmartPointer<vtkPolyData> makePoints(const std::list<Pt_t>& pts);
-    void makePoints(const std::list<Pt_t>& pts, vtkSmartPointer<vtkActor2D> pActor);
-    void makePoints(const std::list<Pt_t>& pts, vtkSmartPointer<vtkActor> pActor);
+    void makePoints(const std::list<Pt_t>& pts, vtkActor2D* pActor);
+    void makePoints(const std::list<Pt_t>& pts, vtkActor* pActor);
 
     // 获取pt沿着direction方向前进len后到达的点
     Pt_t advance(const Pt_t& pt, const double direction[3], const double len);

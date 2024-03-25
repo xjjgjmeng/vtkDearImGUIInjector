@@ -98,6 +98,7 @@
 #include <vtkImageViewer2.h>
 #include <vtkCellPicker.h>
 #include <vtkCellPicker.h>
+#include <vtkTransformPolyDataFilter.h>
 #include <vtkPointPicker.h>
 #include <vtkPropPicker.h>
 #include <vtkProperty.h>
