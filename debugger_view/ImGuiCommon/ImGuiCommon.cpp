@@ -10,6 +10,130 @@ namespace
         }
     }
 
+    void vtkImageReslice_setup(vtkImageReslice* obj)
+    {
+        // slab mode
+        {
+            const char* slabModeText[] = { "VTK_IMAGE_SLAB_MIN", "VTK_IMAGE_SLAB_MAX", "VTK_IMAGE_SLAB_MEAN", "VTK_IMAGE_SLAB_SUM" };
+            auto currentSlabMode = obj->GetSlabMode();
+            if (ImGui::Combo("SlabMode", &currentSlabMode, slabModeText, IM_ARRAYSIZE(slabModeText)))
+            {
+                obj->SetSlabMode(currentSlabMode);
+            }
+        }
+
+        // thickness
+        {
+            auto numOfSlices = obj->GetSlabNumberOfSlices();
+            if (ImGui::DragInt("SlabNumberOfSlices", &numOfSlices, 1, 1, 10000))
+            {
+                obj->SetSlabNumberOfSlices(numOfSlices);
+            }
+        }
+
+        {
+            if (ImGui::TreeNodeEx("ResliceAxes", ImGuiTreeNodeFlags_DefaultOpen))
+            {
+                double xyz[9];
+                obj->GetResliceAxesDirectionCosines(xyz);
+                if (ImGui::DragScalarN("DirectionCosinesX", ImGuiDataType_Double, xyz, 3, .01f))
+                {
+                    obj->SetResliceAxesDirectionCosines(xyz);
+                }
+                if (ImGui::DragScalarN("DirectionCosinesY", ImGuiDataType_Double, xyz + 3, 3, .01f))
+                {
+                    obj->SetResliceAxesDirectionCosines(xyz);
+                }
+                if (ImGui::DragScalarN("DirectionCosinesZ", ImGuiDataType_Double, xyz + 6, 3, .01f))
+                {
+                    obj->SetResliceAxesDirectionCosines(xyz);
+                }
+
+                {
+                    double o[3];
+                    obj->GetResliceAxesOrigin(o);
+                    if (ImGui::DragScalarN("Origin", ImGuiDataType_Double, o, 3, .1f))
+                    {
+                        obj->SetResliceAxesOrigin(o);
+                    }
+                }
+
+                ImGui::TreePop();
+            }
+        }
+
+        // output
+        if (ImGui::TreeNodeEx("Output", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            {
+                double myArray[3];
+#if 1
+                obj->GetOutputSpacing(myArray); //1
+#else
+                ::reslice->GetOutputInformation(0)->Get(vtkDataObject::SPACING(), myArray); // 0.25
+#endif
+                if (ImGui::DragScalarN("Spacing", ImGuiDataType_Double, myArray, IM_ARRAYSIZE(myArray), .1f))
+                {
+                    obj->SetOutputSpacing(myArray);
+                }
+            }
+            {
+                int myArray[6];
+                obj->GetOutputExtent(myArray);
+                if (ImGui::DragScalarN("Extent", ImGuiDataType_S32, myArray, IM_ARRAYSIZE(myArray)))
+                {
+                    obj->SetOutputExtent(myArray);
+                }
+            }
+            {
+                double outputOrigin[3];
+                obj->GetOutputOrigin(outputOrigin);
+                if (ImGui::DragScalarN("Origin", ImGuiDataType_Double, outputOrigin, IM_ARRAYSIZE(outputOrigin)))
+                {
+                    obj->SetOutputOrigin(outputOrigin);
+                }
+            }
+
+            if (ImGui::Button("SetOutputOriginToDefault"))
+            {
+                obj->SetOutputOriginToDefault();
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("SetOutputExtentToDefault"))
+            {
+                obj->SetOutputExtentToDefault();
+            }
+
+            ImGui::TreePop();
+        }
+
+        {
+            if (auto wrap = obj->GetWrap(); ImGui::Button(fmt::format("Wrap: {}", wrap).c_str()))
+            {
+                obj->SetWrap(!wrap);
+            }
+            ImGui::SameLine();
+            if (auto mirror = obj->GetMirror(); ImGui::Button(fmt::format("Mirror: {}", mirror).c_str()))
+            {
+                obj->SetMirror(!mirror);
+            }
+        }
+
+        if (ImGui::TreeNodeEx("Border", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            if (bool v = obj->GetBorder(); ImGui::Checkbox("On", &v))
+            {
+                obj->SetBorder(v);
+            }
+            if (double v = obj->GetBorderThickness(); ImGui::DragScalar("Thickness", ImGuiDataType_Double, &v))
+            {
+                obj->SetBorderThickness(v);
+            }
+
+            ImGui::TreePop();
+        }
+    }
+
     void vtkMarchingCubes_setup(vtkMarchingCubes* obj)
     {
         if (double v = obj->GetValue(0); ImGui::InputDouble("Value", &v, 100.f, 100.0f, "%.8f"))
@@ -1244,6 +1368,10 @@ A value greater than 1 is a zoom-in, a value less than 1 is a zoom-out.
                                         pImageThreshold->ThresholdByUpper(l);
                                     }
                                 }
+                            }
+                            else if (const auto pImageReslice = vtkImageReslice::SafeDownCast(vtkObj); pImageReslice && ImGui::CollapsingHeader("vtkImageReslice", ImGuiTreeNodeFlags_DefaultOpen))
+                            {
+                                ::vtkImageReslice_setup(pImageReslice);
                             }
                             ImGui::TreePop();
                         }

@@ -19,5 +19,5 @@ private:
     void sharpen(vtkImageData* pInput, vtkImageData* pOut);
 
 private:
-    int SharpenCount = 0;
+    int SharpenCount = 0; // 0 - 100
 };

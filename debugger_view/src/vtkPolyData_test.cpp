@@ -34,16 +34,17 @@ int main(int argc, char* argv[])
 
     vtkNew<vtkPolyData> poly;
     poly->SetPoints(points);
-    //poly->SetStrips(strips);
+    poly->SetStrips(strips);
     //poly->SetLines(strips);
-    poly->SetVerts(strips);
+    //poly->SetVerts(strips);
 
     vtkNew<vtkPolyDataMapper> mapper;
     mapper->SetInputData(poly);
 
     vtkNew<vtkActor> actor;
     actor->SetMapper(mapper);
-    actor->GetProperty()->EdgeVisibilityOn();
+    //actor->GetProperty()->EdgeVisibilityOn();
+    actor->GetProperty()->SetRepresentationToWireframe();
     ren->AddActor(actor);
 
     // ::showLogView = true;

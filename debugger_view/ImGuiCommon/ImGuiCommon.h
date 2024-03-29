@@ -599,8 +599,8 @@ namespace ImguiVtkNs
 
 	static const char* getDicomFile()
 	{
-		//const char* retval = "D:/test_data/series/I0000000200.dcm";
-		const char* retval = "C:\\Users\\123\\Desktop\\series\\I0000000200.dcm";
+		const char* retval = "D:/test_data/series/I0000000200.dcm";
+		//const char* retval = "C:\\Users\\123\\Desktop\\series\\I0000000200.dcm";
 		if (!std::filesystem::exists(retval))
 		{
 			throw "dicom file does not exist!";
@@ -610,8 +610,8 @@ namespace ImguiVtkNs
 
 	static const char* getDicomDir()
 	{
-		//const char* retval = "D:/test_data/series";
-		const char* retval = "C:\\Users\\123\\Desktop\\series";
+		const char* retval = "D:/test_data/series";
+		//const char* retval = "C:\\Users\\123\\Desktop\\series";
 		if (!std::filesystem::exists(retval))
 		{
 			throw "dicom dir does not exist!";
@@ -666,6 +666,17 @@ namespace ImguiVtkNs
 		}
 	}
 
+	static void updateImgOutlineMapper(vtkImageData* pData, vtkActor* actor)
+	{
+		vtkNew<vtkImageDataOutlineFilter> pFilter;
+		pFilter->SetInputData(pData);
+
+		vtkNew<vtkPolyDataMapper> pMapper;
+		pMapper->SetInputConnection(pFilter->GetOutputPort());
+
+		actor->SetMapper(pMapper);
+	}
+
 	// 整体影像的轮廓
 	static void genImgOutline(vtkRenderer* pRenderer, vtkImageData* pData)
 	{
@@ -679,5 +690,23 @@ namespace ImguiVtkNs
 		vtkNew<vtkActor> pActor;
 		pActor->SetMapper(pMapper);
 		pRenderer->AddActor(pActor);
+	}
+
+	static void genImgOutlineOnChanged(vtkRenderer* pRenderer, vtkImageData* pData)
+	{
+		vtkNew<vtkActor> pActor;
+		pRenderer->AddActor(pActor);
+
+		auto f = [](vtkObject* caller, unsigned long eid, void* clientdata, void* calldata)
+			{
+				auto pActor = reinterpret_cast<vtkActor*>(clientdata);
+				updateImgOutlineMapper(vtkImageData::SafeDownCast(caller), pActor);
+				pActor->GetProperty()->SetColor(1., 1., 0.);
+				pActor->GetProperty()->SetLineWidth(3);
+			};
+		vtkNew<vtkCallbackCommand> pCC;
+		pCC->SetCallback(f);
+		pCC->SetClientData(pActor);
+		pData->AddObserver(vtkCommand::ModifiedEvent, pCC);
 	}
 }
