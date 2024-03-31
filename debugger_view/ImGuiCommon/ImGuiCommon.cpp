@@ -72,7 +72,7 @@ namespace
 #else
                 ::reslice->GetOutputInformation(0)->Get(vtkDataObject::SPACING(), myArray); // 0.25
 #endif
-                if (ImGui::DragScalarN("Spacing", ImGuiDataType_Double, myArray, IM_ARRAYSIZE(myArray), .1f))
+                if (ImGui::DragScalarN("Spacing", ImGuiDataType_Double, myArray, IM_ARRAYSIZE(myArray), .01f))
                 {
                     obj->SetOutputSpacing(myArray);
                 }
@@ -83,6 +83,7 @@ namespace
                 if (ImGui::DragScalarN("Extent", ImGuiDataType_S32, myArray, IM_ARRAYSIZE(myArray)))
                 {
                     obj->SetOutputExtent(myArray);
+                    obj->Update(); // 没有此句会输出的都是二维
                 }
             }
             {
@@ -103,6 +104,18 @@ namespace
             {
                 obj->SetOutputExtentToDefault();
             }
+            
+            if (ImGui::Button("2"))
+            {
+                obj->SetOutputDimensionality(2);
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("3"))
+            {
+                obj->SetOutputDimensionality(3);
+            }
+            ImGui::SameLine();
+            ImGui::Text(fmt::format("Dimensionality: {}", obj->GetOutputDimensionality()).c_str());
 
             ImGui::TreePop();
         }
