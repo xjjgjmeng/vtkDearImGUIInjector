@@ -10,25 +10,93 @@ namespace
         }
     }
 
-    void vtkImageReslice_setup(vtkImageReslice* obj)
+    void vtkAbstractImageInterpolator_setup(vtkAbstractImageInterpolator* obj)
     {
-        // slab mode
+        if (bool v = obj->GetSlidingWindow(); ImGui::Checkbox("SlidingWindow", &v))
         {
-            const char* slabModeText[] = { "VTK_IMAGE_SLAB_MIN", "VTK_IMAGE_SLAB_MAX", "VTK_IMAGE_SLAB_MEAN", "VTK_IMAGE_SLAB_SUM" };
-            auto currentSlabMode = obj->GetSlabMode();
-            if (ImGui::Combo("SlabMode", &currentSlabMode, slabModeText, IM_ARRAYSIZE(slabModeText)))
-            {
-                obj->SetSlabMode(currentSlabMode);
-            }
+            obj->SetSlidingWindow(v);
+        }
+        ImGui::Text(fmt::format("OutValue: {}", obj->GetOutValue()).c_str());
+        {
+            double v[3];
+            obj->GetSpacing(v);
+            ImGui::Text(fmt::format("Spacing: {::.2f}", v).c_str());
+        }
+        {
+            double v[3];
+            obj->GetOrigin(v);
+            ImGui::Text(fmt::format("Origin: {::.2f}", v).c_str());
+        }
+        {
+            int v[6];
+            obj->GetExtent(v);
+            ImGui::Text(fmt::format("Extent: {}", v).c_str());
         }
 
-        // thickness
         {
-            auto numOfSlices = obj->GetSlabNumberOfSlices();
-            if (ImGui::DragInt("SlabNumberOfSlices", &numOfSlices, 1, 1, 10000))
+            ImGui::Text(fmt::format("BorderMode: {}", obj->GetBorderModeAsString()).c_str()); ImGui::SameLine();
+            if (ImGui::Button("Clamp")) obj->SetBorderModeToClamp(); ImGui::SameLine();
+            if (ImGui::Button("Mirror")) obj->SetBorderModeToMirror(); ImGui::SameLine();
+            if (ImGui::Button("Repeat")) obj->SetBorderModeToRepeat();
+        }
+
+        {
+            static double v[3];
+            static bool b = false;
+            ImGui::Text(fmt::format("{}", b).c_str());
+            ImGui::SameLine();
+            if (ImGui::DragScalarN("CheckBoundsIJK", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), 1.f))
             {
-                obj->SetSlabNumberOfSlices(numOfSlices);
+                b = obj->CheckBoundsIJK(v);
             }
+        }
+        {
+            static double v[3];
+            static bool b = false;
+            static double r[1];
+            ImGui::Text(fmt::format("{} {::.2f}", b, r).c_str());
+            ImGui::SameLine();
+            if (ImGui::DragScalarN("Interpolate", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), 1.f))
+            {
+                b = obj->Interpolate(v, r);
+            }
+        }
+    }
+
+    void vtkImageReslice_setup(vtkImageReslice* obj)
+    {
+        if (ImGui::TreeNodeEx("Slab", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            // slab mode
+            {
+                const char* slabModeText[] = { "VTK_IMAGE_SLAB_MIN", "VTK_IMAGE_SLAB_MAX", "VTK_IMAGE_SLAB_MEAN", "VTK_IMAGE_SLAB_SUM" };
+                auto currentSlabMode = obj->GetSlabMode();
+                if (ImGui::Combo("Mode", &currentSlabMode, slabModeText, IM_ARRAYSIZE(slabModeText)))
+                {
+                    obj->SetSlabMode(currentSlabMode);
+                }
+            }
+
+            // thickness
+            {
+                auto numOfSlices = obj->GetSlabNumberOfSlices();
+                if (ImGui::DragInt("NumberOfSlices", &numOfSlices, 1, 1, 10000))
+                {
+                    obj->SetSlabNumberOfSlices(numOfSlices);
+                }
+            }
+
+            if (double v = obj->GetSlabSliceSpacingFraction(); ImGui::DragScalar("SliceSpacingFraction", ImGuiDataType_Double, &v))
+            {
+                obj->SetSlabSliceSpacingFraction(v);
+            }
+
+            if (bool v = obj->GetSlabTrapezoidIntegration(); ImGui::Checkbox("TrapezoidIntegration", &v))
+            {
+                obj->SetSlabTrapezoidIntegration(v);
+            }
+
+            ImGui::TreePop();
         }
 
         {
@@ -117,6 +185,31 @@ namespace
             ImGui::SameLine();
             ImGui::Text(fmt::format("Dimensionality: {}", obj->GetOutputDimensionality()).c_str());
 
+            if (ImGui::TreeNodeEx("Scalar", ImGuiTreeNodeFlags_DefaultOpen))
+            {
+                if (double v = obj->GetScalarShift(); ImGui::DragScalar("Shift", ImGuiDataType_Double, &v))
+                {
+                    obj->SetScalarShift(v);
+                }
+
+                if (double v = obj->GetScalarScale(); ImGui::DragScalar("Scale", ImGuiDataType_Double, &v))
+                {
+                    obj->SetScalarScale(v);
+                }
+
+                for (auto i : { VTK_CHAR, VTK_SIGNED_CHAR, VTK_UNSIGNED_CHAR,VTK_SHORT, VTK_UNSIGNED_SHORT, VTK_INT, VTK_UNSIGNED_INT, VTK_FLOAT, VTK_DOUBLE })
+                {
+                    if (ImGui::Button(fmt::format("{}", vtkImageScalarTypeNameMacro(i)).c_str()))
+                    {
+                        obj->SetOutputScalarType(i);
+                    }
+                    ImGui::SameLine();
+                }
+                ImGui::Text( fmt::format("Type: {}", vtkImageScalarTypeNameMacro(obj->GetOutputScalarType())).c_str() );
+
+                ImGui::TreePop();
+            }
+
             ImGui::TreePop();
         }
 
@@ -129,6 +222,16 @@ namespace
             if (auto mirror = obj->GetMirror(); ImGui::Button(fmt::format("Mirror: {}", mirror).c_str()))
             {
                 obj->SetMirror(!mirror);
+            }
+            ImGui::SameLine();
+            if (bool v = obj->GetGenerateStencilOutput(); ImGui::Checkbox("GenerateStencilOutput", &v))
+            {
+                obj->SetGenerateStencilOutput(v);
+            }
+            ImGui::SameLine();
+            if (bool v = obj->GetInterpolate(); ImGui::Checkbox("Interpolate", &v))
+            {
+                obj->SetInterpolate(v);
             }
         }
 
@@ -145,6 +248,33 @@ namespace
 
             ImGui::TreePop();
         }
+
+        if (bool v = obj->GetAutoCropOutput(); ImGui::Checkbox("AutoCropOutput", &v))
+        {
+            obj->SetAutoCropOutput(v);
+        }
+
+        if (bool v = obj->GetOptimization(); ImGui::Checkbox("Optimization", &v))
+        {
+            obj->SetOptimization(v);
+        }
+
+        if (ImGui::TreeNodeEx("Background"))
+        {
+            if (float v[4] = { obj->GetBackgroundColor()[0],obj->GetBackgroundColor()[1],obj->GetBackgroundColor()[2],obj->GetBackgroundColor()[3] }; ImGui::ColorEdit4("Color", v))
+            {
+                obj->SetBackgroundColor(v[0], v[1], v[2], v[3]);
+            }
+
+            if (double v = obj->GetBackgroundLevel(); ImGui::DragScalar("Level", ImGuiDataType_Double, &v))
+            {
+                obj->SetBackgroundLevel(v);
+            }
+
+            ImGui::TreePop();
+        }
+
+        ImGuiNs::vtkObjSetup("Interpolator", obj->GetInterpolator());
     }
 
     void vtkMarchingCubes_setup(vtkMarchingCubes* obj)
@@ -1610,6 +1740,10 @@ A value greater than 1 is a zoom-in, a value less than 1 is a zoom-out.
                 else if (const auto pWindow = vtkWindow::SafeDownCast(vtkObj); pWindow && ImGui::CollapsingHeader("vtkWindow", ImGuiTreeNodeFlags_DefaultOpen))
                 {
                     vtkWindow_setup(pWindow);
+                }
+                else if (const auto pAbstractImageInterpolator = vtkAbstractImageInterpolator::SafeDownCast(vtkObj); pAbstractImageInterpolator && ImGui::CollapsingHeader("vtkAbstractImageInterpolator", ImGuiTreeNodeFlags_DefaultOpen))
+                {
+                    vtkAbstractImageInterpolator_setup(pAbstractImageInterpolator);
                 }
 
                 // vtkWindow

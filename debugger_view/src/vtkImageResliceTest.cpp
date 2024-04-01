@@ -1,12 +1,5 @@
 ﻿#include <ImGuiCommon.h>
-
-#ifdef ADOBE_IMGUI_SPECTRUM
-#include "imgui_spectrum.h"
-#endif
-#include "imgui.h"                 // to draw custom UI
-#include "vtkOpenGLRenderWindow.h" // needed to check if opengl is supported.
-
-static void HelpMarker(const char* desc);
+#include <PolyDataHelper.h>
 
 namespace
 {
@@ -48,20 +41,46 @@ public:
   {
       int eventPt[2];
       this->GetInteractor()->GetEventPosition(eventPt);
+
+      if (this->GetInteractor()->FindPokedRenderer(eventPt[0], eventPt[1]) == this->m_renderer && this->GetInteractor()->GetRepeatCount())
+      {
+          vtkNew<vtkActor> actor;
+          actor->GetProperty()->SetPointSize(12);
+          actor->GetProperty()->SetColor(1., 1., 0.);
+          this->m_renderer->AddActor(actor);
+
+          double worldPt[4];
+          vtkInteractorObserver::ComputeDisplayToWorld(this->m_renderer, eventPt[0], eventPt[1], 0, worldPt);
+          worldPt[2] = 0;
+          double worldPt_[4];
+          ::reslice->GetResliceAxes()->MultiplyPoint(worldPt, worldPt_);
+
+          fmt::print("{}\n", worldPt_);
+          vtkNs::makePoints({ {worldPt_[0], worldPt_[1], worldPt_[2]}}, actor);
+      }
+
+      __super::OnLeftButtonDown();
+  }
+
+  void OnRightButtonDown() override
+  {
+      int eventPt[2];
+      this->GetInteractor()->GetEventPosition(eventPt);
+
       if (this->GetInteractor()->FindPokedRenderer(eventPt[0], eventPt[1]) == this->m_renderer)
       {
           this->m_slicing = true;
       }
       else
       {
-          __super::OnLeftButtonDown();
+          __super::OnRightButtonDown();
       }
   }
 
-  void OnLeftButtonUp() override
+  void OnRightButtonUp() override
   {
       this->m_slicing = false;
-      __super::OnLeftButtonUp();
+      __super::OnRightButtonUp();
   }
 
   void OnMouseMove() override
@@ -115,7 +134,7 @@ private:
     }
 
 public:
-    void* m_renderer = nullptr;
+    vtkRenderer* m_renderer = nullptr;
 
 private:
   bool m_slicing = false;
@@ -208,6 +227,29 @@ int main(int argc, char* argv[])
         }
         // 设置用于切割的坐标系
         reslice->SetResliceAxes(resliceAxes);
+        {
+            auto f = [](vtkObject* caller, unsigned long eid, void* clientdata, void* calldata)
+                {
+                    auto mat = vtkMatrix4x4::SafeDownCast(caller);
+                    vtkNew<vtkTransform> transform;
+                    transform->SetMatrix(mat);
+                    double src[4]{ 0,0,0,1 };
+                    double dst[4];
+                    double dst_[3];
+                    transform->MultiplyPoint(src, dst);
+                    transform->TransformPoint(src, dst_);
+                    vtkNs::makePoints({ {dst[0], dst[1], dst[2]} }, reinterpret_cast<vtkActor*>(clientdata));
+                    fmt::print("dst:{} dst_:{}\n", dst, dst_);
+                };
+            vtkNew<vtkCallbackCommand> pCC;
+            pCC->SetCallback(f);
+            vtkNew<vtkActor> actor;
+            actor->GetProperty()->SetPointSize(12);
+            actor->GetProperty()->SetColor(1., 0., 0.);
+            renderer->AddActor(actor);
+            pCC->SetClientData(actor);
+            ::reslice->GetResliceAxes()->AddObserver(vtkCommand::ModifiedEvent, pCC);
+        }
 #else
         const double x[3] = { 1,0,0 };
         const double y[3] = { 0,1,0 };

@@ -33,6 +33,7 @@
 #include <vtkXMLImageDataReader.h>
 #include <vtkPlane.h>
 #include <vtkPointWidget.h>
+#include <vtkAbstractImageInterpolator.h>
 #include <vtkLeaderActor2D.h>
 #include <vtkImageResliceMapper.h>
 #include <vtkImageSlab.h>
