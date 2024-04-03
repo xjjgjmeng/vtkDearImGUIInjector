@@ -1,13 +1,92 @@
 ﻿#include "ImGuiCommon.h"
 
+namespace ImGuiNs
+{
+    void HelpMarker(const char* desc)
+    {
+        ImGui::TextDisabled("(?)");
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::BeginTooltip();
+            ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
+            ImGui::TextUnformatted(desc);
+            ImGui::PopTextWrapPos();
+            ImGui::EndTooltip();
+        }
+    }
+}
+
+auto getMatrixString(vtkMatrix4x4* obj)
+{
+#if 1
+    return fmt::format("Element:\n\t{:.5f}\t{:.5f}\t{:.5f}\t{:.5f}\n\t{:.5f}\t{:.5f}\t{:.5f}\t{:.5f}\n\t{:.5f}\t{:.5f}\t{:.5f}\t{:.5f}\n\t{:.5f}\t{:.5f}\t{:.5f}\t{:.5f}",
+        obj->GetElement(0, 0), obj->GetElement(0, 1), obj->GetElement(0, 2), obj->GetElement(0, 3),
+        obj->GetElement(1, 0), obj->GetElement(1, 1), obj->GetElement(1, 2), obj->GetElement(1, 3),
+        obj->GetElement(2, 0), obj->GetElement(2, 1), obj->GetElement(2, 2), obj->GetElement(2, 3),
+        obj->GetElement(3, 0), obj->GetElement(3, 1), obj->GetElement(3, 2), obj->GetElement(3, 3));
+#else
+    return fmt::format("Element:\n\t{}",
+        *(double(*)[4][4])(obj->GetData()));
+#endif
+}
+
 namespace
 {
+    void vtkPlaneSource_setup(vtkPlaneSource* obj)
+    {
+        if (int v = obj->GetOutputPointsPrecision(); ImGui::DragInt("OutputPointsPrecision", &v))
+        {
+            obj->SetOutputPointsPrecision(v);
+        }
+        if (int v = obj->GetXResolution(); ImGui::DragInt("XResolution", &v))
+        {
+            obj->SetXResolution(v);
+        }
+        if (int v = obj->GetYResolution(); ImGui::DragInt("YResolution", &v))
+        {
+            obj->SetYResolution(v);
+        }
+        if (ImGui::Button("Push-"))
+        {
+            obj->Push(-5);
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Push+"))
+        {
+            obj->Push(5);
+        }
+        if (double v[3]; obj->GetPoint1(v), ImGui::DragScalarN("Point1", ImGuiDataType_Double, v, IM_ARRAYSIZE(v)))
+        {
+            obj->SetPoint1(v);
+        }
+        if (double v[3]; obj->GetPoint2(v), ImGui::DragScalarN("Point2", ImGuiDataType_Double, v, IM_ARRAYSIZE(v)))
+        {
+            obj->SetPoint2(v);
+        }
+        if (double v[3]; obj->GetOrigin(v), ImGui::DragScalarN("Origin", ImGuiDataType_Double, v, IM_ARRAYSIZE(v)))
+        {
+            obj->SetOrigin(v);
+        }
+        if (double v[3]; obj->GetCenter(v), ImGui::DragScalarN("Center", ImGuiDataType_Double, v, IM_ARRAYSIZE(v)))
+        {
+            obj->SetCenter(v);
+        }
+        if (double v[3]; obj->GetNormal(v), ImGui::DragScalarN("Normal", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), 0.01f))
+        {
+            obj->SetNormal(v);
+        }
+    }
+
     void vtkFlyingEdges3D_setup(vtkFlyingEdges3D* obj)
     {
         if (double v = obj->GetValue(0); ImGui::InputDouble("Value", &v, 100.f, 100.0f, "%.8f"))
         {
             obj->SetValue(0, v);
         }
+    }
+
+    void vtkMatrix4x4_setup(vtkMatrix4x4* obj)
+    {
     }
 
     void vtkAbstractImageInterpolator_setup(vtkAbstractImageInterpolator* obj)
@@ -125,6 +204,63 @@ namespace
                         obj->SetResliceAxesOrigin(o);
                     }
                 }
+
+                {
+                    auto f = [](vtkMatrix4x4* mat, const double v)
+                        {
+                            vtkNew<vtkTransform> transform;
+                            transform->SetMatrix(mat);
+                            transform->RotateZ(v);
+                            mat->DeepCopy(transform->GetMatrix());
+                        };
+                    ImGui::Text("RotateZ:");
+                    ImGui::SameLine();
+                    ImGui::PushButtonRepeat(true);
+                    if (ImGui::ArrowButton("##Z-", ImGuiDir_Left)) { f(obj->GetResliceAxes(), -5); }
+                    ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
+                    if (ImGui::ArrowButton("##Z+", ImGuiDir_Right)) { f(obj->GetResliceAxes(), 5); }
+                    ImGui::PopButtonRepeat();
+                    ImGui::SameLine();
+                    ImGuiNs::HelpMarker(u8R"(每次绕着Z轴向左或向右旋转5°)");
+                }
+                {
+                    auto f = [](vtkMatrix4x4* mat, const double v)
+                        {
+                            vtkNew<vtkTransform> transform;
+                            transform->SetMatrix(mat);
+                            transform->RotateY(v);
+                            mat->DeepCopy(transform->GetMatrix());
+                        };
+                    ImGui::Text("RotateY:");
+                    ImGui::SameLine();
+                    ImGui::PushButtonRepeat(true);
+                    if (ImGui::ArrowButton("##Y-", ImGuiDir_Left)) { f(obj->GetResliceAxes(), -5); }
+                    ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
+                    if (ImGui::ArrowButton("##Y+", ImGuiDir_Right)) { f(obj->GetResliceAxes(), 5); }
+                    ImGui::PopButtonRepeat();
+                    ImGui::SameLine();
+                    ImGuiNs::HelpMarker(u8R"(每次绕着Y轴向左或向右旋转5°)");
+                }
+                {
+                    auto f = [](vtkMatrix4x4* mat, const double v)
+                        {
+                            vtkNew<vtkTransform> transform;
+                            transform->SetMatrix(mat);
+                            transform->RotateX(v);
+                            mat->DeepCopy(transform->GetMatrix());
+                        };
+                    ImGui::Text("RotateX:");
+                    ImGui::SameLine();
+                    ImGui::PushButtonRepeat(true);
+                    if (ImGui::ArrowButton("##X-", ImGuiDir_Left)) { f(obj->GetResliceAxes(), -5); }
+                    ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
+                    if (ImGui::ArrowButton("##X+", ImGuiDir_Right)) { f(obj->GetResliceAxes(), 5); }
+                    ImGui::PopButtonRepeat();
+                    ImGui::SameLine();
+                    ImGuiNs::HelpMarker(u8R"(每次绕着X轴向左或向右旋转5°)");
+                }
+
+                ImGui::Text(::getMatrixString(obj->GetResliceAxes()).c_str());
 
                 ImGui::TreePop();
             }
@@ -706,19 +842,6 @@ namespace
 
 namespace ImGuiNs
 {
-    void HelpMarker(const char* desc)
-    {
-        ImGui::TextDisabled("(?)");
-        if (ImGui::IsItemHovered())
-        {
-            ImGui::BeginTooltip();
-            ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
-            ImGui::TextUnformatted(desc);
-            ImGui::PopTextWrapPos();
-            ImGui::EndTooltip();
-        }
-    }
-
     void printWorldPt(ImGuiNs::LogView& logView, vtkRenderer* pRenderer, double disPtX, double disPtY)
     {
         // 0
@@ -1601,6 +1724,10 @@ A value greater than 1 is a zoom-in, a value less than 1 is a zoom-out.
                         {
                             ::vtkTransformPolyDataFilter_setup(pTransformPolyDataFilter);
                         }
+                        else if (const auto pPlaneSource = vtkPlaneSource::SafeDownCast(vtkObj); pPlaneSource && ImGui::CollapsingHeader("vtkPlaneSource", ImGuiTreeNodeFlags_DefaultOpen))
+                        {
+                            ::vtkPlaneSource_setup(pPlaneSource);
+                        }
                         ImGui::TreePop();
                     }
                     else if (const auto pAbstractMapper = vtkAbstractMapper::SafeDownCast(vtkObj); pAbstractMapper && ImGui::CollapsingHeader("vtkAbstractMapper", ImGuiTreeNodeFlags_DefaultOpen))
@@ -1744,6 +1871,10 @@ A value greater than 1 is a zoom-in, a value less than 1 is a zoom-out.
                 else if (const auto pAbstractImageInterpolator = vtkAbstractImageInterpolator::SafeDownCast(vtkObj); pAbstractImageInterpolator && ImGui::CollapsingHeader("vtkAbstractImageInterpolator", ImGuiTreeNodeFlags_DefaultOpen))
                 {
                     vtkAbstractImageInterpolator_setup(pAbstractImageInterpolator);
+                }
+                else if (const auto pMatrix4x4 = vtkMatrix4x4::SafeDownCast(vtkObj); pMatrix4x4 && ImGui::CollapsingHeader("vtkMatrix4x4", ImGuiTreeNodeFlags_DefaultOpen))
+                {
+                    vtkMatrix4x4_setup(pMatrix4x4);
                 }
 
                 // vtkWindow
