@@ -358,7 +358,7 @@ namespace
 	}
 }
 
-namespace ImGuiNs
+namespace vtkns
 {
     void HelpMarker(const char* desc);
     void vtkObjSetup(std::string_view objName, vtkSmartPointer<vtkObject> vtkObj, const ImGuiTreeNodeFlags = 0);
@@ -489,19 +489,19 @@ namespace ImGuiNs
 		}
 	};
 
-	void printWorldPt(ImGuiNs::LogView& logView, vtkRenderer* pRenderer, double disPtX, double disPtY);
+	void printWorldPt(vtkns::LogView& logView, vtkRenderer* pRenderer, double disPtX, double disPtY);
 }
 
 static std::function<void()> imgui_render_callback;
 static vtkWeakPointer<vtkRenderWindow> pWindow;
 static bool showLogView = false;
-static ImGuiNs::LogView* getLogView()
+static vtkns::LogView* getLogView()
 {
-	static ImGuiNs::LogView o;
+	static vtkns::LogView o;
 	return &o;
 }
 
-namespace ImguiVtkNs
+namespace vtkns
 {
 	static void DrawUI(vtkDearImGuiInjector* overlay)
 	{
@@ -528,27 +528,27 @@ namespace ImguiVtkNs
 						}
 						if (ImGui::BeginTabItem("CameraInfo"))
 						{
-							ImGuiNs::vtkObjSetup("Camera", ::pWindow->GetRenderers()->GetFirstRenderer()->GetActiveCamera(), ImGuiTreeNodeFlags_DefaultOpen);
+							vtkns::vtkObjSetup("Camera", ::pWindow->GetRenderers()->GetFirstRenderer()->GetActiveCamera(), ImGuiTreeNodeFlags_DefaultOpen);
 							ImGui::EndTabItem();
 						}
 						if (ImGui::BeginTabItem("RendererInfo"))
 						{
-							ImGuiNs::vtkObjSetup("Renderer", ::pWindow->GetRenderers()->GetFirstRenderer(), ImGuiTreeNodeFlags_DefaultOpen);
+							vtkns::vtkObjSetup("Renderer", ::pWindow->GetRenderers()->GetFirstRenderer(), ImGuiTreeNodeFlags_DefaultOpen);
 							ImGui::EndTabItem();
 						}
 						if (ImGui::BeginTabItem("InteractorInfo"))
 						{
-							ImGuiNs::vtkObjSetup("Interactor", ::pWindow->GetInteractor(), ImGuiTreeNodeFlags_DefaultOpen);
+							vtkns::vtkObjSetup("Interactor", ::pWindow->GetInteractor(), ImGuiTreeNodeFlags_DefaultOpen);
 							ImGui::EndTabItem();
 						}
 						if (ImGui::BeginTabItem("WindowInfo"))
 						{
-							ImGuiNs::vtkObjSetup("Window", ::pWindow.Get(), ImGuiTreeNodeFlags_DefaultOpen);
+							vtkns::vtkObjSetup("Window", ::pWindow.Get(), ImGuiTreeNodeFlags_DefaultOpen);
 							ImGui::EndTabItem();
 						}
 						if (ImGui::BeginTabItem("InteractorStyle"))
 						{
-							ImGuiNs::vtkObjSetup("Style", ::pWindow->GetInteractor()->GetInteractorStyle(), ImGuiTreeNodeFlags_DefaultOpen);
+							vtkns::vtkObjSetup("Style", ::pWindow->GetInteractor()->GetInteractorStyle(), ImGuiTreeNodeFlags_DefaultOpen);
 							ImGui::EndTabItem();
 						}
 						ImGui::EndTabBar();
@@ -599,8 +599,8 @@ namespace ImguiVtkNs
 
 	static const char* getDicomFile()
 	{
-		const char* retval = "D:/test_data/series/I0000000200.dcm";
-		//const char* retval = "C:\\Users\\123\\Desktop\\series\\I0000000200.dcm";
+		//const char* retval = "D:/test_data/series/I0000000200.dcm";
+		const char* retval = "C:\\Users\\123\\Desktop\\series\\I0000000200.dcm";
 		if (!std::filesystem::exists(retval))
 		{
 			throw "dicom file does not exist!";
@@ -610,8 +610,8 @@ namespace ImguiVtkNs
 
 	static const char* getDicomDir()
 	{
-		const char* retval = "D:/test_data/series";
-		//const char* retval = "C:\\Users\\123\\Desktop\\series";
+		//const char* retval = "D:/test_data/series";
+		const char* retval = "C:\\Users\\123\\Desktop\\series";
 		if (!std::filesystem::exists(retval))
 		{
 			throw "dicom dir does not exist!";

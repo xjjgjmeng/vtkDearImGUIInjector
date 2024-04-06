@@ -1,6 +1,6 @@
 ﻿#include <ImGuiCommon.h>
 
-ImGuiNs::LogView logView;
+vtkns::LogView logView;
 
 class MyStyle : public vtkInteractorStyleImage
 {
@@ -35,7 +35,7 @@ public:
             ::logView.Add(fmt::format("worldOrient: {}", worldOrient));
             const auto withinImage = this->m_placer->ValidateWorldPosition(worldPos);
             ::logView.Add(fmt::format("ValidateWorldPosition: {}", withinImage));
-            ImGuiNs::printWorldPt(::logView, pRenderer, currPos[0], currPos[1]);
+            vtkns::printWorldPt(::logView, pRenderer, currPos[0], currPos[1]);
 
             do
             {
@@ -80,7 +80,7 @@ int main(int argc, char* argv[])
 {
   vtkNew<vtkDICOMImageReader> reader;
 #if 1
-  reader->SetDirectoryName(ImguiVtkNs::getDicomDir());
+  reader->SetDirectoryName(vtkns::getDicomDir());
 #else
   reader->SetFileName(ImguiVtkNs::getDicomFile());
 #endif
@@ -128,16 +128,16 @@ int main(int argc, char* argv[])
           }
           //if (ImGui::TreeNodeEx("vtkImageActor", ImGuiTreeNodeFlags_DefaultOpen))
           {
-              ImGuiNs::vtkObjSetup("vtkImageActor", viewer->GetImageActor());
+              vtkns::vtkObjSetup("vtkImageActor", viewer->GetImageActor());
               //ImGui::TreePop();
           }
           //if (ImGui::TreeNodeEx("Camera"))
           {
-              ImGuiNs::vtkObjSetup("Camera", ren->GetActiveCamera());
+              vtkns::vtkObjSetup("Camera", ren->GetActiveCamera());
               //ImGui::TreePop();
           }
-          ImGuiNs::vtkObjSetup("Slab", pSlab);
-          ImGuiNs::vtkObjSetup("View", viewer, ImGuiTreeNodeFlags_DefaultOpen);
+          vtkns::vtkObjSetup("Slab", pSlab);
+          vtkns::vtkObjSetup("View", viewer, ImGuiTreeNodeFlags_DefaultOpen);
           ImGui::Checkbox(u8"只能绘制到影像上", &myStyle->m_drawOntoImage);
       };
 
@@ -151,9 +151,9 @@ int main(int argc, char* argv[])
     // 💉 the overlay.
     dearImGuiOverlay->Inject(iren);
     // These functions add callbacks to ImGuiSetupEvent and ImGuiDrawEvents.
-    ImguiVtkNs::SetupUI(dearImGuiOverlay);
+    vtkns::SetupUI(dearImGuiOverlay);
     // You can draw custom user interface elements using ImGui:: namespace.
-    ImguiVtkNs::DrawUI(dearImGuiOverlay);
+    vtkns::DrawUI(dearImGuiOverlay);
     /// Change to your code ends here. ///
 
     vtkNew<vtkCameraOrientationWidget> camManipulator;

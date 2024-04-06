@@ -11,7 +11,7 @@ int main(int argc, char* argv[])
     pViewer->GetRenderer()->GetActiveCamera()->SetParallelProjection(false);
 
     vtkNew<vtkDICOMImageReader> reader;
-    reader->SetDirectoryName(ImguiVtkNs::getDicomDir());
+    reader->SetDirectoryName(vtkns::getDicomDir());
     reader->Update();
 
     {
@@ -73,7 +73,7 @@ int main(int argc, char* argv[])
                 if (b)
                 {
                     ImGui::Begin("OLD");
-                    ImGuiNs::vtkObjSetup("image_I", reader->GetOutput(), ImGuiTreeNodeFlags_DefaultOpen);
+                    vtkns::vtkObjSetup("image_I", reader->GetOutput(), ImGuiTreeNodeFlags_DefaultOpen);
                     ImGui::End();
                 }
             }
@@ -84,13 +84,13 @@ int main(int argc, char* argv[])
                 if (b)
                 {
                     ImGui::Begin("NEW");
-                    ImGuiNs::vtkObjSetup("image_O", changer->GetOutput(), ImGuiTreeNodeFlags_DefaultOpen);
+                    vtkns::vtkObjSetup("image_O", changer->GetOutput(), ImGuiTreeNodeFlags_DefaultOpen);
                     ImGui::End();
                 }
             }
             
-            ImGuiNs::vtkObjSetup("Slab", slab, ImGuiTreeNodeFlags_DefaultOpen);
-            ImGuiNs::vtkObjSetup("Viewer2", pViewer);
+            vtkns::vtkObjSetup("Slab", slab, ImGuiTreeNodeFlags_DefaultOpen);
+            vtkns::vtkObjSetup("Viewer2", pViewer);
         };
 
     // Start rendering app
@@ -103,9 +103,9 @@ int main(int argc, char* argv[])
     // 💉 the overlay.
     dearImGuiOverlay->Inject(iren);
     // These functions add callbacks to ImGuiSetupEvent and ImGuiDrawEvents.
-    ImguiVtkNs::SetupUI(dearImGuiOverlay);
+    vtkns::SetupUI(dearImGuiOverlay);
     // You can draw custom user interface elements using ImGui:: namespace.
-    ImguiVtkNs::DrawUI(dearImGuiOverlay);
+    vtkns::DrawUI(dearImGuiOverlay);
     /// Change to your code ends here. ///
 
     vtkNew<vtkCameraOrientationWidget> camManipulator;

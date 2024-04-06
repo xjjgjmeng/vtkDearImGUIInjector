@@ -17,7 +17,7 @@ int main(int argc, char* argv[])
     iren->SetRenderWindow(renderWindow);
 
     reader = vtkSmartPointer<vtkDICOMImageReader>::New();
-    reader->SetFileName(ImguiVtkNs::getDicomFile());
+    reader->SetFileName(vtkns::getDicomFile());
     reader->Update();
 
     vtkNew<ImageSharpenFilter> myFilter;
@@ -31,8 +31,8 @@ int main(int argc, char* argv[])
     ::pWindow = renderWindow;
     ::imgui_render_callback = [&]
     {
-        ImGuiNs::vtkObjSetup("vtkImageData", ::reader->GetOutput());
-        ImGuiNs::vtkObjSetup("vtkImageActor", actor);
+        vtkns::vtkObjSetup("vtkImageData", ::reader->GetOutput());
+        vtkns::vtkObjSetup("vtkImageActor", actor);
         if (auto v = ::pMyFilter->GetSharpenCount(); ImGui::SliderInt("Sharpen", &v, 0, 100))
         {
             ::pMyFilter->SetSharpenCount(v);
@@ -49,9 +49,9 @@ int main(int argc, char* argv[])
     // 💉 the overlay.
     dearImGuiOverlay->Inject(iren);
     // These functions add callbacks to ImGuiSetupEvent and ImGuiDrawEvents.
-    ImguiVtkNs::SetupUI(dearImGuiOverlay);
+    vtkns::SetupUI(dearImGuiOverlay);
     // You can draw custom user interface elements using ImGui:: namespace.
-    ImguiVtkNs::DrawUI(dearImGuiOverlay);
+    vtkns::DrawUI(dearImGuiOverlay);
     /// Change to your code ends here. ///
 
     vtkNew<vtkCameraOrientationWidget> camManipulator;

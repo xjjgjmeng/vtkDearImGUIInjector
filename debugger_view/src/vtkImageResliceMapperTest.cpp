@@ -81,7 +81,7 @@ int main(int argc, char* argv[])
     reader->Update();
 #else
     vtkNew<vtkDICOMImageReader> reader;
-    reader->SetDirectoryName(ImguiVtkNs::getDicomDir());
+    reader->SetDirectoryName(vtkns::getDicomDir());
     reader->Update();
 #endif
     auto pImageData = reader->GetOutput();
@@ -156,8 +156,8 @@ int main(int argc, char* argv[])
     ren->ResetCamera(pImageData->GetBounds());
 #endif
 
-    ImguiVtkNs::genImgOutline(ren, pImageData);
-    ImguiVtkNs::labelWorldZero(ren);
+    vtkns::genImgOutline(ren, pImageData);
+    vtkns::labelWorldZero(ren);
 
     // VR
     vtkNew<vtkVolume> pVolume;
@@ -206,10 +206,10 @@ int main(int argc, char* argv[])
             if (bool v = pVolume->GetVisibility(); ImGui::Checkbox("VRVisibility", &v)) pVolume->SetVisibility(v);
 
             //ImGui::Begin("666");
-            ImGuiNs::vtkObjSetup("OriginImage", reader->GetOutput());
-            ImGuiNs::vtkObjSetup("ImageActor", pActor);
+            vtkns::vtkObjSetup("OriginImage", reader->GetOutput());
+            vtkns::vtkObjSetup("ImageActor", pActor);
             //ImGui::End();
-            ImGuiNs::vtkObjSetup("Mapper", pMapper, ImGuiTreeNodeFlags_DefaultOpen);
+            vtkns::vtkObjSetup("Mapper", pMapper, ImGuiTreeNodeFlags_DefaultOpen);
 #if 1 == SHOW_Y
             ImGuiNs::vtkObjSetup("YMapper", pYMapper);
 #endif
@@ -228,9 +228,9 @@ int main(int argc, char* argv[])
     // 💉 the overlay.
     dearImGuiOverlay->Inject(iren);
     // These functions add callbacks to ImGuiSetupEvent and ImGuiDrawEvents.
-    ImguiVtkNs::SetupUI(dearImGuiOverlay);
+    vtkns::SetupUI(dearImGuiOverlay);
     // You can draw custom user interface elements using ImGui:: namespace.
-    ImguiVtkNs::DrawUI(dearImGuiOverlay);
+    vtkns::DrawUI(dearImGuiOverlay);
     /// Change to your code ends here. ///
 
     vtkNew<vtkCameraOrientationWidget> camManipulator;

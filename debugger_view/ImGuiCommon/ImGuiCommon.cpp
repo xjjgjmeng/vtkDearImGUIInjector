@@ -1,6 +1,6 @@
 ﻿#include "ImGuiCommon.h"
 
-namespace ImGuiNs
+namespace vtkns
 {
     void HelpMarker(const char* desc)
     {
@@ -32,6 +32,51 @@ auto getMatrixString(vtkMatrix4x4* obj)
 
 namespace
 {
+    void vtkImageToPolyDataFilter_setup(vtkImageToPolyDataFilter* obj)
+    {
+        if (ImGui::TreeNodeEx("OutputStyle", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            if (ImGui::Button("Pixelize"))
+            {
+                obj->SetOutputStyleToPixelize();
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Polygonalize"))
+            {
+                obj->SetOutputStyleToPolygonalize();
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("RunLength"))
+            {
+                obj->SetOutputStyleToRunLength();
+            }
+            ImGui::SameLine();
+            ImGui::Text(fmt::format("{}", obj->GetOutputStyle()).c_str());
+
+            ImGui::TreePop();
+        }
+
+        if (bool v = obj->GetSmoothing(); ImGui::Checkbox("Smoothing", &v))
+        {
+            obj->SetSmoothing(v);
+        }
+
+        if (bool v = obj->GetDecimation(); ImGui::Checkbox("Decimation", &v))
+        {
+            obj->SetDecimation(v);
+        }
+
+        if (int v = obj->GetSubImageSize(); ImGui::DragInt("SubImageSize", &v))
+        {
+            obj->SetSubImageSize(v);
+        }
+
+        if (int v = obj->GetNumberOfSmoothingIterations(); ImGui::DragInt("NumberOfSmoothingIterations", &v))
+        {
+            obj->SetNumberOfSmoothingIterations(v);
+        }
+    }
+
     void vtkPlaneSource_setup(vtkPlaneSource* obj)
     {
         if (int v = obj->GetOutputPointsPrecision(); ImGui::DragInt("OutputPointsPrecision", &v))
@@ -46,14 +91,16 @@ namespace
         {
             obj->SetYResolution(v);
         }
-        if (ImGui::Button("Push-"))
         {
-            obj->Push(-5);
-        }
-        ImGui::SameLine();
-        if (ImGui::Button("Push+"))
-        {
-            obj->Push(5);
+            ImGui::Text("Push:");
+            ImGui::SameLine();
+            ImGui::PushButtonRepeat(true);
+            if (ImGui::ArrowButton("##-", ImGuiDir_Left)) { obj->Push(-1); }
+            ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
+            if (ImGui::ArrowButton("##+", ImGuiDir_Right)) { obj->Push(1); }
+            ImGui::PopButtonRepeat();
+            ImGui::SameLine();
+            vtkns::HelpMarker(u8R"(沿着法向前进或后退)");
         }
         if (double v[3]; obj->GetPoint1(v), ImGui::DragScalarN("Point1", ImGuiDataType_Double, v, IM_ARRAYSIZE(v)))
         {
@@ -71,6 +118,8 @@ namespace
         {
             obj->SetCenter(v);
         }
+        ImGui::SameLine();
+        vtkns::HelpMarker(u8R"(移动整个plane，plane的size不变，Point1和Point2和Origin会被修改)");
         if (double v[3]; obj->GetNormal(v), ImGui::DragScalarN("Normal", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), 0.01f))
         {
             obj->SetNormal(v);
@@ -207,12 +256,12 @@ namespace
 
                 {
                     auto f = [](vtkMatrix4x4* mat, const double v)
-                        {
-                            vtkNew<vtkTransform> transform;
-                            transform->SetMatrix(mat);
-                            transform->RotateZ(v);
-                            mat->DeepCopy(transform->GetMatrix());
-                        };
+                    {
+                        vtkNew<vtkTransform> transform;
+                        transform->SetMatrix(mat);
+                        transform->RotateZ(v);
+                        mat->DeepCopy(transform->GetMatrix());
+                    };
                     ImGui::Text("RotateZ:");
                     ImGui::SameLine();
                     ImGui::PushButtonRepeat(true);
@@ -221,16 +270,16 @@ namespace
                     if (ImGui::ArrowButton("##Z+", ImGuiDir_Right)) { f(obj->GetResliceAxes(), 5); }
                     ImGui::PopButtonRepeat();
                     ImGui::SameLine();
-                    ImGuiNs::HelpMarker(u8R"(每次绕着Z轴向左或向右旋转5°)");
+                    vtkns::HelpMarker(u8R"(每次绕着Z轴向左或向右旋转5°)");
                 }
                 {
                     auto f = [](vtkMatrix4x4* mat, const double v)
-                        {
-                            vtkNew<vtkTransform> transform;
-                            transform->SetMatrix(mat);
-                            transform->RotateY(v);
-                            mat->DeepCopy(transform->GetMatrix());
-                        };
+                    {
+                        vtkNew<vtkTransform> transform;
+                        transform->SetMatrix(mat);
+                        transform->RotateY(v);
+                        mat->DeepCopy(transform->GetMatrix());
+                    };
                     ImGui::Text("RotateY:");
                     ImGui::SameLine();
                     ImGui::PushButtonRepeat(true);
@@ -239,16 +288,16 @@ namespace
                     if (ImGui::ArrowButton("##Y+", ImGuiDir_Right)) { f(obj->GetResliceAxes(), 5); }
                     ImGui::PopButtonRepeat();
                     ImGui::SameLine();
-                    ImGuiNs::HelpMarker(u8R"(每次绕着Y轴向左或向右旋转5°)");
+                    vtkns::HelpMarker(u8R"(每次绕着Y轴向左或向右旋转5°)");
                 }
                 {
                     auto f = [](vtkMatrix4x4* mat, const double v)
-                        {
-                            vtkNew<vtkTransform> transform;
-                            transform->SetMatrix(mat);
-                            transform->RotateX(v);
-                            mat->DeepCopy(transform->GetMatrix());
-                        };
+                    {
+                        vtkNew<vtkTransform> transform;
+                        transform->SetMatrix(mat);
+                        transform->RotateX(v);
+                        mat->DeepCopy(transform->GetMatrix());
+                    };
                     ImGui::Text("RotateX:");
                     ImGui::SameLine();
                     ImGui::PushButtonRepeat(true);
@@ -257,7 +306,7 @@ namespace
                     if (ImGui::ArrowButton("##X+", ImGuiDir_Right)) { f(obj->GetResliceAxes(), 5); }
                     ImGui::PopButtonRepeat();
                     ImGui::SameLine();
-                    ImGuiNs::HelpMarker(u8R"(每次绕着X轴向左或向右旋转5°)");
+                    vtkns::HelpMarker(u8R"(每次绕着X轴向左或向右旋转5°)");
                 }
 
                 ImGui::Text(::getMatrixString(obj->GetResliceAxes()).c_str());
@@ -308,7 +357,7 @@ namespace
             {
                 obj->SetOutputExtentToDefault();
             }
-            
+
             if (ImGui::Button("2"))
             {
                 obj->SetOutputDimensionality(2);
@@ -341,7 +390,7 @@ namespace
                     }
                     ImGui::SameLine();
                 }
-                ImGui::Text( fmt::format("Type: {}", vtkImageScalarTypeNameMacro(obj->GetOutputScalarType())).c_str() );
+                ImGui::Text(fmt::format("Type: {}", vtkImageScalarTypeNameMacro(obj->GetOutputScalarType())).c_str());
 
                 ImGui::TreePop();
             }
@@ -410,7 +459,7 @@ namespace
             ImGui::TreePop();
         }
 
-        ImGuiNs::vtkObjSetup("Interpolator", obj->GetInterpolator());
+        vtkns::vtkObjSetup("Interpolator", obj->GetInterpolator());
     }
 
     void vtkMarchingCubes_setup(vtkMarchingCubes* obj)
@@ -463,7 +512,7 @@ namespace
 
     void vtkPointSet_setup(vtkPointSet* obj)
     {
-        if (ImGui::TreeNodeEx("Points", ImGuiTreeNodeFlags_DefaultOpen))
+        if (ImGui::TreeNodeEx("Points"/*, ImGuiTreeNodeFlags_DefaultOpen*/))
         {
             for (auto i = 0; i < obj->GetNumberOfPoints(); ++i)
             {
@@ -488,17 +537,17 @@ namespace
             obj->GetCellDims(v);
             ImGui::Text(fmt::format("CellDims: {}", v).c_str());
         }
-        if (int v[6]; obj->GetExtent(v), ImGui::DragScalarN("Extent", ImGuiDataType_S32, v, IM_ARRAYSIZE(v)))
+        if (double v[3]; obj->GetOrigin(v), ImGui::DragScalarN("Origin", ImGuiDataType_Double, v, IM_ARRAYSIZE(v)))
         {
-            obj->SetExtent(v);
+            obj->SetOrigin(v);
         }
         if (double v[3]; obj->GetSpacing(v), ImGui::DragScalarN("Spacing", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), .1f))
         {
             obj->SetSpacing(v);
         }
-        if (double v[3]; obj->GetOrigin(v), ImGui::DragScalarN("Origin", ImGuiDataType_Double, v, IM_ARRAYSIZE(v)))
+        if (int v[6]; obj->GetExtent(v), ImGui::DragScalarN("Extent", ImGuiDataType_S32, v, IM_ARRAYSIZE(v)))
         {
-            obj->SetOrigin(v);
+            obj->SetExtent(v);
         }
         {
             static int v[3]{};
@@ -584,12 +633,12 @@ namespace
             ImGui::Text(fmt::format("IndexBounds: {::.2f}", v).c_str());
         }
 
-        ImGuiNs::vtkObjSetup("SlicePlane", obj->GetSlicePlane(), ImGuiTreeNodeFlags_DefaultOpen);
+        vtkns::vtkObjSetup("SlicePlane", obj->GetSlicePlane(), ImGuiTreeNodeFlags_DefaultOpen);
     }
 
     void vtkImplicitFunction_setup(vtkImplicitFunction* obj)
     {
-    
+
     }
 
     void vtkPlane_setup(vtkPlane* obj)
@@ -627,8 +676,8 @@ namespace
         {
             obj->SetForceTranslucent(v);
         }
-        ImGuiNs::vtkObjSetup("Property", obj->GetProperty());
-        ImGuiNs::vtkObjSetup("Mapper", obj->GetMapper());
+        vtkns::vtkObjSetup("Property", obj->GetProperty());
+        vtkns::vtkObjSetup("Mapper", obj->GetMapper());
     }
 
     void vtkImageProperty_setup(vtkImageProperty* obj)
@@ -685,7 +734,7 @@ namespace
                 obj->SetInterpolationType(v);
             }
         }
-        ImGuiNs::vtkObjSetup("LookupTable", obj->GetLookupTable());
+        vtkns::vtkObjSetup("LookupTable", obj->GetLookupTable());
     }
 
     void vtkImageActor_setup(vtkImageActor* obj)
@@ -724,7 +773,7 @@ namespace
         {
             obj->SetZSlice(v);
         }
-        ImGuiNs::vtkObjSetup("Input", obj->GetInput());
+        vtkns::vtkObjSetup("Input", obj->GetInput());
     }
 
     void vtkImageFlip_setup(vtkImageFlip* obj)
@@ -793,13 +842,13 @@ namespace
         {
             obj->SetHotSpotSize(v);
         }
-        ImGuiNs::vtkObjSetup("Property", obj->GetProperty());
-        ImGuiNs::vtkObjSetup("SelectedProperty", obj->GetSelectedProperty());
+        vtkns::vtkObjSetup("Property", obj->GetProperty());
+        vtkns::vtkObjSetup("SelectedProperty", obj->GetSelectedProperty());
     }
 
     void vtkWindow_setup(vtkWindow* obj)
     {
-    
+
     }
 
     void vtkRenderWindow_setup(vtkRenderWindow* obj)
@@ -825,7 +874,7 @@ namespace
         {
             obj->SetThreeDimensionalLeader(v);
         }
-        if (float v[3]{ obj->GetAttachmentPoint()[0], obj->GetAttachmentPoint()[1], obj->GetAttachmentPoint()[2]}; ImGui::DragScalarN("AttachmentPoint", ImGuiDataType_Float, v, IM_ARRAYSIZE(v), 0.1f))
+        if (float v[3]{ obj->GetAttachmentPoint()[0], obj->GetAttachmentPoint()[1], obj->GetAttachmentPoint()[2] }; ImGui::DragScalarN("AttachmentPoint", ImGuiDataType_Float, v, IM_ARRAYSIZE(v), 0.1f))
         {
             obj->SetAttachmentPoint(v[0], v[1], v[2]);
         }
@@ -840,9 +889,9 @@ namespace
     }
 }
 
-namespace ImGuiNs
+namespace vtkns
 {
-    void printWorldPt(ImGuiNs::LogView& logView, vtkRenderer* pRenderer, double disPtX, double disPtY)
+    void printWorldPt(vtkns::LogView& logView, vtkRenderer* pRenderer, double disPtX, double disPtY)
     {
         // 0
         {
@@ -1107,7 +1156,7 @@ The result is a horizontal rotation of the scene.
                         ImGui::PopButtonRepeat();
                         ImGui::SameLine();
                         ImGui::Text("%lf", pCamera->GetDistance());
-                }
+                    }
 #else
                     if (float v = pCamera->GetDistance(); ImGui::SliderFloat("Distance", &v, -10., 10.))
                     {
@@ -1127,7 +1176,7 @@ The result is a horizontal rotation of the scene.
                         ImGui::PopButtonRepeat();
                         ImGui::SameLine();
                         ImGui::Text("%lf", pCamera->GetViewAngle());
-            }
+                    }
 #else
                     if (float v = pCamera->GetViewAngle(); ImGui::SliderFloat("ViewAngle", &v, 0.001, 180.))
                     {
@@ -1192,7 +1241,7 @@ A value greater than 1 is a zoom-in, a value less than 1 is a zoom-out.
                     {
                         pCamera->SetViewUp(1.0, 0.0, 0.0);
                     }
-        }
+                }
                 else if (const auto pViewport = vtkViewport::SafeDownCast(vtkObj); pViewport && ImGui::CollapsingHeader("vtkViewport", ImGuiTreeNodeFlags_DefaultOpen))
                 {
                     if (float v[3] = { pViewport->GetBackground()[0],pViewport->GetBackground()[1],pViewport->GetBackground()[2] }; ImGui::ColorEdit3("Background", v))
@@ -1326,6 +1375,28 @@ A value greater than 1 is a zoom-in, a value less than 1 is a zoom-out.
                 }
                 else if (const auto pProperty = vtkProperty::SafeDownCast(vtkObj); pProperty && ImGui::TreeNodeEx("vtkProperty", ImGuiTreeNodeFlags_DefaultOpen))
                 {
+                    if (ImGui::TreeNodeEx("Representation", ImGuiTreeNodeFlags_DefaultOpen))
+                    {
+                        if (ImGui::Button("Wireframe"))
+                        {
+                            pProperty->SetRepresentationToWireframe();
+                        }
+                        ImGui::SameLine();
+                        if (ImGui::Button("Surface"))
+                        {
+                            pProperty->SetRepresentationToSurface();
+                        }
+                        ImGui::SameLine();
+                        if (ImGui::Button("Points"))
+                        {
+                            pProperty->SetRepresentationToPoints();
+                        }
+                        ImGui::SameLine();
+                        ImGui::Text(fmt::format("{}", pProperty->GetRepresentationAsString()).c_str());
+
+                        ImGui::TreePop();
+                    }
+                    
                     if (bool lighting = pProperty->GetLighting(); ImGui::Checkbox("Lighting", &lighting))
                     {
                         pProperty->SetLighting(lighting);
@@ -1428,7 +1499,7 @@ A value greater than 1 is a zoom-in, a value less than 1 is a zoom-out.
                     }
 
                     {
-                        const char* modeText[] = { "SLICE_ORIENTATION_YZ", "SLICE_ORIENTATION_XZ", "SLICE_ORIENTATION_XY"};
+                        const char* modeText[] = { "SLICE_ORIENTATION_YZ", "SLICE_ORIENTATION_XZ", "SLICE_ORIENTATION_XY" };
                         if (auto v = pImageViewer2->GetSliceOrientation(); ImGui::Combo("SliceOrientation", &v, modeText, IM_ARRAYSIZE(modeText)))
                         {
                             pImageViewer2->SetSliceOrientation(v);
@@ -1440,7 +1511,7 @@ A value greater than 1 is a zoom-in, a value less than 1 is a zoom-out.
                         pImageViewer2->SetOffScreenRendering(v);
                     }
 
-                    ImGuiNs::vtkObjSetup("ImageActor", pImageViewer2->GetImageActor(), ImGuiTreeNodeFlags_DefaultOpen);
+                    vtkns::vtkObjSetup("ImageActor", pImageViewer2->GetImageActor(), ImGuiTreeNodeFlags_DefaultOpen);
 
                     if (const auto pResliceImageViewer = vtkResliceImageViewer::SafeDownCast(vtkObj); pResliceImageViewer && ImGui::TreeNodeEx("vtkResliceImageViewer", ImGuiTreeNodeFlags_DefaultOpen))
                     {
@@ -1727,6 +1798,10 @@ A value greater than 1 is a zoom-in, a value less than 1 is a zoom-out.
                         else if (const auto pPlaneSource = vtkPlaneSource::SafeDownCast(vtkObj); pPlaneSource && ImGui::CollapsingHeader("vtkPlaneSource", ImGuiTreeNodeFlags_DefaultOpen))
                         {
                             ::vtkPlaneSource_setup(pPlaneSource);
+                        }
+                        else if (const auto pImageToPolyDataFilter = vtkImageToPolyDataFilter::SafeDownCast(vtkObj); pImageToPolyDataFilter && ImGui::CollapsingHeader("vtkImageToPolyDataFilter", ImGuiTreeNodeFlags_DefaultOpen))
+                        {
+                            vtkImageToPolyDataFilter_setup(pImageToPolyDataFilter);
                         }
                         ImGui::TreePop();
                     }
@@ -2344,7 +2419,7 @@ A value greater than 1 is a zoom-in, a value less than 1 is a zoom-out.
                 else if (const auto pHandleRepresentation = vtkHandleRepresentation::SafeDownCast(vtkObj); pHandleRepresentation && ImGui::CollapsingHeader("vtkHandleRepresentation", ImGuiTreeNodeFlags_DefaultOpen))
                 {
                     {
-                        char* v[] = {"Outside","Nearby", "Selecting", "Translating", "Scaling"};
+                        char* v[] = { "Outside","Nearby", "Selecting", "Translating", "Scaling" };
                         ImGui::Text(fmt::format("InteractionState: {}", v[pHandleRepresentation->GetInteractionState()]).c_str());
                     }
                     {
@@ -2412,7 +2487,7 @@ A value greater than 1 is a zoom-in, a value less than 1 is a zoom-out.
 #if 0
                 if (const auto pDataSet = vtkDataSet::SafeDownCast(vtkObj); pDataSet && ImGui::CollapsingHeader("vtkDataSet", ImGuiTreeNodeFlags_DefaultOpen))
                 {
- 
+
                 }
 #endif
 
@@ -2568,7 +2643,7 @@ A value greater than 1 is a zoom-in, a value less than 1 is a zoom-out.
                             }
                         }
                         ImGui::TreePop();
-                }
+                    }
                     ImGui::TreePop();
                 }
                 else if (const auto pAnnotatedCubeActor = vtkAnnotatedCubeActor::SafeDownCast(vtkObj); pAnnotatedCubeActor && ImGui::TreeNodeEx("vtkAnnotatedCubeActor"))

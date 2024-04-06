@@ -10,20 +10,30 @@ int main(int argc, char* argv[])
     vtkNew<vtkRenderWindowInteractor> iren;
     iren->SetRenderWindow(renWin);
 
-    ImguiVtkNs::labelWorldZero(ren);
+    vtkns::labelWorldZero(ren);
 
     vtkSmartPointer<vtkImageData> img;
     auto actor = vtkSmartPointer<vtkImageActor>::New();
     ren->AddActor(actor);
 
+    //vtkNew<vtkActor> polydataActor;
+    //vtkSmartPointer<vtkImageToPolyDataFilter> imgPolyFilter = vtkSmartPointer<vtkImageToPolyDataFilter>::New();
+    //{
+    //    vtkNew<vtkRenderer> ren;
+    //    ren->SetBackground(1, 1, 1);
+    //    ren->AddActor(polydataActor);
+    //    ren->SetViewport(0.8, 0.5, 1, 1);
+    //    renWin->AddRenderer(ren);
+    //}
+
     double origin[3]{};
-    double spacing[3] = {1.,1.,1.};
+    double spacing[3] = { 1.,1.,1. };
     int extentStart[3]{};
 
-    auto generateImg = [&img, actor, &ren, &origin, &spacing, &extentStart] // arr??
+    auto generateImg = [&img, actor, /*&polydataActor,*/ &ren, &origin, &spacing, &extentStart/*, imgPolyFilter*/] // arr??
     {
-            int w = 100;
-            int h = 100;
+        int w = 100;
+        int h = 100;
 
         img = vtkSmartPointer<vtkImageData>::New();
         // 设置图像的维度、原点、间隔等信息
@@ -33,8 +43,8 @@ int main(int argc, char* argv[])
         img->SetExtent(extentStart[0], extentStart[0] + w - 1, extentStart[1], extentStart[1] + h - 1, extentStart[2], extentStart[2]);
 #endif
         // origin指的是extent (0,0,0)在世界坐标系中的位置
-        img->SetOrigin(origin[0], origin[1], origin[2]);
-        img->SetSpacing(spacing[0], spacing[1], spacing[2]);
+        img->SetOrigin(origin);
+        img->SetSpacing(spacing);
 
         // 分配内存并写入数据
         img->AllocateScalars(VTK_UNSIGNED_CHAR, 1);
@@ -52,17 +62,36 @@ int main(int argc, char* argv[])
         }
 
         actor->SetInputData(img);
+#if 0
+        {
+            //vtkNew<vtkImageToPolyDataFilter> filter;
+            //imgPolyFilter = filter.GetPointer();
+            imgPolyFilter->SetColorModeToLUT();
+            {
+                vtkNew<vtkScalarsToColors> lut;
+                lut->SetRange(0, 255);
+                imgPolyFilter->SetLookupTable(lut);
+            }
+            imgPolyFilter->SetInputData(img);
+            vtkNew<vtkPolyDataMapper> mapper;
+            mapper->SetInputConnection(imgPolyFilter->GetOutputPort());
+            polydataActor->SetMapper(mapper);
+            polydataActor->GetProperty()->SetColor(1, 0, 0);
+        }
+#endif
     };
     generateImg();
     ren->ResetCamera();
 
     ::pWindow = renWin;
     ::imgui_render_callback = [&]
+    {
+        if (ImGui::TreeNodeEx(u8"生成参数", ImGuiTreeNodeFlags_DefaultOpen))
         {
-            if (ImGui::Button("generate"))
-            {
-                generateImg();
-            }
+            //if (ImGui::Button("generate"))
+            //{
+            //    generateImg();
+            //}
             if (ImGui::DragScalarN("origin", ImGuiDataType_Double, origin, IM_ARRAYSIZE(origin), 0.1f))
             {
                 generateImg();
@@ -75,9 +104,14 @@ int main(int argc, char* argv[])
             {
                 generateImg();
             }
-            ImGuiNs::vtkObjSetup("ImageData", img, ImGuiTreeNodeFlags_DefaultOpen);
-            ImGuiNs::vtkObjSetup("ImageActor", actor, ImGuiTreeNodeFlags_DefaultOpen);
-        };
+
+            ImGui::TreePop();
+        }
+        vtkns::vtkObjSetup("ImageData", img, ImGuiTreeNodeFlags_DefaultOpen);
+        vtkns::vtkObjSetup("ImageActor", actor);
+        //vtkns::vtkObjSetup("polydataActor", polydataActor, ImGuiTreeNodeFlags_DefaultOpen);
+        //vtkns::vtkObjSetup("filter", imgPolyFilter, ImGuiTreeNodeFlags_DefaultOpen);
+    };
 
     // Start rendering app
     ren->SetBackground(0., 0., 0.);
@@ -89,9 +123,9 @@ int main(int argc, char* argv[])
     // 💉 the overlay.
     dearImGuiOverlay->Inject(iren);
     // These functions add callbacks to ImGuiSetupEvent and ImGuiDrawEvents.
-    ImguiVtkNs::SetupUI(dearImGuiOverlay);
+    vtkns::SetupUI(dearImGuiOverlay);
     // You can draw custom user interface elements using ImGui:: namespace.
-    ImguiVtkNs::DrawUI(dearImGuiOverlay);
+    vtkns::DrawUI(dearImGuiOverlay);
     /// Change to your code ends here. ///
 
     vtkNew<vtkCameraOrientationWidget> camManipulator;

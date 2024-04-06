@@ -17,7 +17,7 @@ public:
         ::getLogView()->Add(fmt::format("EventPosition: {}", eventPt));
         if (const auto renderer = this->GetInteractor()->FindPokedRenderer(eventPt[0], eventPt[1]))
         {
-            ImGuiNs::printWorldPt(*::getLogView(), renderer, eventPt[0], eventPt[1]);
+            vtkns::printWorldPt(*::getLogView(), renderer, eventPt[0], eventPt[1]);
 
             this->GetInteractor()->GetPicker()->Pick(eventPt[0], eventPt[1], 0, renderer);
             vtkNs::Pt_t pickedPt;
@@ -105,7 +105,7 @@ int main(int argc, char* argv[])
 
     {
         vtkNew<vtkDICOMImageReader> reader;
-        reader->SetFileName(ImguiVtkNs::getDicomFile());
+        reader->SetFileName(vtkns::getDicomFile());
         reader->Update();
 
         vtkNew<vtkImageActor> pActor;
@@ -116,7 +116,7 @@ int main(int argc, char* argv[])
 
     {
         vtkNew<vtkDICOMImageReader> reader;
-        reader->SetFileName(ImguiVtkNs::getDicomFile());
+        reader->SetFileName(vtkns::getDicomFile());
         reader->Update();
 
         vtkNew<vtkImageActor> pActor;
@@ -129,7 +129,7 @@ int main(int argc, char* argv[])
     }
 
     vtkNew<vtkDICOMImageReader> reader;
-    reader->SetDirectoryName(ImguiVtkNs::getDicomDir());
+    reader->SetDirectoryName(vtkns::getDicomDir());
     reader->Update();
 
     {
@@ -171,9 +171,9 @@ int main(int argc, char* argv[])
     ::pWindow = renWin;
     ::imgui_render_callback = [&]
         {
-            ImGuiNs::vtkObjSetup("CurrentPicker", iren->GetPicker(), ImGuiTreeNodeFlags_DefaultOpen);
+            vtkns::vtkObjSetup("CurrentPicker", iren->GetPicker(), ImGuiTreeNodeFlags_DefaultOpen);
             ImGui::Begin("PickedActor");
-            ImGuiNs::vtkObjSetup("ActorInfo", vtkAbstractPropPicker::SafeDownCast(iren->GetPicker())->GetViewProp(), ImGuiTreeNodeFlags_DefaultOpen);
+            vtkns::vtkObjSetup("ActorInfo", vtkAbstractPropPicker::SafeDownCast(iren->GetPicker())->GetViewProp(), ImGuiTreeNodeFlags_DefaultOpen);
             ImGui::End();
         };
 
@@ -187,9 +187,9 @@ int main(int argc, char* argv[])
     // 💉 the overlay.
     dearImGuiOverlay->Inject(iren);
     // These functions add callbacks to ImGuiSetupEvent and ImGuiDrawEvents.
-    ImguiVtkNs::SetupUI(dearImGuiOverlay);
+    vtkns::SetupUI(dearImGuiOverlay);
     // You can draw custom user interface elements using ImGui:: namespace.
-    ImguiVtkNs::DrawUI(dearImGuiOverlay);
+    vtkns::DrawUI(dearImGuiOverlay);
     /// Change to your code ends here. ///
 
     vtkNew<vtkCameraOrientationWidget> camManipulator;

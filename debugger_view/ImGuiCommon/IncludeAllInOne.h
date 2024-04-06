@@ -27,6 +27,7 @@
 #include <vtkShortArray.h>
 #include <vtkGenericOutlineFilter.h>
 #include <vtkImageDataOutlineFilter.h>
+#include <vtkImageToPolyDataFilter.h>
 #include <vtkImageCursor3D.h>
 #include <vtkLine.h>
 #include <vtkFloatArray.h>

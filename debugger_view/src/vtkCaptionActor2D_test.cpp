@@ -8,7 +8,7 @@ int main(int argc, char* argv[])
     vtkNew<vtkRenderWindowInteractor> iren;
     iren->SetRenderWindow(renWin);
 
-    ImguiVtkNs::labelWorldZero(ren);
+    vtkns::labelWorldZero(ren);
 
     auto pCaptionActor2D = vtkSmartPointer<vtkCaptionActor2D>::New();
     pCaptionActor2D->SetCaption("123\n456\nhello");
@@ -29,7 +29,7 @@ int main(int argc, char* argv[])
     ::pWindow = renWin;
     ::imgui_render_callback = [&]
         {
-            ImGuiNs::vtkObjSetup("CaptionActor2D", pCaptionActor2D, ImGuiTreeNodeFlags_DefaultOpen);
+            vtkns::vtkObjSetup("CaptionActor2D", pCaptionActor2D, ImGuiTreeNodeFlags_DefaultOpen);
         };
 
     // Start rendering app
@@ -42,9 +42,9 @@ int main(int argc, char* argv[])
     // 💉 the overlay.
     dearImGuiOverlay->Inject(iren);
     // These functions add callbacks to ImGuiSetupEvent and ImGuiDrawEvents.
-    ImguiVtkNs::SetupUI(dearImGuiOverlay);
+    vtkns::SetupUI(dearImGuiOverlay);
     // You can draw custom user interface elements using ImGui:: namespace.
-    ImguiVtkNs::DrawUI(dearImGuiOverlay);
+    vtkns::DrawUI(dearImGuiOverlay);
     /// Change to your code ends here. ///
 
     vtkNew<vtkCameraOrientationWidget> camManipulator;

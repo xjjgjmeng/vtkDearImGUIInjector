@@ -3,7 +3,7 @@
 int main(int argc, char* argv[])
 {
   vtkNew<vtkDICOMImageReader> reader;
-  reader->SetDirectoryName(ImguiVtkNs::getDicomDir());
+  reader->SetDirectoryName(vtkns::getDicomDir());
   reader->Update();
 
   vtkNew<vtkImageViewer2> viewer;
@@ -27,8 +27,8 @@ int main(int argc, char* argv[])
   ::pWindow = renWin;
   ::imgui_render_callback = [&]
       {
-          ImGuiNs::vtkObjSetup("ImageActor", viewer->GetImageActor());
-          ImGuiNs::vtkObjSetup("View", viewer);
+          vtkns::vtkObjSetup("ImageActor", viewer->GetImageActor());
+          vtkns::vtkObjSetup("View", viewer);
       };
 
   // Start rendering app
@@ -41,9 +41,9 @@ int main(int argc, char* argv[])
     // 💉 the overlay.
     dearImGuiOverlay->Inject(iren);
     // These functions add callbacks to ImGuiSetupEvent and ImGuiDrawEvents.
-    ImguiVtkNs::SetupUI(dearImGuiOverlay);
+    vtkns::SetupUI(dearImGuiOverlay);
     // You can draw custom user interface elements using ImGui:: namespace.
-    ImguiVtkNs::DrawUI(dearImGuiOverlay);
+    vtkns::DrawUI(dearImGuiOverlay);
     /// Change to your code ends here. ///
 
     vtkNew<vtkCameraOrientationWidget> camManipulator;

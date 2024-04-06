@@ -1,6 +1,6 @@
 ﻿#include <ImGuiCommon.h>
 
-ImGuiNs::LogView logView;
+vtkns::LogView logView;
 
 class MyStyle : public vtkInteractorStyleImage
 {
@@ -34,7 +34,7 @@ int main(int argc, char* argv[])
     iren->SetRenderWindow(renderWindow);
 
     vtkNew<vtkDICOMImageReader> reader;
-    reader->SetDirectoryName(ImguiVtkNs::getDicomDir());
+    reader->SetDirectoryName(vtkns::getDicomDir());
     reader->Update();
     auto pImageData = reader->GetOutput();
 
@@ -95,13 +95,13 @@ int main(int argc, char* argv[])
                 ::logView.Draw();
                 ImGui::TreePop();
             }
-            ImGuiNs::vtkObjSetup("vtkImageData", reader->GetOutput());
-            ImGuiNs::vtkObjSetup("XImageActor", xActor);
-            ImGuiNs::vtkObjSetup("XMapper", pXMapper, ImGuiTreeNodeFlags_DefaultOpen);
-            ImGuiNs::vtkObjSetup("YImageActor", yActor);
-            ImGuiNs::vtkObjSetup("YMapper", pYMapper, ImGuiTreeNodeFlags_DefaultOpen);
-            ImGuiNs::vtkObjSetup("ZImageActor", zActor);
-            ImGuiNs::vtkObjSetup("ZMapper", pZMapper, ImGuiTreeNodeFlags_DefaultOpen);
+            vtkns::vtkObjSetup("vtkImageData", reader->GetOutput());
+            vtkns::vtkObjSetup("XImageActor", xActor);
+            vtkns::vtkObjSetup("XMapper", pXMapper, ImGuiTreeNodeFlags_DefaultOpen);
+            vtkns::vtkObjSetup("YImageActor", yActor);
+            vtkns::vtkObjSetup("YMapper", pYMapper, ImGuiTreeNodeFlags_DefaultOpen);
+            vtkns::vtkObjSetup("ZImageActor", zActor);
+            vtkns::vtkObjSetup("ZMapper", pZMapper, ImGuiTreeNodeFlags_DefaultOpen);
             if (ImGui::Button("recalcX"))
             {
                 int dims[3];
@@ -120,9 +120,9 @@ int main(int argc, char* argv[])
     // 💉 the overlay.
     dearImGuiOverlay->Inject(iren);
     // These functions add callbacks to ImGuiSetupEvent and ImGuiDrawEvents.
-    ImguiVtkNs::SetupUI(dearImGuiOverlay);
+    vtkns::SetupUI(dearImGuiOverlay);
     // You can draw custom user interface elements using ImGui:: namespace.
-    ImguiVtkNs::DrawUI(dearImGuiOverlay);
+    vtkns::DrawUI(dearImGuiOverlay);
     /// Change to your code ends here. ///
 
     vtkNew<vtkCameraOrientationWidget> camManipulator;

@@ -175,10 +175,10 @@ int main(int argc, char* argv[])
     renderWindow->AddRenderer(renderer);
     iren->SetRenderWindow(renderWindow);
 
-    ImguiVtkNs::labelWorldZero(renderer);
+    vtkns::labelWorldZero(renderer);
 
     auto reader = vtkSmartPointer<vtkDICOMImageReader>::New();
-    reader->SetDirectoryName(ImguiVtkNs::getDicomDir());
+    reader->SetDirectoryName(vtkns::getDicomDir());
     reader->Update();
 
     int extent[6];
@@ -192,9 +192,9 @@ int main(int argc, char* argv[])
     reslice->SetOutputDimensionality(2);
 
     // 将原始的image用线框显示出来
-    ImguiVtkNs::genImgOutline(renderer, reader->GetOutput())->GetProperty()->SetColor(1., 1., 0.);
+    vtkns::genImgOutline(renderer, reader->GetOutput())->GetProperty()->SetColor(1., 1., 0.);
     // 将reslice得到的image用线框动态表示出来
-    ImguiVtkNs::genImgOutlineOnChanged(renderer, reslice->GetOutput())->GetProperty()->SetColor(1., 0., 0.);
+    vtkns::genImgOutlineOnChanged(renderer, reslice->GetOutput())->GetProperty()->SetColor(1., 0., 0.);
 
     if (3 == ::reslice->GetOutputDimensionality())
     {
@@ -210,8 +210,8 @@ int main(int argc, char* argv[])
         ren->SetViewport(0.7, 0.5, 1., 1.);
         ren->SetBackground(0, 1, 1);
         ren->SetBackgroundAlpha(0.2);
-        ImguiVtkNs::genImgOutline(ren, reader->GetOutput())->GetProperty()->SetColor(1., 1., 0.);
-        ImguiVtkNs::genImgOutlineOnChanged(ren, reslice->GetOutput())->GetProperty()->SetColor(1., 0., 0.);
+        vtkns::genImgOutline(ren, reader->GetOutput())->GetProperty()->SetColor(1., 1., 0.);
+        vtkns::genImgOutlineOnChanged(ren, reslice->GetOutput())->GetProperty()->SetColor(1., 0., 0.);
         renderWindow->AddRenderer(ren);
 }
     else
@@ -340,18 +340,18 @@ int main(int argc, char* argv[])
     ::pWindow = renderWindow;
     ::imgui_render_callback = [&]
     {
-        ImGuiNs::vtkObjSetup("vtkImageData", reader->GetOutput());
+        vtkns::vtkObjSetup("vtkImageData", reader->GetOutput());
         static bool showResliceOutput = false;
         ImGui::Checkbox("ShowResliceOutput", &showResliceOutput);
         ImGui::Checkbox("addActorOnPress", &::addActorOnPress);
         if (showResliceOutput)
         {
             ImGui::Begin("ResliceOutput");
-            ImGuiNs::vtkObjSetup("ImageData", reslice->GetOutput(), ImGuiTreeNodeFlags_DefaultOpen);
+            vtkns::vtkObjSetup("ImageData", reslice->GetOutput(), ImGuiTreeNodeFlags_DefaultOpen);
             ImGui::End();
         }
-        ImGuiNs::vtkObjSetup("vtkImageActor", actor);
-        ImGuiNs::vtkObjSetup("Reslice", ::reslice, ImGuiTreeNodeFlags_DefaultOpen);
+        vtkns::vtkObjSetup("vtkImageActor", actor);
+        vtkns::vtkObjSetup("Reslice", ::reslice, ImGuiTreeNodeFlags_DefaultOpen);
 #if 1 == USE_MAP_TO_COLORS
         auto lookupmap = colorMap->GetLookupTable();
         double* pRange = lookupmap->GetRange();
@@ -422,9 +422,9 @@ int main(int argc, char* argv[])
     // 💉 the overlay.
     dearImGuiOverlay->Inject(iren);
     // These functions add callbacks to ImGuiSetupEvent and ImGuiDrawEvents.
-    ImguiVtkNs::SetupUI(dearImGuiOverlay);
+    vtkns::SetupUI(dearImGuiOverlay);
     // You can draw custom user interface elements using ImGui:: namespace.
-    ImguiVtkNs::DrawUI(dearImGuiOverlay);
+    vtkns::DrawUI(dearImGuiOverlay);
     /// Change to your code ends here. ///
 
     vtkNew<vtkCameraOrientationWidget> camManipulator;

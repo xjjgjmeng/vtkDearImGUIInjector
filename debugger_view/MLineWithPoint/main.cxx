@@ -1,6 +1,6 @@
 ﻿#include <ImGuiCommon.h>
 
-ImGuiNs::LogView logView;
+vtkns::LogView logView;
 
 int main(int argc, char* argv[])
 {
@@ -94,7 +94,7 @@ int main(int argc, char* argv[])
                 ::logView.Draw();
                 ImGui::TreePop();
             }
-            ImGuiNs::vtkObjSetup("Actor", pActor);
+            vtkns::vtkObjSetup("Actor", pActor);
 			if (ImGui::Button("Resample"))
 			{
 				vtkNew<vtkPoints> resampledPoints;
@@ -127,9 +127,9 @@ int main(int argc, char* argv[])
     // 💉 the overlay.
     dearImGuiOverlay->Inject(iren);
     // These functions add callbacks to ImGuiSetupEvent and ImGuiDrawEvents.
-    ImguiVtkNs::SetupUI(dearImGuiOverlay);
+    vtkns::SetupUI(dearImGuiOverlay);
     // You can draw custom user interface elements using ImGui:: namespace.
-    ImguiVtkNs::DrawUI(dearImGuiOverlay);
+    vtkns::DrawUI(dearImGuiOverlay);
     /// Change to your code ends here. ///
 
     vtkNew<vtkCameraOrientationWidget> camManipulator;

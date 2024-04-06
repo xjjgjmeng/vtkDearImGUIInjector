@@ -90,11 +90,11 @@ int main(int argc, char* argv[])
     iren->SetRenderWindow(renWin);
 
     vtkNew<vtkDICOMImageReader> reader;
-    reader->SetDirectoryName(ImguiVtkNs::getDicomDir());
+    reader->SetDirectoryName(vtkns::getDicomDir());
     reader->Update();
     auto pImg = reader->GetOutput();
 
-    ImguiVtkNs::genImgOutline(ren, pImg);
+    vtkns::genImgOutline(ren, pImg);
 
 #if 1
     vtkNew<vtkVolume> pVolume;
@@ -160,10 +160,10 @@ int main(int argc, char* argv[])
     ::pWindow = renWin;
     ::imgui_render_callback = [&]
         {
-            ImGuiNs::vtkObjSetup("ExtractVOI", pExtractVOI, ImGuiTreeNodeFlags_DefaultOpen);
-            ImGuiNs::vtkObjSetup("OriginImg", pImg);
-            ImGuiNs::vtkObjSetup("NewImg", pExtractVOI->GetOutput(), ImGuiTreeNodeFlags_DefaultOpen);
-            ImGuiNs::vtkObjSetup("ImgActor", pImgActor);
+            vtkns::vtkObjSetup("ExtractVOI", pExtractVOI, ImGuiTreeNodeFlags_DefaultOpen);
+            vtkns::vtkObjSetup("OriginImg", pImg);
+            vtkns::vtkObjSetup("NewImg", pExtractVOI->GetOutput(), ImGuiTreeNodeFlags_DefaultOpen);
+            vtkns::vtkObjSetup("ImgActor", pImgActor);
             //ImGuiNs::vtkObjSetup("Box", boxWidget, ImGuiTreeNodeFlags_DefaultOpen);
             //ImGuiNs::vtkObjSetup("Mapper", pMapper);
         };
@@ -178,9 +178,9 @@ int main(int argc, char* argv[])
     // 💉 the overlay.
     dearImGuiOverlay->Inject(iren);
     // These functions add callbacks to ImGuiSetupEvent and ImGuiDrawEvents.
-    ImguiVtkNs::SetupUI(dearImGuiOverlay);
+    vtkns::SetupUI(dearImGuiOverlay);
     // You can draw custom user interface elements using ImGui:: namespace.
-    ImguiVtkNs::DrawUI(dearImGuiOverlay);
+    vtkns::DrawUI(dearImGuiOverlay);
     /// Change to your code ends here. ///
 
     vtkNew<vtkCameraOrientationWidget> camManipulator;

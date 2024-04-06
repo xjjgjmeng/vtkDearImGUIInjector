@@ -1,7 +1,7 @@
 ﻿#include <ImGuiCommon.h>
 #include <implot.h>
 
-ImGuiNs::LogView logView;
+vtkns::LogView logView;
 
 int main(int argc, char* argv[])
 {
@@ -12,7 +12,7 @@ int main(int argc, char* argv[])
     iren->SetRenderWindow(renWin);
 
     vtkNew<vtkDICOMImageReader> reader;
-    reader->SetDirectoryName(ImguiVtkNs::getDicomDir());
+    reader->SetDirectoryName(vtkns::getDicomDir());
     reader->Update();
 
     vtkNew<vtkRenderer> ren;
@@ -71,12 +71,12 @@ int main(int argc, char* argv[])
                 logView.Draw();
                 ImGui::TreePop();
             }
-            ImGuiNs::vtkObjSetup("Volume", pVolume);
-            ImGuiNs::vtkObjSetup("Mapper", pMapper);
-            ImGuiNs::vtkObjSetup("MarchingCubes", surface_mc, ImGuiTreeNodeFlags_DefaultOpen);
-            ImGuiNs::vtkObjSetup("MarchingCubesActor", actor_mc);
-            ImGuiNs::vtkObjSetup("FlyingEdges3D", surface_fe, ImGuiTreeNodeFlags_DefaultOpen);
-            ImGuiNs::vtkObjSetup("FlyingEdges3DActor", actor_fe);
+            vtkns::vtkObjSetup("Volume", pVolume);
+            vtkns::vtkObjSetup("Mapper", pMapper);
+            vtkns::vtkObjSetup("MarchingCubes", surface_mc, ImGuiTreeNodeFlags_DefaultOpen);
+            vtkns::vtkObjSetup("MarchingCubesActor", actor_mc);
+            vtkns::vtkObjSetup("FlyingEdges3D", surface_fe, ImGuiTreeNodeFlags_DefaultOpen);
+            vtkns::vtkObjSetup("FlyingEdges3DActor", actor_fe);
         };
 
     // Start rendering app
@@ -89,9 +89,9 @@ int main(int argc, char* argv[])
     // 💉 the overlay.
     dearImGuiOverlay->Inject(iren);
     // These functions add callbacks to ImGuiSetupEvent and ImGuiDrawEvents.
-    ImguiVtkNs::SetupUI(dearImGuiOverlay);
+    vtkns::SetupUI(dearImGuiOverlay);
     // You can draw custom user interface elements using ImGui:: namespace.
-    ImguiVtkNs::DrawUI(dearImGuiOverlay);
+    vtkns::DrawUI(dearImGuiOverlay);
     /// Change to your code ends here. ///
 
     vtkNew<vtkCameraOrientationWidget> camManipulator;

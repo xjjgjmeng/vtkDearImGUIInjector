@@ -9,7 +9,7 @@ int main(int argc, char* argv[])
     vtkNew<vtkRenderWindowInteractor> iren;
     iren->SetRenderWindow(renWin);
 
-    ImguiVtkNs::labelWorldZero(ren);
+    vtkns::labelWorldZero(ren);
 
     vtkNew<vtkPlaneSource> src;
     {
@@ -27,6 +27,7 @@ int main(int argc, char* argv[])
             vtkNew<vtkActor> actor;
             actor->GetProperty()->SetColor(1, 0, 0);
             actor->GetProperty()->SetPointSize(12);
+            actor->GetProperty()->SetRenderPointsAsSpheres(1);
             ren->AddActor(actor);
             cc->SetClientData(actor);
         }
@@ -66,7 +67,7 @@ int main(int argc, char* argv[])
             {
                 actor->GetProperty()->SetRepresentationToPoints();
             }
-            ImGuiNs::vtkObjSetup("src", src, ImGuiTreeNodeFlags_DefaultOpen);
+            vtkns::vtkObjSetup("src", src, ImGuiTreeNodeFlags_DefaultOpen);
         };
 
     // Start rendering app
@@ -79,9 +80,9 @@ int main(int argc, char* argv[])
     // 💉 the overlay.
     dearImGuiOverlay->Inject(iren);
     // These functions add callbacks to ImGuiSetupEvent and ImGuiDrawEvents.
-    ImguiVtkNs::SetupUI(dearImGuiOverlay);
+    vtkns::SetupUI(dearImGuiOverlay);
     // You can draw custom user interface elements using ImGui:: namespace.
-    ImguiVtkNs::DrawUI(dearImGuiOverlay);
+    vtkns::DrawUI(dearImGuiOverlay);
     /// Change to your code ends here. ///
 
     vtkNew<vtkCameraOrientationWidget> camManipulator;

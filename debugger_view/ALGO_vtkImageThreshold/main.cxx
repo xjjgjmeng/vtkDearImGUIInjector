@@ -1,13 +1,13 @@
 ﻿#include <ImGuiCommon.h>
 
-ImGuiNs::LogView logView;
+vtkns::LogView logView;
 
 // https://blog.csdn.net/shenziheng1/article/details/54744911
 
 int main(int argc, char* argv[])
 {
   vtkNew<vtkDICOMImageReader> reader;
-  reader->SetDirectoryName(ImguiVtkNs::getDicomDir());
+  reader->SetDirectoryName(vtkns::getDicomDir());
   reader->Update();
 
   vtkNew<vtkImageViewer2> viewer;
@@ -36,8 +36,8 @@ int main(int argc, char* argv[])
               logView.Draw();
               ImGui::TreePop();
           }
-          ImGuiNs::vtkObjSetup("ImageThreshold", pImageThreshold, ImGuiTreeNodeFlags_DefaultOpen);
-          ImGuiNs::vtkObjSetup("Viewer", viewer);
+          vtkns::vtkObjSetup("ImageThreshold", pImageThreshold, ImGuiTreeNodeFlags_DefaultOpen);
+          vtkns::vtkObjSetup("Viewer", viewer);
       };
 
   // Start rendering app
@@ -50,9 +50,9 @@ int main(int argc, char* argv[])
     // 💉 the overlay.
     dearImGuiOverlay->Inject(iren);
     // These functions add callbacks to ImGuiSetupEvent and ImGuiDrawEvents.
-    ImguiVtkNs::SetupUI(dearImGuiOverlay);
+    vtkns::SetupUI(dearImGuiOverlay);
     // You can draw custom user interface elements using ImGui:: namespace.
-    ImguiVtkNs::DrawUI(dearImGuiOverlay);
+    vtkns::DrawUI(dearImGuiOverlay);
     /// Change to your code ends here. ///
 
     vtkNew<vtkCameraOrientationWidget> camManipulator;
