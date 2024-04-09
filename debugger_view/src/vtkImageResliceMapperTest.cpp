@@ -156,7 +156,7 @@ int main(int argc, char* argv[])
     ren->ResetCamera(pImageData->GetBounds());
 #endif
 
-    vtkns::genImgOutline(ren, pImageData);
+    vtkns::genImgOutline(ren, pImageData, false);
     vtkns::labelWorldZero(ren);
 
     // VR

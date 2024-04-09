@@ -8,7 +8,7 @@
 #include <vtkPoints.h>
 #include <vtkTextProperty.h>
 
-namespace vtkNs
+namespace vtkns
 {
     vtkSmartPointer<vtkPolyData> makeLines(const std::list<Pt_t>& pts)
     {
@@ -40,7 +40,7 @@ namespace vtkNs
     void makeLines(const std::list<Pt_t>& pts, vtkActor2D* pActor)
     {
         vtkNew<vtkPolyDataMapper2D> pMapper;
-        pMapper->SetInputData(vtkNs::makeLines(pts));
+        pMapper->SetInputData(vtkns::makeLines(pts));
         {
             vtkNew<vtkCoordinate> pCoordinate;
             pCoordinate->SetCoordinateSystemToWorld();
@@ -52,7 +52,7 @@ namespace vtkNs
     void makeLines(const std::list<Pt_t>& pts, vtkActor* pActor)
     {
         vtkNew<vtkPolyDataMapper> pMapper;
-        pMapper->SetInputData(vtkNs::makeLines(pts));
+        pMapper->SetInputData(vtkns::makeLines(pts));
         pActor->SetMapper(pMapper);
     }
 
@@ -79,7 +79,7 @@ namespace vtkNs
     void makePoints(const std::list<Pt_t>& pts, vtkActor2D* pActor)
     {
         vtkNew<vtkPolyDataMapper2D> pMapper;
-        pMapper->SetInputData(vtkNs::makePoints(pts));
+        pMapper->SetInputData(vtkns::makePoints(pts));
         {
             vtkNew<vtkCoordinate> pCoordinate;
             pCoordinate->SetCoordinateSystemToWorld();
@@ -92,7 +92,7 @@ namespace vtkNs
     void makePoints(const std::list<Pt_t>& pts, vtkActor* pActor)
     {
         vtkNew<vtkPolyDataMapper> pMapper;
-        pMapper->SetInputData(vtkNs::makePoints(pts));
+        pMapper->SetInputData(vtkns::makePoints(pts));
         pActor->SetMapper(pMapper);
     }
 
@@ -114,7 +114,7 @@ namespace vtkNs
         auto text = vtkSmartPointer<vtkTextActor>::New();
         text->GetTextProperty()->SetFontFamily(VTK_FONT_FILE);
         text->GetTextProperty()->SetFontFile("C:/Windows/Fonts/simhei.ttf");
-        text->GetTextProperty()->SetColor(vtkNs::TextNormalColor);
+        text->GetTextProperty()->SetColor(vtkns::TextNormalColor);
         text->GetTextProperty()->SetOpacity(1.);
         text->GetTextProperty()->SetBackgroundColor(1, 1, 1);
         text->GetTextProperty()->SetBackgroundOpacity(0.);

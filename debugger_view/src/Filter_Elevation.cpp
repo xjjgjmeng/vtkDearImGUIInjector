@@ -1,6 +1,4 @@
 ﻿#include <ImGuiCommon.h>
-#include <PolyDataHelper.h>
-
 
 int main(int argc, char* argv[])
 {
@@ -10,40 +8,43 @@ int main(int argc, char* argv[])
     vtkNew<vtkRenderWindowInteractor> iren;
     iren->SetRenderWindow(renWin);
 
-    vtkns::labelWorldZero(ren);
+    // vtkns::labelWorldZero(ren);
 
-    vtkns::Pt_t p0{0,0,0};
-    vtkns::Pt_t p1{10,10,10};
+    vtkNew<vtkSphereSource> src;
+    src->SetThetaResolution(51);
+    src->SetPhiResolution(17);
 
-    vtkNew<vtkActor> actor;
-    vtkns::makeLines({ p0, p1 }, actor);
-    ren->AddActor(actor);
-
-    auto pd = vtkns::makeLines({ p0, p1 });
-    vtkNew<vtkTransform> transform;
-    transform->Scale(2, 3, 4);
-    transform->Translate(10, 0, 0);
-    vtkNew<vtkTransformPolyDataFilter> filter;
-    filter->SetInputData(pd);
-    filter->SetTransform(transform);
-    filter->Update();
+    vtkNew<vtkElevationFilter> elevationF;
+    elevationF->SetInputConnection(src->GetOutputPort());
+    elevationF->SetLowPoint(0, 0, -0.5);
+    elevationF->SetHighPoint(0, 0, 0.5);
+    elevationF->SetScalarRange(-1, 1);
 
     vtkNew<vtkPolyDataMapper> mapper;
-    mapper->SetInputData(filter->GetOutput());
-    vtkNew<vtkActor> transformActor;
-    transformActor->GetProperty()->SetColor(1, 1, 0);
-    transformActor->SetMapper(mapper);
-    ren->AddActor(transformActor);
+    mapper->SetScalarRange(-1, 1);
+    mapper->SetInputConnection(elevationF->GetOutputPort());
 
-    // ::showLogView = true;
+    vtkNew<vtkActor> actor;
+    actor->SetMapper(mapper);
+    ren->AddActor(actor);
+
+    vtkNew<vtkScalarBarActor> bar;
+    bar->SetLookupTable(mapper->GetLookupTable());
+    //bar->SetMaximumHeightInPixels(500);
+    ren->AddActor2D(bar);
+
+    ren->ResetCamera();
+
     ::pWindow = renWin;
     ::imgui_render_callback = [&]
         {
-            vtkns::vtkObjSetup("filter", filter, ImGuiTreeNodeFlags_DefaultOpen);
+            vtkns::vtkObjSetup("elevation", elevationF, ImGuiTreeNodeFlags_DefaultOpen);
+            vtkns::vtkObjSetup("src", src);
+            vtkns::vtkObjSetup("actor", actor);
         };
 
     // Start rendering app
-    ren->SetBackground(0.2, 0.3, 0.4);
+    ren->SetBackground(0., 0., 0.);
     renWin->Render(); // 非常重要！！
 
     /// Change to your code begins here. ///
@@ -68,15 +69,14 @@ int main(int argc, char* argv[])
     renderWindow->SetSize(1920, 1000);
 #else
 #ifdef _WIN32
-// 获取窗口句柄
+    // 获取窗口句柄
     HWND hwnd = ::FindWindow(NULL, renWin->GetWindowName());
     // 最大化窗口
     ::ShowWindow(hwnd, SW_MAXIMIZE);
 #endif
 #endif
-    //vtkInteractorStyleSwitch::SafeDownCast(iren->GetInteractorStyle())->SetCurrentStyleToTrackballCamera();
+    vtkInteractorStyleSwitch::SafeDownCast(iren->GetInteractorStyle())->SetCurrentStyleToTrackballCamera();
     iren->EnableRenderOff();
     iren->Start();
-
     return 0;
 }

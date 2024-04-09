@@ -26,15 +26,20 @@ int main(int argc, char* argv[])
     //    renWin->AddRenderer(ren);
     //}
 
+    vtkNew<vtkActor> dataSetActor;
+    dataSetActor->AddPosition(3, 3, 3);
+    dataSetActor->GetProperty()->SetRepresentationToWireframe();
+    dataSetActor->GetProperty()->SetColor(1, 1, 0);
+    ren->AddActor(dataSetActor);
+
     double origin[3]{};
     double spacing[3] = { 1.,1.,1. };
     int extentStart[3]{};
+    int w = 100;
+    int h = 100;
 
-    auto generateImg = [&img, actor, /*&polydataActor,*/ &ren, &origin, &spacing, &extentStart/*, imgPolyFilter*/] // arr??
+    auto generateImg = [&] // arr??
     {
-        int w = 100;
-        int h = 100;
-
         img = vtkSmartPointer<vtkImageData>::New();
         // 设置图像的维度、原点、间隔等信息
 #if 0
@@ -48,6 +53,7 @@ int main(int argc, char* argv[])
 
         // 分配内存并写入数据
         img->AllocateScalars(VTK_UNSIGNED_CHAR, 1);
+#if 0 // 会崩溃
         //unsigned char* data = static_cast<unsigned char*>(img->GetScalarPointer(0, 0, 0));
         unsigned char* data = static_cast<unsigned char*>(img->GetScalarPointer(extentStart[0], extentStart[1], extentStart[2]));
 
@@ -60,8 +66,22 @@ int main(int argc, char* argv[])
                 data[i * w + j] = static_cast<unsigned char>(i + j);
             }
         }
-
+#endif
         actor->SetInputData(img);
+
+        {
+            vtkNew<vtkDataSetMapper> mapper;
+#if 1
+            vtkNew<vtkImageData> data;
+            data->SetOrigin(img->GetOrigin());
+            data->SetSpacing(img->GetSpacing());
+            data->SetExtent(img->GetExtent());
+            mapper->SetInputData(data);
+#else // 这样写设置Color不生效
+            mapper->SetInputData(img);
+#endif
+            dataSetActor->SetMapper(mapper);
+        }
 #if 0
         {
             //vtkNew<vtkImageToPolyDataFilter> filter;
@@ -88,10 +108,8 @@ int main(int argc, char* argv[])
     {
         if (ImGui::TreeNodeEx(u8"生成参数", ImGuiTreeNodeFlags_DefaultOpen))
         {
-            //if (ImGui::Button("generate"))
-            //{
-            //    generateImg();
-            //}
+            if (ImGui::DragInt("Width", &w)) generateImg();
+            if (ImGui::DragInt("height", &h)) generateImg();
             if (ImGui::DragScalarN("origin", ImGuiDataType_Double, origin, IM_ARRAYSIZE(origin), 0.1f))
             {
                 generateImg();
@@ -109,6 +127,7 @@ int main(int argc, char* argv[])
         }
         vtkns::vtkObjSetup("ImageData", img, ImGuiTreeNodeFlags_DefaultOpen);
         vtkns::vtkObjSetup("ImageActor", actor);
+        vtkns::vtkObjSetup("DataSetActor", dataSetActor);
         //vtkns::vtkObjSetup("polydataActor", polydataActor, ImGuiTreeNodeFlags_DefaultOpen);
         //vtkns::vtkObjSetup("filter", imgPolyFilter, ImGuiTreeNodeFlags_DefaultOpen);
     };
@@ -145,8 +164,7 @@ int main(int argc, char* argv[])
     ::ShowWindow(hwnd, SW_MAXIMIZE);
 #endif
 #endif
-    //vtkInteractorStyleSwitch::SafeDownCast(iren->GetInteractorStyle())->SetCurrentStyleToTrackballCamera();
-    //iren->SetInteractorStyle(vtkSmartPointer<MyStyle>::New());
+    vtkInteractorStyleSwitch::SafeDownCast(iren->GetInteractorStyle())->SetCurrentStyleToTrackballCamera();
     iren->EnableRenderOff();
     iren->Start();
 

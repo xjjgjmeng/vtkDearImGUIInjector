@@ -33,6 +33,15 @@
 #include <vtkFloatArray.h>
 #include <vtkXMLImageDataReader.h>
 #include <vtkPlane.h>
+#include <vtkRectilinearGrid.h>
+#include <vtkStructuredGrid.h>
+#include <vtkUnstructuredGrid.h>
+#include <vtkDoubleArray.h>
+#include <vtkHexahedron.h>
+#include <vtkVoxel.h>
+#include <vtkTetra.h>
+#include <vtkElevationFilter.h>
+#include <vtkScalarBarActor.h>
 #include <vtkPointWidget.h>
 #include <vtkAbstractImageInterpolator.h>
 #include <vtkLeaderActor2D.h>
@@ -154,6 +163,7 @@
 #include <vtkLight.h>
 #include <vtkCaptionRepresentation.h>
 #include <vtkCaptionActor2D.h>
+#include <vtkUnsignedCharArray.h>
 #include <vtkCaptionWidget.h>
 #include <vtkOutlineFilter.h>
 #include <vtkWeakPointer.h>
@@ -165,3 +175,5 @@
 #include "vtkfmt/chrono.h"
 
 #include <imgui.h>
+
+#include "PolyDataHelper.h"

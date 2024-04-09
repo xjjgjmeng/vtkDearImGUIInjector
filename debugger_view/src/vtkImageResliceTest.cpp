@@ -1,27 +1,6 @@
 ﻿#include <ImGuiCommon.h>
 #include <PolyDataHelper.h>
 
-namespace
-{
-    auto getTextActor()
-    {
-        auto text = vtkSmartPointer<vtkTextActor>::New();
-        text->GetTextProperty()->SetFontFamily(VTK_FONT_FILE);
-        text->GetTextProperty()->SetFontFile("C:/Windows/Fonts/simhei.ttf");
-        text->GetTextProperty()->SetColor(0, 1, 0);
-        text->GetTextProperty()->SetOpacity(0.8);
-        text->GetTextProperty()->SetBackgroundColor(1, 0, 0);
-        text->GetTextProperty()->SetBackgroundOpacity(0.5);
-        text->GetTextProperty()->SetFontSize(18);
-        text->GetTextProperty()->SetJustification(VTK_TEXT_RIGHT);
-        //text->GetPositionCoordinate()->SetCoordinateSystemToWorld();
-        return text;
-    }
-}
-
-//------------------------------------------------------------------------------
-// Main
-//------------------------------------------------------------------------------
 #define USE_MAP_TO_COLORS 0
 
 vtkSmartPointer<vtkImageReslice> reslice;
@@ -31,7 +10,7 @@ vtkSmartPointer<vtkImageMapToColors> colorMap;
 vtkSmartPointer<vtkRenderWindowInteractor> iren;
 vtkSmartPointer<vtkRenderWindow> renderWindow;
 double spacing[3];
-bool addActorOnPress = false;
+bool calcRelice2Vr = false;
 
 class MyStyle : public vtkInteractorStyleTrackballCamera
 {
@@ -43,7 +22,7 @@ public:
       int eventPt[2];
       this->GetInteractor()->GetEventPosition(eventPt);
 
-      if (this->GetInteractor()->FindPokedRenderer(eventPt[0], eventPt[1]) == this->m_renderer && ::addActorOnPress)
+      if (::calcRelice2Vr && (this->GetInteractor()->FindPokedRenderer(eventPt[0], eventPt[1]) == this->m_renderer))
       {
           vtkNew<vtkActor> actor_image;
           actor_image->GetProperty()->SetPointSize(12);
@@ -55,7 +34,7 @@ public:
           actor_original->GetProperty()->SetPointSize(12);
           actor_original->GetProperty()->SetColor(0,0,1);
           this->m_renderer->AddActor(actor_original);
-
+          // 设置origin和normal
           this->m_placer->SetProjectionNormalToOblique();
           {
               vtkNew<vtkPlane> plane;
@@ -63,14 +42,14 @@ public:
               plane->SetNormal(0, 0, 1);
               this->m_placer->SetObliquePlane(plane);
           }
-
+          // 获取点击在reslice上的位置
           double worldPt_img[3];
           {
               double worldOrient[9];
               double eventPt_d[] = { eventPt[0], eventPt[1] };
               this->m_placer->ComputeWorldPosition(this->m_renderer, eventPt_d, worldPt_img, worldOrient);
           }
-
+          // 转化为原始图像上的位置
           double worldPt_original[4];
           {
               double pt[] = { worldPt_img[0], worldPt_img[1], worldPt_img[2], 1 };
@@ -79,8 +58,8 @@ public:
 
           ::getLogView()->Add(fmt::format("worldPt_img: {::.2f}", worldPt_img));
           ::getLogView()->Add(fmt::format("worldPt_original: {::.2f}\n", worldPt_original));
-          vtkNs::makePoints({ {worldPt_img[0], worldPt_img[1], worldPt_img[2]}}, actor_image);
-          vtkNs::makePoints({ {worldPt_original[0], worldPt_original[1], worldPt_original[2]}}, actor_original);
+          vtkns::makePoints({ {worldPt_img[0], worldPt_img[1], worldPt_img[2]}}, actor_image);
+          vtkns::makePoints({ {worldPt_original[0], worldPt_original[1], worldPt_original[2]}}, actor_original);
       }
 
       __super::OnLeftButtonDown();
@@ -192,9 +171,13 @@ int main(int argc, char* argv[])
     reslice->SetOutputDimensionality(2);
 
     // 将原始的image用线框显示出来
-    vtkns::genImgOutline(renderer, reader->GetOutput())->GetProperty()->SetColor(1., 1., 0.);
+    vtkns::genImgOutline(renderer, reader->GetOutput(), false)->GetProperty()->SetColor(1., 1., 0.);
     // 将reslice得到的image用线框动态表示出来
-    vtkns::genImgOutlineOnChanged(renderer, reslice->GetOutput())->GetProperty()->SetColor(1., 0., 0.);
+    {
+        auto actor = vtkns::genImgOutline(renderer, reslice->GetOutput(), true);
+        actor->GetProperty()->SetColor(1., 0., 0.);
+        actor->GetProperty()->SetLineWidth(5);
+    }
 
     if (3 == ::reslice->GetOutputDimensionality())
     {
@@ -210,8 +193,8 @@ int main(int argc, char* argv[])
         ren->SetViewport(0.7, 0.5, 1., 1.);
         ren->SetBackground(0, 1, 1);
         ren->SetBackgroundAlpha(0.2);
-        vtkns::genImgOutline(ren, reader->GetOutput())->GetProperty()->SetColor(1., 1., 0.);
-        vtkns::genImgOutlineOnChanged(ren, reslice->GetOutput())->GetProperty()->SetColor(1., 0., 0.);
+        vtkns::genImgOutline(ren, reader->GetOutput(), false)->GetProperty()->SetColor(1., 1., 0.);
+        vtkns::genImgOutline(ren, reslice->GetOutput(), true)->GetProperty()->SetColor(1., 0., 0.);
         renderWindow->AddRenderer(ren);
 }
     else
@@ -226,8 +209,6 @@ int main(int argc, char* argv[])
     }
 
     {
-        // ResliceAxesOrigin设置reslice坐标系的原点在世界坐标系中的位置，生成的slice的origin是相对这个点而言的
-        // 如果调用了SetOutputOrigin，则输出的slice的origin只被此接口控制
 #if 1
         auto resliceAxes = vtkSmartPointer<vtkMatrix4x4>::New();
         {
@@ -256,23 +237,44 @@ int main(int argc, char* argv[])
         {
             auto f = [](vtkObject* caller, unsigned long eid, void* clientdata, void* calldata)
                 {
-                    auto mat = vtkMatrix4x4::SafeDownCast(caller);
+                    auto actor = reinterpret_cast<vtkActor*>(clientdata);
 #if 0
-                    double src[4]{ 0,0,0,1 };
-                    double dst[4];
-                    mat->MultiplyPoint(src, dst);
-                    vtkNs::makePoints({ {dst[0], dst[1], dst[2]} }, reinterpret_cast<vtkActor*>(clientdata));
+                    if (auto mat = vtkMatrix4x4::SafeDownCast(caller))
+                    {
+                        double src[4]{ 0,0,0,1 };
+                        double dst[4];
+                        mat->MultiplyPoint(src, dst);
+                        vtkNs::makePoints({ {dst[0], dst[1], dst[2]} }, actor);
+                    }
+#elif 1
+                    if (auto img = vtkImageData::SafeDownCast(caller))
+                    {
+                        vtkNew<vtkDataSetMapper> mapper;
+                        vtkNew<vtkImageData> data;
+                        data->SetOrigin(img->GetOrigin());
+                        data->SetSpacing(img->GetSpacing());
+                        data->SetExtent(img->GetExtent());
+                        mapper->SetInputData(data);
+                        actor->SetMapper(mapper);
+                        actor->GetProperty()->SetRepresentationToWireframe();
+                        actor->GetProperty()->SetColor(0, 1, 0);
+                        actor->GetProperty()->SetOpacity(.1);
+                        actor->SetPosition(0, 0, 1); // 设置偏移方便看到后面的图像
+                    }
 #else
-                    vtkNew<vtkPlaneSource> src;
-                    src->SetOrigin(0, 0, 0);
-                    src->SetPoint1(13, 0, 0);
-                    src->SetPoint2(0, 13, 0);
-                    src->SetCenter(mat->GetElement(0, 3), mat->GetElement(1, 3), mat->GetElement(2, 3));
-                    src->SetNormal(mat->GetElement(0, 2), mat->GetElement(1, 2), mat->GetElement(2, 2));
-                    // src->Update(); 使用GetOutputPort就不需要Update
-                    vtkNew<vtkPolyDataMapper> mapper;
-                    mapper->SetInputConnection(src->GetOutputPort());
-                    reinterpret_cast<vtkActor*>(clientdata)->SetMapper(mapper);
+                    if (auto mat = vtkMatrix4x4::SafeDownCast(caller))
+                    {
+                        vtkNew<vtkPlaneSource> src;
+                        src->SetOrigin(0, 0, 0);
+                        src->SetPoint1(13, 0, 0);
+                        src->SetPoint2(0, 13, 0);
+                        src->SetCenter(mat->GetElement(0, 3), mat->GetElement(1, 3), mat->GetElement(2, 3));
+                        src->SetNormal(mat->GetElement(0, 2), mat->GetElement(1, 2), mat->GetElement(2, 2));
+                        // src->Update(); 使用GetOutputPort就不需要Update
+                        vtkNew<vtkPolyDataMapper> mapper;
+                        mapper->SetInputConnection(src->GetOutputPort());
+                        actor->SetMapper(mapper);
+                    }
 #endif
                 };
             vtkNew<vtkCallbackCommand> pCC;
@@ -283,6 +285,7 @@ int main(int argc, char* argv[])
             renderer->AddActor(actor);
             pCC->SetClientData(actor);
             ::reslice->GetResliceAxes()->AddObserver(vtkCommand::ModifiedEvent, pCC);
+            ::reslice->GetOutput()->AddObserver(vtkCommand::ModifiedEvent, pCC);
         }
 #else
         const double x[3] = { 1,0,0 };
@@ -294,26 +297,11 @@ int main(int argc, char* argv[])
 #endif
     }
     reslice->SetInterpolationModeToLinear();
-    reslice->SetOutputOrigin(0, 0, 0); // 指定了输出的数据的extent(0,0,0)的世界坐标
-    reslice->SetOutputExtent(0,400,0,400,0,400); // 指定了数据数据extent的范围，可以从0开始，也可以大于或小于0
-    //reslice->SetOutputSpacing(1., 1., 1.); // 指定了数据点之间的世界坐标中的距离
+    reslice->SetOutputOrigin(0, 0, 0);
+    reslice->SetOutputExtent(0,400,0,400,0,400);
     reslice->SetOutputSpacing(::spacing);
     ::reslice->Update(); // 没有此句的话在一开始不能显示三维线框
-    // 某个voxel在世界中的位置: origin指定的世界点 + ijk * spacing指定的间距
 
-    // 总结:
-    // 在输出数据为二维的时候:
-    // 根据ResliceAxes截取一个slice，将slice放置在XY平面上，将ResliceAxesOrigin对应的voxel或ijk和世界坐标的(0,0,0)对其
-    // 再根据设置的OutputOrigin，OutputExtent（和OutputSpacing）在这个平面上滑动选取想要的区域
-    // OutputExtent（和OutputSpacing）确定最终区域的大小，OutputOrigin确定这个区域（ijk为0，0，0）的起点
-
-    // 再总结：
-    // 将坐标系放置在指定的origin位置
-    // xoy应该可以穿过imagedata，不然无输出
-    // 固定output的origin和extent不变，修改ResliceAxes的origin的x和y，发现黑窗在世界中不动，image在黑窗口中游走
-    // 固定ResliceAxes的origin，修改output的origin，发现黑窗在世界中游走，可以看到image不同部分
-    // 固定ResliceAxes的origin，修改output的extent，发现黑窗在世界扩大或缩小，可以看到image的更多或更少
-    // output的origin是相对于新坐标系的，把新坐标系的origin处看作（0，0，0），但最后在原始的坐标系中也是一样的
 #if 1 == USE_MAP_TO_COLORS
     colorMap = vtkSmartPointer<vtkImageMapToColors>::New();
     {
@@ -343,7 +331,7 @@ int main(int argc, char* argv[])
         vtkns::vtkObjSetup("vtkImageData", reader->GetOutput());
         static bool showResliceOutput = false;
         ImGui::Checkbox("ShowResliceOutput", &showResliceOutput);
-        ImGui::Checkbox("addActorOnPress", &::addActorOnPress);
+        ImGui::Checkbox("Reslice2Vr", &::calcRelice2Vr); ImGui::SameLine(); vtkns::HelpMarker(u8"左键点击时将被点击的reslice上的位置映射到原始的VR空间并用点标识");
         if (showResliceOutput)
         {
             ImGui::Begin("ResliceOutput");
@@ -371,7 +359,7 @@ int main(int argc, char* argv[])
 
         if (ImGui::Button("AddMarker"))
         {
-            auto text = ::getTextActor();
+            auto text = vtkns::genTextActor();
             text->SetInput(fmt::format("{}", ::reslice->GetResliceAxesOrigin()[2]).c_str());
             text->GetPositionCoordinate()->SetCoordinateSystemToWorld();
             text->SetPosition(actor->GetCenter());

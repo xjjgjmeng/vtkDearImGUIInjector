@@ -20,7 +20,7 @@ public:
             vtkns::printWorldPt(*::getLogView(), renderer, eventPt[0], eventPt[1]);
 
             this->GetInteractor()->GetPicker()->Pick(eventPt[0], eventPt[1], 0, renderer);
-            vtkNs::Pt_t pickedPt;
+            vtkns::Pt_t pickedPt;
             this->GetInteractor()->GetPicker()->GetPickPosition(pickedPt.data()); // 获取pick的世界坐标
             ::getLogView()->Add(fmt::format("pickedPt: {}", pickedPt));
 
@@ -50,14 +50,14 @@ public:
                 //pt2[0] += len * normal[0];
                 //pt2[1] += len * normal[1];
                 //pt2[2] += len * normal[2];
-                auto pt2 = vtkNs::advance(pickedPt, normal, len);
+                auto pt2 = vtkns::advance(pickedPt, normal, len);
                 ::getLogView()->Add(fmt::format("len: {}", std::sqrt(vtkMath::Distance2BetweenPoints(pickedPt.data(), pt2.data()))));
                 this->m_normal->GetProperty()->SetColor(1, 0, 0);
                 this->m_normal->GetProperty()->SetLineWidth(3);
                 this->m_normalPt->GetProperty()->SetColor(0, 1, 0);
                 this->m_normalPt->GetProperty()->SetPointSize(8);
-                vtkNs::makeLines(vtkNs::Pts_t{ pickedPt, pt2 }, this->m_normal.Get());
-                vtkNs::makePoints(vtkNs::Pts_t{ pt2 }, this->m_normalPt.Get());
+                vtkns::makeLines(vtkns::Pts_t{ pickedPt, pt2 }, this->m_normal.Get());
+                vtkns::makePoints(vtkns::Pts_t{ pt2 }, this->m_normalPt.Get());
                 renderer->AddActor(this->m_normal);
                 renderer->AddActor(this->m_normalPt);
             }

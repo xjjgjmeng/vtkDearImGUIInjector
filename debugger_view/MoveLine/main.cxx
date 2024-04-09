@@ -64,7 +64,7 @@ public:
 
     void SetPosition(double pos[3]) override
     {
-        ::pLogView->Add(fmt::format("{}: {} {} {}", __func__, pos[0], pos[1], pos[2]));
+        ::getLogView()->Add(fmt::format("{}: {} {} {}", __func__, pos[0], pos[1], pos[2]));
         // 只能垂直移动
 #if 1
         pos[0] = this->Position[0];

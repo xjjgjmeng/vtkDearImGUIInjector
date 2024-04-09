@@ -1,6 +1,4 @@
 ﻿#include <ImGuiCommon.h>
-#include <PolyDataHelper.h>
-
 
 int main(int argc, char* argv[])
 {
@@ -12,38 +10,30 @@ int main(int argc, char* argv[])
 
     vtkns::labelWorldZero(ren);
 
-    vtkns::Pt_t p0{0,0,0};
-    vtkns::Pt_t p1{10,10,10};
+    constexpr auto gridSize = 5;
+    vtkNew<vtkImageData> data;
+    data->SetExtent(0, gridSize - 1, 0, gridSize - 1, 0, gridSize - 1);
+    data->SetSpacing(10, 20, 40);
+
+    vtkNew<vtkDataSetMapper> mapper;
+    mapper->SetInputData(data);
 
     vtkNew<vtkActor> actor;
-    vtkns::makeLines({ p0, p1 }, actor);
+    actor->GetProperty()->SetRepresentationToWireframe();
+    actor->SetMapper(mapper);
     ren->AddActor(actor);
 
-    auto pd = vtkns::makeLines({ p0, p1 });
-    vtkNew<vtkTransform> transform;
-    transform->Scale(2, 3, 4);
-    transform->Translate(10, 0, 0);
-    vtkNew<vtkTransformPolyDataFilter> filter;
-    filter->SetInputData(pd);
-    filter->SetTransform(transform);
-    filter->Update();
+    ren->ResetCamera();
 
-    vtkNew<vtkPolyDataMapper> mapper;
-    mapper->SetInputData(filter->GetOutput());
-    vtkNew<vtkActor> transformActor;
-    transformActor->GetProperty()->SetColor(1, 1, 0);
-    transformActor->SetMapper(mapper);
-    ren->AddActor(transformActor);
-
-    // ::showLogView = true;
     ::pWindow = renWin;
     ::imgui_render_callback = [&]
-        {
-            vtkns::vtkObjSetup("filter", filter, ImGuiTreeNodeFlags_DefaultOpen);
-        };
+    {
+        vtkns::vtkObjSetup("ImageData", data, ImGuiTreeNodeFlags_DefaultOpen);
+        vtkns::vtkObjSetup("ImageActor", actor);
+    };
 
     // Start rendering app
-    ren->SetBackground(0.2, 0.3, 0.4);
+    ren->SetBackground(0., 0., 0.);
     renWin->Render(); // 非常重要！！
 
     /// Change to your code begins here. ///
@@ -74,7 +64,7 @@ int main(int argc, char* argv[])
     ::ShowWindow(hwnd, SW_MAXIMIZE);
 #endif
 #endif
-    //vtkInteractorStyleSwitch::SafeDownCast(iren->GetInteractorStyle())->SetCurrentStyleToTrackballCamera();
+    vtkInteractorStyleSwitch::SafeDownCast(iren->GetInteractorStyle())->SetCurrentStyleToTrackballCamera();
     iren->EnableRenderOff();
     iren->Start();
 

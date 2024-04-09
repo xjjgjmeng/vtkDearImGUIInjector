@@ -10,7 +10,7 @@
 #include <vtkActor.h>
 #include <vtkTextActor.h>
 
-namespace vtkNs
+namespace vtkns
 {
     using Pt_t = std::array<double, 3>;
     using Pts_t = std::list<Pt_t>;

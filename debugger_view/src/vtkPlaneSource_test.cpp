@@ -21,19 +21,23 @@ int main(int argc, char* argv[])
                     auto p2 = vtkPlaneSource::SafeDownCast(caller)->GetPoint2();
                     auto o = vtkPlaneSource::SafeDownCast(caller)->GetOrigin();
                     auto c = vtkPlaneSource::SafeDownCast(caller)->GetCenter();
-                    vtkNs::makePoints({ {p1[0], p1[1], p1[2]}, {p2[0], p2[1], p2[2]} , {o[0], o[1], o[2]}, {c[0], c[1], c[2]} }, reinterpret_cast<vtkActor*>(clientdata));
+                    vtkns::makePoints({ {p1[0], p1[1], p1[2]}, {p2[0], p2[1], p2[2]} , {o[0], o[1], o[2]}, {c[0], c[1], c[2]} }, reinterpret_cast<vtkActor*>(clientdata));
                 };
             cc->SetCallback(f);
             vtkNew<vtkActor> actor;
             actor->GetProperty()->SetColor(1, 0, 0);
             actor->GetProperty()->SetPointSize(12);
-            actor->GetProperty()->SetRenderPointsAsSpheres(1);
+            actor->GetProperty()->SetRenderPointsAsSpheres(1); // ??
             ren->AddActor(actor);
             cc->SetClientData(actor);
         }
         src->AddObserver(vtkCommand::ModifiedEvent, cc);
     }
     {
+#if 0 // 按w键查看
+        src->SetXResolution(3);
+        src->SetYResolution(4);
+#else
         src->SetXResolution(50);
         src->SetYResolution(50);
         src->SetOrigin(0, 0, 0);
@@ -41,6 +45,7 @@ int main(int argc, char* argv[])
         src->SetPoint2(0, 30, 0);
         src->SetCenter(30, 30, 0);
         src->SetNormal(1, 1, 1);
+#endif
     }
     vtkNew<vtkPolyDataMapper> mapper;
     mapper->SetInputConnection(src->GetOutputPort());
@@ -53,21 +58,8 @@ int main(int argc, char* argv[])
     ::pWindow = renWin;
     ::imgui_render_callback = [&]
         {
-            if (ImGui::Button("W"))
-            {
-                actor->GetProperty()->SetRepresentationToWireframe();
-            }
-            ImGui::SameLine();
-            if (ImGui::Button("S"))
-            {
-                actor->GetProperty()->SetRepresentationToSurface();
-            }
-            ImGui::SameLine();
-            if (ImGui::Button("P"))
-            {
-                actor->GetProperty()->SetRepresentationToPoints();
-            }
             vtkns::vtkObjSetup("src", src, ImGuiTreeNodeFlags_DefaultOpen);
+            vtkns::vtkObjSetup("actor", actor);
         };
 
     // Start rendering app

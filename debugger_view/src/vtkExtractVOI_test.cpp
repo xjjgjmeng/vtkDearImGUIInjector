@@ -94,7 +94,7 @@ int main(int argc, char* argv[])
     reader->Update();
     auto pImg = reader->GetOutput();
 
-    vtkns::genImgOutline(ren, pImg);
+    vtkns::genImgOutline(ren, pImg, false);
 
 #if 1
     vtkNew<vtkVolume> pVolume;

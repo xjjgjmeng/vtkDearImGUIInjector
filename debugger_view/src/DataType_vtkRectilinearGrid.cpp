@@ -1,6 +1,4 @@
 ﻿#include <ImGuiCommon.h>
-#include <PolyDataHelper.h>
-
 
 int main(int argc, char* argv[])
 {
@@ -12,38 +10,54 @@ int main(int argc, char* argv[])
 
     vtkns::labelWorldZero(ren);
 
-    vtkns::Pt_t p0{0,0,0};
-    vtkns::Pt_t p1{10,10,10};
+    constexpr auto gridSize = 5;
+    vtkNew<vtkRectilinearGrid> data;
+    data->SetExtent(0, gridSize - 1, 0, gridSize - 1, 0, gridSize - 1);
+    vtkNew<vtkDoubleArray> xCoords;
+    xCoords->SetNumberOfComponents(1);
+    vtkNew<vtkDoubleArray> yCoords;
+    yCoords->SetNumberOfComponents(1);
+    vtkNew<vtkDoubleArray> zCoords;
+    zCoords->SetNumberOfComponents(1);
+    for (auto i = 0; i < gridSize; ++i)
+    {
+        if (0 == i)
+        {
+            xCoords->InsertNextValue(0);
+            yCoords->InsertNextValue(0);
+            zCoords->InsertNextValue(0);
+            continue;
+        }
+        double oldX = xCoords->GetValue(i - 1);
+        double oldY = yCoords->GetValue(i - 1);
+        double oldZ = zCoords->GetValue(i - 1);
+        xCoords->InsertNextValue(oldX + i * i);
+        yCoords->InsertNextValue(oldY + i * i);
+        zCoords->InsertNextValue(oldZ + i * i);
+    }
+    data->SetXCoordinates(xCoords);
+    data->SetYCoordinates(yCoords);
+    data->SetZCoordinates(zCoords);
+
+    vtkNew<vtkDataSetMapper> mapper;
+    mapper->SetInputData(data);
 
     vtkNew<vtkActor> actor;
-    vtkns::makeLines({ p0, p1 }, actor);
+    actor->GetProperty()->SetRepresentationToWireframe();
+    actor->SetMapper(mapper);
     ren->AddActor(actor);
 
-    auto pd = vtkns::makeLines({ p0, p1 });
-    vtkNew<vtkTransform> transform;
-    transform->Scale(2, 3, 4);
-    transform->Translate(10, 0, 0);
-    vtkNew<vtkTransformPolyDataFilter> filter;
-    filter->SetInputData(pd);
-    filter->SetTransform(transform);
-    filter->Update();
+    ren->ResetCamera();
 
-    vtkNew<vtkPolyDataMapper> mapper;
-    mapper->SetInputData(filter->GetOutput());
-    vtkNew<vtkActor> transformActor;
-    transformActor->GetProperty()->SetColor(1, 1, 0);
-    transformActor->SetMapper(mapper);
-    ren->AddActor(transformActor);
-
-    // ::showLogView = true;
     ::pWindow = renWin;
     ::imgui_render_callback = [&]
-        {
-            vtkns::vtkObjSetup("filter", filter, ImGuiTreeNodeFlags_DefaultOpen);
-        };
+    {
+        vtkns::vtkObjSetup("Data", data, ImGuiTreeNodeFlags_DefaultOpen);
+        vtkns::vtkObjSetup("Actor", actor);
+    };
 
     // Start rendering app
-    ren->SetBackground(0.2, 0.3, 0.4);
+    ren->SetBackground(0., 0., 0.);
     renWin->Render(); // 非常重要！！
 
     /// Change to your code begins here. ///
@@ -74,7 +88,7 @@ int main(int argc, char* argv[])
     ::ShowWindow(hwnd, SW_MAXIMIZE);
 #endif
 #endif
-    //vtkInteractorStyleSwitch::SafeDownCast(iren->GetInteractorStyle())->SetCurrentStyleToTrackballCamera();
+    vtkInteractorStyleSwitch::SafeDownCast(iren->GetInteractorStyle())->SetCurrentStyleToTrackballCamera();
     iren->EnableRenderOff();
     iren->Start();
 

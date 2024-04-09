@@ -1,6 +1,4 @@
 ﻿#include <ImGuiCommon.h>
-#include <PolyDataHelper.h>
-
 
 int main(int argc, char* argv[])
 {
@@ -10,40 +8,42 @@ int main(int argc, char* argv[])
     vtkNew<vtkRenderWindowInteractor> iren;
     iren->SetRenderWindow(renWin);
 
-    vtkns::labelWorldZero(ren);
+    //vtkns::labelWorldZero(ren);
 
-    vtkns::Pt_t p0{0,0,0};
-    vtkns::Pt_t p1{10,10,10};
+    vtkNew<vtkPoints> points;
+    vtkNew<vtkCellArray> lines;
+    vtkNew<vtkPolyData> poly;
 
-    vtkNew<vtkActor> actor;
-    vtkns::makeLines({ p0, p1 }, actor);
-    ren->AddActor(actor);
-
-    auto pd = vtkns::makeLines({ p0, p1 });
-    vtkNew<vtkTransform> transform;
-    transform->Scale(2, 3, 4);
-    transform->Translate(10, 0, 0);
-    vtkNew<vtkTransformPolyDataFilter> filter;
-    filter->SetInputData(pd);
-    filter->SetTransform(transform);
-    filter->Update();
+    points->InsertNextPoint(0, 0, 0);
+    points->InsertNextPoint(0, 2, 0);
+    points->InsertNextPoint(2, 4, 0);
+    points->InsertNextPoint(4, 4, 0);
+    lines->InsertNextCell(4);
+    lines->InsertCellPoint(0);
+    lines->InsertCellPoint(1);
+    lines->InsertCellPoint(2);
+    lines->InsertCellPoint(3);
+    poly->SetPoints(points);
+    poly->SetLines(lines);
 
     vtkNew<vtkPolyDataMapper> mapper;
-    mapper->SetInputData(filter->GetOutput());
-    vtkNew<vtkActor> transformActor;
-    transformActor->GetProperty()->SetColor(1, 1, 0);
-    transformActor->SetMapper(mapper);
-    ren->AddActor(transformActor);
+    mapper->SetInputData(poly);
 
-    // ::showLogView = true;
+    vtkNew<vtkActor> actor;
+    actor->SetMapper(mapper);
+    ren->AddActor(actor);
+
+    ren->ResetCamera();
+
     ::pWindow = renWin;
     ::imgui_render_callback = [&]
-        {
-            vtkns::vtkObjSetup("filter", filter, ImGuiTreeNodeFlags_DefaultOpen);
-        };
+    {
+        //vtkns::vtkObjSetup("Data", data, ImGuiTreeNodeFlags_DefaultOpen);
+        vtkns::vtkObjSetup("Actor", actor);
+    };
 
     // Start rendering app
-    ren->SetBackground(0.2, 0.3, 0.4);
+    ren->SetBackground(0., 0., 0.);
     renWin->Render(); // 非常重要！！
 
     /// Change to your code begins here. ///
@@ -74,7 +74,7 @@ int main(int argc, char* argv[])
     ::ShowWindow(hwnd, SW_MAXIMIZE);
 #endif
 #endif
-    //vtkInteractorStyleSwitch::SafeDownCast(iren->GetInteractorStyle())->SetCurrentStyleToTrackballCamera();
+    vtkInteractorStyleSwitch::SafeDownCast(iren->GetInteractorStyle())->SetCurrentStyleToTrackballCamera();
     iren->EnableRenderOff();
     iren->Start();
 
