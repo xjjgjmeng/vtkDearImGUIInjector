@@ -83,35 +83,11 @@ namespace
 
 int main(int argc, char* argv[])
 {
-    vtkNew<vtkRenderer> ren;
-    vtkNew<vtkRenderWindow> renWin;
-    renWin->AddRenderer(ren);
-    vtkNew<vtkRenderWindowInteractor> iren;
-    iren->SetRenderWindow(renWin);
-
-    vtkNew<vtkDICOMImageReader> reader;
-    reader->SetDirectoryName(vtkns::getDicomDir());
-    reader->Update();
-    auto pImg = reader->GetOutput();
+    SETUP_WINDOW
+    auto pImg = vtkns::getVRData();
 
     vtkns::genImgOutline(ren, pImg, false);
-
-#if 1
-    vtkNew<vtkVolume> pVolume;
-    vtkNew<vtkGPUVolumeRayCastMapper> pMapper;
-
-    pMapper->SetInputData(pImg);
-    pMapper->SetBlendModeToComposite();
-    pVolume->SetMapper(pMapper);
-    ::setupDefaultVolumeProperty(pVolume);
-#if 1
-    // 调节透明度让slice更清楚
-    pVolume->GetProperty()->GetScalarOpacity()->RemoveAllPoints();
-    pVolume->GetProperty()->GetScalarOpacity()->AddPoint(1000, 0.);
-    pVolume->GetProperty()->GetScalarOpacity()->AddPoint(5000, 0.05);
-#endif
-    ren->AddVolume(pVolume);
-#endif
+    auto pVolume = vtkns::genVR(ren, pImg, false, true);
 
     vtkNew<vtkExtractVOI> pExtractVOI;
     vtkNew<vtkImageActor> pImgActor;
@@ -144,17 +120,7 @@ int main(int argc, char* argv[])
         pExtractVOI->Update();
     }
     // 将提取的volume渲染出来
-    {
-        vtkNew<vtkVolume> pVolume;
-        vtkNew<vtkGPUVolumeRayCastMapper> pMapper;
-
-        pMapper->SetInputConnection(pExtractVOI->GetOutputPort());
-        pMapper->SetBlendModeToComposite();
-        pVolume->SetMapper(pMapper);
-        ::setupDefaultVolumeProperty(pVolume);
-        ren->AddVolume(pVolume);
-    }
-
+    vtkns::genVR(ren, pExtractVOI->GetOutput(), true, false);
     ren->ResetCamera();
 
     ::pWindow = renWin;
@@ -166,6 +132,7 @@ int main(int argc, char* argv[])
             vtkns::vtkObjSetup("ImgActor", pImgActor);
             //ImGuiNs::vtkObjSetup("Box", boxWidget, ImGuiTreeNodeFlags_DefaultOpen);
             //ImGuiNs::vtkObjSetup("Mapper", pMapper);
+            if (bool v = pVolume->GetVisibility(); ImGui::Checkbox("OriginalVrVisibility", &v)) pVolume->SetVisibility(v);
         };
 
     // Start rendering app
@@ -176,7 +143,7 @@ int main(int argc, char* argv[])
     // Initialize an overlay with DearImgui elements.
     vtkNew<vtkDearImGuiInjector> dearImGuiOverlay;
     // 💉 the overlay.
-    dearImGuiOverlay->Inject(iren);
+    dearImGuiOverlay->Inject(rwi);
     // These functions add callbacks to ImGuiSetupEvent and ImGuiDrawEvents.
     vtkns::SetupUI(dearImGuiOverlay);
     // You can draw custom user interface elements using ImGui:: namespace.
@@ -200,8 +167,8 @@ int main(int argc, char* argv[])
     ::ShowWindow(hwnd, SW_MAXIMIZE);
 #endif
 #endif
-    vtkInteractorStyleSwitch::SafeDownCast(iren->GetInteractorStyle())->SetCurrentStyleToTrackballCamera();
-    iren->EnableRenderOff();
-    iren->Start();
+    vtkInteractorStyleSwitch::SafeDownCast(rwi->GetInteractorStyle())->SetCurrentStyleToTrackballCamera();
+    rwi->EnableRenderOff();
+    rwi->Start();
     return 0;
 }

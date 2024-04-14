@@ -10,38 +10,22 @@ int main(int argc, char* argv[])
 
     // vtkns::labelWorldZero(ren);
 
-    vtkNew<vtkSphereSource> src;
-    src->SetThetaResolution(51);
-    src->SetPhiResolution(17);
+    auto img = vtkns::getVRData();
 
-    vtkNew<vtkElevationFilter> elevationF;
-    elevationF->SetInputConnection(src->GetOutputPort());
-    elevationF->SetLowPoint(0, 0, -0.5);
-    elevationF->SetHighPoint(0, 0, 0.5);
-    elevationF->SetScalarRange(-1, 1);
+    vtkNew<vtkContourFilter> f;
+    f->SetInputData(img);
+    f->GenerateValues(3, 0, 1.2);
 
-    vtkNew<vtkPolyDataMapper> mapper;
-    mapper->SetScalarRange(-1, 1);
-    mapper->SetInputConnection(elevationF->GetOutputPort());
-
-    vtkNew<vtkActor> actor;
-    actor->SetMapper(mapper);
-    ren->AddActor(actor);
-
-    vtkNew<vtkScalarBarActor> bar;
-    bar->SetLookupTable(mapper->GetLookupTable());
-    //bar->SetMaximumHeightInPixels(500);
-    ren->AddActor2D(bar);
+    vtkns::genPolyDataActor(ren, f->GetOutputPort())->GetMapper()->SetScalarRange(0,1.2);
 
     ren->ResetCamera();
 
     ::pWindow = renWin;
     ::imgui_render_callback = [&]
         {
-            vtkns::vtkObjSetup("elevation", elevationF, ImGuiTreeNodeFlags_DefaultOpen);
-            vtkns::vtkObjSetup("src", src);
-            vtkns::vtkObjSetup("actor", actor);
-            vtkns::vtkObjSetup("bar", bar);
+            //vtkns::vtkObjSetup("elevation", elevationF, ImGuiTreeNodeFlags_DefaultOpen);
+            //vtkns::vtkObjSetup("src", src);
+            //vtkns::vtkObjSetup("actor", actor);
         };
 
     // Start rendering app

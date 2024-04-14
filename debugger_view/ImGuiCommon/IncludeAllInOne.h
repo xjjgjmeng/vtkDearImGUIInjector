@@ -29,8 +29,13 @@
 #include <vtkImageDataOutlineFilter.h>
 #include <vtkImageToPolyDataFilter.h>
 #include <vtkImageCursor3D.h>
+#include <vtkWindowLevelLookupTable.h>
+#include <vtkContourFilter.h>
+#include <vtkImageDataGeometryFilter.h>
+#include <vtkWarpScalar.h>
 #include <vtkLine.h>
 #include <vtkFloatArray.h>
+#include <vtkImageSinusoidSource.h>
 #include <vtkXMLImageDataReader.h>
 #include <vtkPlane.h>
 #include <vtkRectilinearGrid.h>
@@ -45,7 +50,9 @@
 #include <vtkPointWidget.h>
 #include <vtkAbstractImageInterpolator.h>
 #include <vtkLeaderActor2D.h>
+#include <vtkImageGridSource.h>
 #include <vtkImageResliceMapper.h>
+#include <vtkImageBlend.h>
 #include <vtkImageSlab.h>
 #include <vtkImageSliceMapper.h>
 #include <vtkImageProperty.h>

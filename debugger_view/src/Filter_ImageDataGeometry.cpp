@@ -2,46 +2,31 @@
 
 int main(int argc, char* argv[])
 {
-    vtkNew<vtkRenderer> ren;
-    vtkNew<vtkRenderWindow> renWin;
-    renWin->AddRenderer(ren);
-    vtkNew<vtkRenderWindowInteractor> iren;
-    iren->SetRenderWindow(renWin);
+    SETUP_WINDOW
+    auto img = vtkns::getVRData();
 
     // vtkns::labelWorldZero(ren);
 
-    vtkNew<vtkSphereSource> src;
-    src->SetThetaResolution(51);
-    src->SetPhiResolution(17);
+    vtkNew<vtkImageDataGeometryFilter> f;
+    f->SetInputData(img);
 
-    vtkNew<vtkElevationFilter> elevationF;
-    elevationF->SetInputConnection(src->GetOutputPort());
-    elevationF->SetLowPoint(0, 0, -0.5);
-    elevationF->SetHighPoint(0, 0, 0.5);
-    elevationF->SetScalarRange(-1, 1);
+    vtkNew<vtkWarpScalar> ws;
+    ws->SetInputConnection(f->GetOutputPort());
+    ws->SetScaleFactor(0.005);
 
-    vtkNew<vtkPolyDataMapper> mapper;
-    mapper->SetScalarRange(-1, 1);
-    mapper->SetInputConnection(elevationF->GetOutputPort());
-
-    vtkNew<vtkActor> actor;
-    actor->SetMapper(mapper);
-    ren->AddActor(actor);
-
-    vtkNew<vtkScalarBarActor> bar;
-    bar->SetLookupTable(mapper->GetLookupTable());
-    //bar->SetMaximumHeightInPixels(500);
-    ren->AddActor2D(bar);
+    auto actor = vtkns::genPolyDataActor(ren, ws->GetOutputPort());
+    actor->GetMapper()->SetScalarRange(0, 2000);
+    //vtkPolyDataMapper::SafeDownCast(actor->GetMapper())->ImmediateModeRenderingOff();
+    actor->GetMapper()->SetLookupTable(vtkNew<vtkWindowLevelLookupTable>{});
 
     ren->ResetCamera();
 
     ::pWindow = renWin;
     ::imgui_render_callback = [&]
         {
-            vtkns::vtkObjSetup("elevation", elevationF, ImGuiTreeNodeFlags_DefaultOpen);
-            vtkns::vtkObjSetup("src", src);
-            vtkns::vtkObjSetup("actor", actor);
-            vtkns::vtkObjSetup("bar", bar);
+            //vtkns::vtkObjSetup("elevation", elevationF, ImGuiTreeNodeFlags_DefaultOpen);
+            //vtkns::vtkObjSetup("src", src);
+            //vtkns::vtkObjSetup("actor", actor);
         };
 
     // Start rendering app
@@ -52,7 +37,7 @@ int main(int argc, char* argv[])
     // Initialize an overlay with DearImgui elements.
     vtkNew<vtkDearImGuiInjector> dearImGuiOverlay;
     // 💉 the overlay.
-    dearImGuiOverlay->Inject(iren);
+    dearImGuiOverlay->Inject(rwi);
     // These functions add callbacks to ImGuiSetupEvent and ImGuiDrawEvents.
     vtkns::SetupUI(dearImGuiOverlay);
     // You can draw custom user interface elements using ImGui:: namespace.
@@ -76,8 +61,8 @@ int main(int argc, char* argv[])
     ::ShowWindow(hwnd, SW_MAXIMIZE);
 #endif
 #endif
-    vtkInteractorStyleSwitch::SafeDownCast(iren->GetInteractorStyle())->SetCurrentStyleToTrackballCamera();
-    iren->EnableRenderOff();
-    iren->Start();
+    vtkInteractorStyleSwitch::SafeDownCast(rwi->GetInteractorStyle())->SetCurrentStyleToTrackballCamera();
+    rwi->EnableRenderOff();
+    rwi->Start();
     return 0;
 }

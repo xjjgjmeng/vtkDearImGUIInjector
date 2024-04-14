@@ -32,7 +32,135 @@ auto getMatrixString(vtkMatrix4x4* obj)
 
 namespace
 {
-    void vtkElevationFilter_setup(vtkElevationFilter* obj)
+    // 使用函数模板特化，而不使用普通函数重载，可以避免子类类型继续调用基类函数？
+    template <typename T>
+    void setupImpl(T*);
+
+    template <>
+    void setupImpl<vtkActor2D>(vtkActor2D* pActor2D)
+    {
+        if (float v = pActor2D->GetWidth(); ImGui::SliderFloat("Width", &v, 0, 100))
+        {
+            pActor2D->SetWidth(v);
+        }
+        if (float v = pActor2D->GetHeight(); ImGui::SliderFloat("Height", &v, 0, 100))
+        {
+            pActor2D->SetHeight(v);
+        }
+        if (float v[2]{ pActor2D->GetPosition()[0], pActor2D->GetPosition()[1] }; ImGui::DragFloat2("Position", v, 0.01f))
+        {
+            pActor2D->SetPosition(v[0], v[1]);
+        }
+        if (float v[2]{ pActor2D->GetPosition2()[0], pActor2D->GetPosition2()[1] }; ImGui::DragFloat2("Position2", v, 0.01f))
+        {
+            pActor2D->SetPosition2(v[0], v[1]);
+        }
+    }
+
+    template <>
+    void setupImpl(vtkWidgetRepresentation* pWidgetRepresentation)
+    {
+        if (bool v = pWidgetRepresentation->GetPickingManaged(); ImGui::Checkbox("PickingManaged", &v))
+        {
+            pWidgetRepresentation->SetPickingManaged(v);
+        }
+        if (float v = pWidgetRepresentation->GetPlaceFactor(); ImGui::SliderFloat("PlaceFactor", &v, 0., 2.))
+        {
+            pWidgetRepresentation->SetPlaceFactor(v);
+        }
+        if (float v = pWidgetRepresentation->GetHandleSize(); ImGui::SliderFloat("HandleSize", &v, 0., 20.))
+        {
+            pWidgetRepresentation->SetHandleSize(v);
+        }
+        ImGui::Text(fmt::format("InteractionState: {}", pWidgetRepresentation->GetInteractionState()).c_str());
+    }
+
+    template <>
+    void setupImpl<vtkProp3D>(vtkProp3D* obj)
+    {
+        double pos[3];
+        obj->GetPosition(pos);
+        if (ImGui::DragScalarN("Position", ImGuiDataType_Double, pos, 3, 0.1f))
+        {
+            obj->SetPosition(pos);
+        }
+
+        double origin[3];
+        obj->GetOrigin(origin);
+        if (ImGui::DragScalarN("Origin", ImGuiDataType_Double, origin, 3, 0.1f))
+        {
+            obj->SetOrigin(origin);
+        }
+
+        double scale[3];
+        obj->GetScale(scale);
+        if (ImGui::DragScalarN("Scale", ImGuiDataType_Double, scale, 3, 0.001f))
+        {
+            obj->SetScale(scale);
+        }
+
+        ImGui::InputScalarN("Center", ImGuiDataType_Double, obj->GetCenter(), 3, nullptr, nullptr, nullptr, ImGuiInputTextFlags_ReadOnly);
+        ImGui::InputScalarN("XRange", ImGuiDataType_Double, obj->GetXRange(), 2, nullptr, nullptr, nullptr, ImGuiInputTextFlags_ReadOnly);
+        ImGui::InputScalarN("YRange", ImGuiDataType_Double, obj->GetYRange(), 2, nullptr, nullptr, nullptr, ImGuiInputTextFlags_ReadOnly);
+        ImGui::InputScalarN("ZRange", ImGuiDataType_Double, obj->GetZRange(), 2, nullptr, nullptr, nullptr, ImGuiInputTextFlags_ReadOnly);
+        ImGui::InputScalarN("Orientation", ImGuiDataType_Double, obj->GetOrientation(), 3, nullptr, nullptr, nullptr, ImGuiInputTextFlags_ReadOnly);
+        ImGui::Text("IsIdentity: %s", obj->GetIsIdentity() ? "true" : "false");
+
+        {
+            float spacing = ImGui::GetStyle().ItemInnerSpacing.x;
+            const auto n = 5;
+
+            ImGui::Text("RotateX:");
+            ImGui::SameLine();
+            ImGui::PushButtonRepeat(true);
+            if (ImGui::ArrowButton("##leftRotateX", ImGuiDir_Left)) { obj->RotateX(-n); }
+            ImGui::SameLine(0.0f, spacing);
+            if (ImGui::ArrowButton("##rightRotateX", ImGuiDir_Right)) { obj->RotateX(n); }
+            ImGui::PopButtonRepeat();
+
+            ImGui::Text("RotateY:");
+            ImGui::SameLine();
+            ImGui::PushButtonRepeat(true);
+            if (ImGui::ArrowButton("##leftRotateY", ImGuiDir_Left)) { obj->RotateY(-n); }
+            ImGui::SameLine(0.0f, spacing);
+            if (ImGui::ArrowButton("##rightRotateY", ImGuiDir_Right)) { obj->RotateY(n); }
+            ImGui::PopButtonRepeat();
+
+            ImGui::Text("RotateZ:");
+            ImGui::SameLine();
+            ImGui::PushButtonRepeat(true);
+            if (ImGui::ArrowButton("##leftRotateZ", ImGuiDir_Left)) { obj->RotateZ(-n); }
+            ImGui::SameLine(0.0f, spacing);
+            if (ImGui::ArrowButton("##rightRotateZ", ImGuiDir_Right)) { obj->RotateZ(n); }
+            ImGui::PopButtonRepeat();
+        }
+    }
+
+    template <>
+    void setupImpl(vtkMapper* obj)
+    {
+    
+    }
+
+    template <>
+    void setupImpl(vtkPolyDataMapper* obj)
+    {
+        ImGui::InputScalarN("Bounds", ImGuiDataType_Double, obj->GetBounds(), 6, nullptr, nullptr, nullptr, ImGuiInputTextFlags_ReadOnly);
+    }
+
+    void vtkImageGridSource_setup(vtkImageGridSource* obj)
+    {
+        if (double v = obj->GetLineValue(); ImGui::DragScalar("LineValue", ImGuiDataType_Double , &v)) obj->SetLineValue(v);
+        if (double v = obj->GetFillValue(); ImGui::DragScalar("FillValue", ImGuiDataType_Double, &v)) obj->SetFillValue(v);
+        if (int v[3]; obj->GetGridSpacing(v), ImGui::DragScalarN("GridSpacing", ImGuiDataType_S32, v, IM_ARRAYSIZE(v))) obj->SetGridSpacing(v);
+        if (int v[3]; obj->GetGridOrigin(v), ImGui::DragScalarN("GridOrigin", ImGuiDataType_S32, v, IM_ARRAYSIZE(v))) obj->SetGridOrigin(v);
+        if (int v[6]; obj->GetDataExtent(v), ImGui::DragScalarN("DataExtent", ImGuiDataType_S32, v, IM_ARRAYSIZE(v))) obj->SetDataExtent(v);
+        if (double v[3]; obj->GetDataOrigin(v), ImGui::DragScalarN("DataOrigin", ImGuiDataType_Double, v, IM_ARRAYSIZE(v))) obj->SetDataOrigin(v);
+        if (double v[3]; obj->GetDataSpacing(v), ImGui::DragScalarN("DataSpacing", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), 0.01f)) obj->SetDataSpacing(v);
+    }
+
+    template <>
+    void setupImpl(vtkElevationFilter* obj)
     {
         if (double v[3]; obj->GetLowPoint(v), ImGui::DragScalarN("LowPoint", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), 0.01f))
         {
@@ -41,6 +169,141 @@ namespace
         if (double v[3]; obj->GetHighPoint(v), ImGui::DragScalarN("HighPoint", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), 0.01f))
         {
             obj->SetHighPoint(v);
+        }
+    }
+
+    template <>
+    void setupImpl(vtkAxisActor2D* pAxisActor2D)
+    {
+        ImGui::Text(fmt::format("Title: {}", pAxisActor2D->GetTitle()).c_str());
+        if (float v[2]{ pAxisActor2D->GetPoint1()[0], pAxisActor2D->GetPoint1()[1] }; ImGui::DragFloat2("Point1", v, 0.01f))
+        {
+            pAxisActor2D->SetPoint1(v[0], v[1]);
+        }
+        if (float v[2]{ pAxisActor2D->GetPoint2()[0], pAxisActor2D->GetPoint2()[1] }; ImGui::DragFloat2("Point2", v, 0.01f))
+        {
+            pAxisActor2D->SetPoint2(v[0], v[1]);
+        }
+        if (bool v = pAxisActor2D->GetRulerMode(); ImGui::Checkbox("RulerMode ", &v))
+        {
+            pAxisActor2D->SetRulerMode(v);
+        }
+        if (bool v = pAxisActor2D->GetAdjustLabels(); ImGui::Checkbox("AdjustLabels ", &v))
+        {
+            pAxisActor2D->SetAdjustLabels(v);
+        }
+        if (bool v = pAxisActor2D->GetAxisVisibility(); ImGui::Checkbox("AxisVisibility ", &v))
+        {
+            pAxisActor2D->SetAxisVisibility(v);
+        }
+        if (bool v = pAxisActor2D->GetTickVisibility(); ImGui::Checkbox("TickVisibility ", &v))
+        {
+            pAxisActor2D->SetTickVisibility(v);
+        }
+        if (bool v = pAxisActor2D->GetLabelVisibility(); ImGui::Checkbox("LabelVisibility ", &v))
+        {
+            pAxisActor2D->SetLabelVisibility(v);
+        }
+        if (bool v = pAxisActor2D->GetTitleVisibility(); ImGui::Checkbox("TitleVisibility ", &v))
+        {
+            pAxisActor2D->SetTitleVisibility(v);
+        }
+        if (float v = pAxisActor2D->GetRulerDistance(); ImGui::SliderFloat("RulerDistance", &v, 0., 20.))
+        {
+            pAxisActor2D->SetRulerDistance(v);
+        }
+        if (int v = pAxisActor2D->GetNumberOfLabels(); ImGui::DragInt("NumberOfLabels", &v))
+        {
+            pAxisActor2D->SetNumberOfLabels(v);
+        }
+        if (int v = pAxisActor2D->GetTickOffset(); ImGui::DragInt("TickOffset", &v))
+        {
+            pAxisActor2D->SetTickOffset(v);
+        }
+        if (int v = pAxisActor2D->GetTickLength(); ImGui::DragInt("TickLength", &v))
+        {
+            pAxisActor2D->SetTickLength(v);
+        }
+        if (bool v = pAxisActor2D->GetUseFontSizeFromProperty(); ImGui::Checkbox("UseFontSizeFromProperty ", &v))
+        {
+            pAxisActor2D->SetUseFontSizeFromProperty(v);
+        }
+        if (double v = pAxisActor2D->GetFontFactor(); ImGui::DragScalar("FontFactor", ImGuiDataType_Double, &v, 0.01f))
+        {
+            pAxisActor2D->SetFontFactor(v); // 需要手动刷新？？
+        }
+        vtkns::vtkObjSetup("TitleTextProperty", pAxisActor2D->GetTitleTextProperty());
+    }
+
+    template <>
+    void setupImpl(vtkVolumeMapper* pVolumeMapper)
+    {
+        // BlendMode
+        {
+            const char* modeText[] = { "COMPOSITE_BLEND", "MAXIMUM_INTENSITY_BLEND", "MINIMUM_INTENSITY_BLEND", "AVERAGE_INTENSITY_BLEND", "ADDITIVE_BLEND", "ISOSURFACE_BLEND", "SLICE_BLEND" };
+            if (auto v = pVolumeMapper->GetBlendMode(); ImGui::Combo("BlendMode", &v, modeText, IM_ARRAYSIZE(modeText)))
+            {
+                pVolumeMapper->SetBlendMode(v);
+            }
+        }
+#if 0
+        {
+            const char* items[] = { "VTK_CROP_SUBVOLUME", "VTK_CROP_FENCE", "VTK_CROP_INVERTED_FENCE", "VTK_CROP_CROSS", "VTK_CROP_INVERTED_CROSS" };
+            int dataArray[] = { VTK_CROP_SUBVOLUME, VTK_CROP_FENCE, VTK_CROP_INVERTED_FENCE, VTK_CROP_CROSS, VTK_CROP_INVERTED_CROSS };
+            static int currentIdx = -1;
+            if (ImGui::Combo("CroppingRegionFlags", &currentIdx, items, IM_ARRAYSIZE(items)))
+            {
+                const auto n = dataArray[currentIdx] / ::spacing[2];
+                ::reslice->SetSlabNumberOfSlices(n);
+                ::colorMap->Update();
+            }
+        }
+#else
+        {
+            std::map<int, char*> myMap
+            {
+                {VTK_CROP_SUBVOLUME,"VTK_CROP_SUBVOLUME"},
+                {VTK_CROP_FENCE,"VTK_CROP_FENCE"},
+                {VTK_CROP_INVERTED_FENCE,"VTK_CROP_INVERTED_FENCE"},
+                {VTK_CROP_CROSS,"VTK_CROP_CROSS"},
+                {VTK_CROP_INVERTED_CROSS,"VTK_CROP_INVERTED_CROSS"}
+            };
+            for (auto i : myMap)
+            {
+                if (ImGui::Button(i.second)) pVolumeMapper->SetCroppingRegionFlags(i.first); ImGui::SameLine();
+            }
+            ImGui::Text(myMap[pVolumeMapper->GetCroppingRegionFlags()]);
+        }
+#endif
+
+        if (bool v = pVolumeMapper->GetCropping(); ImGui::Checkbox("Cropping", &v))
+        {
+            pVolumeMapper->SetCropping(v);
+        }
+        if (double v[6]; pVolumeMapper->GetCroppingRegionPlanes(v), ImGui::DragScalarN("CroppingRegionPlanes", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), 0.1f))
+        {
+            pVolumeMapper->SetCroppingRegionPlanes(v);
+        }
+    }
+
+    template <>
+    void setupImpl(vtkGPUVolumeRayCastMapper* pGPUVolumeRayCastMapper)
+    {
+        if (float v = pGPUVolumeRayCastMapper->GetImageSampleDistance(); ImGui::SliderFloat("ImageSampleDistance", &v, 0., 10.))
+        {
+            pGPUVolumeRayCastMapper->SetImageSampleDistance(v);
+        }
+        if (float v = pGPUVolumeRayCastMapper->GetSampleDistance(); ImGui::SliderFloat("SampleDistance", &v, 0.01, 3.)) // 调到0.001会崩溃且变卡
+        {
+            pGPUVolumeRayCastMapper->SetSampleDistance(v);
+        }
+        if (bool v = pGPUVolumeRayCastMapper->GetAutoAdjustSampleDistances(); ImGui::Checkbox("AutoAdjustSampleDistances", &v))
+        {
+            pGPUVolumeRayCastMapper->SetAutoAdjustSampleDistances(v);
+        }
+        if (bool v = pGPUVolumeRayCastMapper->GetUseJittering(); ImGui::Checkbox("UseJittering", &v))
+        {
+            pGPUVolumeRayCastMapper->SetUseJittering(v);
         }
     }
 
@@ -631,7 +894,8 @@ output的origin是相对于新坐标系的，把新坐标系的origin处看作�
         }
     }
 
-    void vtkImageMapper3D_setup(vtkImageMapper3D* obj)
+    template <>
+    void setupImpl(vtkImageMapper3D* obj)
     {
         if (bool v = obj->GetBorder(); ImGui::Checkbox("Border", &v))
         {
@@ -667,7 +931,8 @@ output的origin是相对于新坐标系的，把新坐标系的origin处看作�
 
     }
 
-    void vtkPlane_setup(vtkPlane* obj)
+    template <>
+    void setupImpl(vtkPlane* obj)
     {
         {
             ImGui::Text("Push:");
@@ -802,7 +1067,8 @@ output的origin是相对于新坐标系的，把新坐标系的origin处看作�
         vtkns::vtkObjSetup("Input", obj->GetInput());
     }
 
-    void vtkImageFlip_setup(vtkImageFlip* obj)
+    template <>
+    void setupImpl(vtkImageFlip* obj)
     {
         if (bool v = obj->GetFlipAboutOrigin(); ImGui::Checkbox("FlipAboutOrigin", &v))
         {
@@ -837,7 +1103,8 @@ output的origin是相对于新坐标系的，把新坐标系的origin处看作�
         }
     }
 
-    void vtkPointWidget_setup(vtkPointWidget* obj)
+    template <>
+    void setupImpl(vtkPointWidget* obj)
     {
         if (bool v = obj->GetOutline(); ImGui::Checkbox("Outline", &v))
         {
@@ -877,12 +1144,14 @@ output的origin是相对于新坐标系的，把新坐标系的origin处看作�
 
     }
 
-    void vtkRenderWindow_setup(vtkRenderWindow* obj)
+    template <>
+    void setupImpl(vtkRenderWindow* obj)
     {
         ImGui::Text(fmt::format("NumberOfLayers: {}", obj->GetNumberOfLayers()).c_str());
     }
 
-    void vtkCaptionActor2D_setup(vtkCaptionActor2D* obj)
+    template <>
+    void setupImpl(vtkCaptionActor2D* obj)
     {
         if (bool v = obj->GetBorder(); ImGui::Checkbox("Border", &v))
         {
@@ -1272,10 +1541,39 @@ A value greater than 1 is a zoom-in, a value less than 1 is a zoom-out.
             obj->SetLineStippleRepeatFactor(v);
         }
     }
+
+    template <>
+    void setupImpl(vtkPointHandleRepresentation2D* pPointHandleRepresentation2D)
+    {
+        if (ImGui::Button("Highlight")) pPointHandleRepresentation2D->Highlight(1);
+    }
+
+    template <>
+    void setupImpl(vtkDistanceRepresentation2D* pDistanceRepresentation2D)
+    {
+        vtkns::vtkObjSetup("Axis", pDistanceRepresentation2D->GetAxis());
+        vtkns::vtkObjSetup("AxisProperty", pDistanceRepresentation2D->GetAxisProperty());
+    }
 }
 
 namespace vtkns
 {
+    template <typename T, typename... Ts>
+    void setupHelper(vtkObject* obj)
+    {
+        if (const auto p = T::SafeDownCast(obj); p && ImGui::CollapsingHeader(typeid(T).name(), ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            ::setupImpl<T>(p);
+        }
+        else
+        {
+            if constexpr (sizeof...(Ts))
+            {
+                vtkns::setupHelper<Ts...>(obj);
+            }
+        }
+    }
+
     void vtkObjSetup(std::string_view objName, vtkSmartPointer<vtkObject> vtkObj, const ImGuiTreeNodeFlags flags)
     {
         if (!vtkObj)
@@ -1719,6 +2017,20 @@ namespace vtkns
                                 pExtractVOI->SetVOI(v);
                                 pExtractVOI->Update();
                             }
+
+                            {
+                                int minV = 1;
+                                int maxV = 8;
+                                if (int v[3]; pExtractVOI->GetSampleRate(v), ImGui::DragScalarN("SampleRate", ImGuiDataType_S32, v, IM_ARRAYSIZE(v), 1.f, &minV, &maxV))
+                                {
+                                    pExtractVOI->SetSampleRate(v);
+                                    pExtractVOI->Update();
+                                }
+                            }
+                        }
+                        else if (const auto pImageGridSource = vtkImageGridSource::SafeDownCast(vtkObj); pImageGridSource && ImGui::CollapsingHeader("vtkImageGridSource", ImGuiTreeNodeFlags_DefaultOpen))
+                        {
+                            ::vtkImageGridSource_setup(pImageGridSource);
                         }
                         ImGui::TreePop();
                     }
@@ -1957,276 +2269,72 @@ namespace vtkns
                 }
 
                 // vtkWindow
+#if 0
                 if (const auto pRenderWindow = vtkRenderWindow::SafeDownCast(vtkObj); pRenderWindow && ImGui::CollapsingHeader("vtkRenderWindow", ImGuiTreeNodeFlags_DefaultOpen))
                 {
                     vtkRenderWindow_setup(pRenderWindow);
                 }
+#else
+                vtkns::setupHelper<vtkRenderWindow>(vtkObj);
+#endif
 
                 // vtkDataSetAlgorithm
+#if 0
                 if (const auto pElevationFilter = vtkElevationFilter::SafeDownCast(vtkObj); pElevationFilter && ImGui::CollapsingHeader("vtkElevationFilter", ImGuiTreeNodeFlags_DefaultOpen))
                 {
                     vtkElevationFilter_setup(pElevationFilter);
                 }
-
-                // vtkAbstractMapper3D
-                if (const auto pMapper = vtkMapper::SafeDownCast(vtkObj); pMapper && ImGui::CollapsingHeader("vtkMapper", ImGuiTreeNodeFlags_DefaultOpen))
-                {
-                    if (const auto pPolyDataMapper = vtkPolyDataMapper::SafeDownCast(vtkObj); pPolyDataMapper && ImGui::CollapsingHeader("vtkPolyDataMapper", ImGuiTreeNodeFlags_DefaultOpen))
-                    {
-                        ImGui::InputScalarN("Bounds", ImGuiDataType_Double, pPolyDataMapper->GetBounds(), 6, nullptr, nullptr, nullptr, ImGuiInputTextFlags_ReadOnly);
-                    }
-                }
-                else if (const auto pAbstractVolumeMapper = vtkAbstractVolumeMapper::SafeDownCast(vtkObj); pAbstractVolumeMapper && ImGui::CollapsingHeader("vtkAbstractVolumeMapper", ImGuiTreeNodeFlags_DefaultOpen))
-                {
-                    if (const auto pVolumeMapper = vtkVolumeMapper::SafeDownCast(vtkObj); pVolumeMapper && ImGui::CollapsingHeader("vtkVolumeMapper", ImGuiTreeNodeFlags_DefaultOpen))
-                    {
-                        // BlendMode
-                        {
-                            const char* modeText[] = { "COMPOSITE_BLEND", "MAXIMUM_INTENSITY_BLEND", "MINIMUM_INTENSITY_BLEND", "AVERAGE_INTENSITY_BLEND", "ADDITIVE_BLEND", "ISOSURFACE_BLEND", "SLICE_BLEND" };
-                            if (auto v = pVolumeMapper->GetBlendMode(); ImGui::Combo("BlendMode", &v, modeText, IM_ARRAYSIZE(modeText)))
-                            {
-                                pVolumeMapper->SetBlendMode(v);
-                            }
-                        }
-#if 0
-                        {
-                            const char* items[] = { "VTK_CROP_SUBVOLUME", "VTK_CROP_FENCE", "VTK_CROP_INVERTED_FENCE", "VTK_CROP_CROSS", "VTK_CROP_INVERTED_CROSS" };
-                            int dataArray[] = { VTK_CROP_SUBVOLUME, VTK_CROP_FENCE, VTK_CROP_INVERTED_FENCE, VTK_CROP_CROSS, VTK_CROP_INVERTED_CROSS };
-                            static int currentIdx = -1;
-                            if (ImGui::Combo("CroppingRegionFlags", &currentIdx, items, IM_ARRAYSIZE(items)))
-                            {
-                                const auto n = dataArray[currentIdx] / ::spacing[2];
-                                ::reslice->SetSlabNumberOfSlices(n);
-                                ::colorMap->Update();
-                            }
-                        }
 #else
-                        {
-                            std::map<int, char*> myMap
-                            {
-                                {VTK_CROP_SUBVOLUME,"VTK_CROP_SUBVOLUME"},
-                                {VTK_CROP_FENCE,"VTK_CROP_FENCE"},
-                                {VTK_CROP_INVERTED_FENCE,"VTK_CROP_INVERTED_FENCE"},
-                                {VTK_CROP_CROSS,"VTK_CROP_CROSS"},
-                                {VTK_CROP_INVERTED_CROSS,"VTK_CROP_INVERTED_CROSS"}
-                            };
-                            for (auto i : myMap)
-                            {
-                                if (ImGui::Button(i.second)) pVolumeMapper->SetCroppingRegionFlags(i.first); ImGui::SameLine();
-                            }
-                            ImGui::Text(myMap[pVolumeMapper->GetCroppingRegionFlags()]);
-                        }
+                vtkns::setupHelper<vtkElevationFilter>(vtkObj);
 #endif
 
-                        if (bool v = pVolumeMapper->GetCropping(); ImGui::Checkbox("Cropping", &v))
-                        {
-                            pVolumeMapper->SetCropping(v);
-                        }
-                        if (double v[6]; pVolumeMapper->GetCroppingRegionPlanes(v), ImGui::DragScalarN("CroppingRegionPlanes", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), 0.1f))
-                        {
-                            pVolumeMapper->SetCroppingRegionPlanes(v);
-                        }
-                        if (const auto pGPUVolumeRayCastMapper = vtkGPUVolumeRayCastMapper::SafeDownCast(vtkObj); pGPUVolumeRayCastMapper && ImGui::TreeNodeEx("vtkGPUVolumeRayCastMapper", ImGuiTreeNodeFlags_DefaultOpen))
-                        {
-                            if (float v = pGPUVolumeRayCastMapper->GetImageSampleDistance(); ImGui::SliderFloat("ImageSampleDistance", &v, 0., 10.))
-                            {
-                                pGPUVolumeRayCastMapper->SetImageSampleDistance(v);
-                            }
-                            if (float v = pGPUVolumeRayCastMapper->GetSampleDistance(); ImGui::SliderFloat("SampleDistance", &v, 0.01, 3.)) // 调到0.001会崩溃且变卡
-                            {
-                                pGPUVolumeRayCastMapper->SetSampleDistance(v);
-                            }
-                            if (bool v = pGPUVolumeRayCastMapper->GetAutoAdjustSampleDistances(); ImGui::Checkbox("AutoAdjustSampleDistances", &v))
-                            {
-                                pGPUVolumeRayCastMapper->SetAutoAdjustSampleDistances(v);
-                            }
-                            if (bool v = pGPUVolumeRayCastMapper->GetUseJittering(); ImGui::Checkbox("UseJittering", &v))
-                            {
-                                pGPUVolumeRayCastMapper->SetUseJittering(v);
-                            }
-                            ImGui::TreePop();
-                        }
-                    }
-                }
-                else if (const auto pImageMapper3D = vtkImageMapper3D::SafeDownCast(vtkObj); pImageMapper3D && ImGui::CollapsingHeader("vtkImageMapper3D", ImGuiTreeNodeFlags_DefaultOpen))
-                {
-                    vtkImageMapper3D_setup(pImageMapper3D);
-                }
+                // vtkAbstractMapper3D
+                vtkns::setupHelper<vtkMapper, vtkImageMapper3D>(vtkObj);
+
+                // vtkMapper
+                vtkns::setupHelper<vtkPolyDataMapper>(vtkObj);
 
                 // vtkImplicitFunction
-                if (const auto pPlane = vtkPlane::SafeDownCast(vtkObj); pPlane && ImGui::CollapsingHeader("vtkPlane", ImGuiTreeNodeFlags_DefaultOpen))
-                {
-                    vtkPlane_setup(pPlane);
-                }
+                vtkns::setupHelper<vtkPlane>(vtkObj);
 
                 // vtk3DWidget
-                if (const auto pPointWidget = vtkPointWidget::SafeDownCast(vtkObj); pPointWidget && ImGui::CollapsingHeader("vtkPointWidget", ImGuiTreeNodeFlags_DefaultOpen))
-                {
-                    vtkPointWidget_setup(pPointWidget);
-                }
+                vtkns::setupHelper<vtkPointWidget>(vtkObj);
 
                 // 继承自vtkProp
+#if 0
                 if (const auto pProp3D = vtkProp3D::SafeDownCast(vtkObj); pProp3D && ImGui::CollapsingHeader("vtkProp3D", ImGuiTreeNodeFlags_DefaultOpen))
                 {
-                    double pos[3];
-                    pProp3D->GetPosition(pos);
-                    if (ImGui::DragScalarN("Position", ImGuiDataType_Double, pos, 3, 0.1f))
-                    {
-                        pProp3D->SetPosition(pos);
-                    }
-
-                    double origin[3];
-                    pProp3D->GetOrigin(origin);
-                    if (ImGui::DragScalarN("Origin", ImGuiDataType_Double, origin, 3, 0.1f))
-                    {
-                        pProp3D->SetOrigin(origin);
-                    }
-
-                    double scale[3];
-                    pProp3D->GetScale(scale);
-                    if (ImGui::DragScalarN("Scale", ImGuiDataType_Double, scale, 3, 0.001f))
-                    {
-                        pProp3D->SetScale(scale);
-                    }
-
-                    ImGui::InputScalarN("Center", ImGuiDataType_Double, pProp3D->GetCenter(), 3, nullptr, nullptr, nullptr, ImGuiInputTextFlags_ReadOnly);
-                    ImGui::InputScalarN("XRange", ImGuiDataType_Double, pProp3D->GetXRange(), 2, nullptr, nullptr, nullptr, ImGuiInputTextFlags_ReadOnly);
-                    ImGui::InputScalarN("YRange", ImGuiDataType_Double, pProp3D->GetYRange(), 2, nullptr, nullptr, nullptr, ImGuiInputTextFlags_ReadOnly);
-                    ImGui::InputScalarN("ZRange", ImGuiDataType_Double, pProp3D->GetZRange(), 2, nullptr, nullptr, nullptr, ImGuiInputTextFlags_ReadOnly);
-                    ImGui::InputScalarN("Orientation", ImGuiDataType_Double, pProp3D->GetOrientation(), 3, nullptr, nullptr, nullptr, ImGuiInputTextFlags_ReadOnly);
-                    ImGui::Text("IsIdentity: %s", pProp3D->GetIsIdentity() ? "true" : "false");
-
-                    {
-                        float spacing = ImGui::GetStyle().ItemInnerSpacing.x;
-                        const auto n = 5;
-
-                        ImGui::Text("RotateX:");
-                        ImGui::SameLine();
-                        ImGui::PushButtonRepeat(true);
-                        if (ImGui::ArrowButton("##leftRotateX", ImGuiDir_Left)) { pProp3D->RotateX(-n); }
-                        ImGui::SameLine(0.0f, spacing);
-                        if (ImGui::ArrowButton("##rightRotateX", ImGuiDir_Right)) { pProp3D->RotateX(n); }
-                        ImGui::PopButtonRepeat();
-
-                        ImGui::Text("RotateY:");
-                        ImGui::SameLine();
-                        ImGui::PushButtonRepeat(true);
-                        if (ImGui::ArrowButton("##leftRotateY", ImGuiDir_Left)) { pProp3D->RotateY(-n); }
-                        ImGui::SameLine(0.0f, spacing);
-                        if (ImGui::ArrowButton("##rightRotateY", ImGuiDir_Right)) { pProp3D->RotateY(n); }
-                        ImGui::PopButtonRepeat();
-
-                        ImGui::Text("RotateZ:");
-                        ImGui::SameLine();
-                        ImGui::PushButtonRepeat(true);
-                        if (ImGui::ArrowButton("##leftRotateZ", ImGuiDir_Left)) { pProp3D->RotateZ(-n); }
-                        ImGui::SameLine(0.0f, spacing);
-                        if (ImGui::ArrowButton("##rightRotateZ", ImGuiDir_Right)) { pProp3D->RotateZ(n); }
-                        ImGui::PopButtonRepeat();
-                    }
+                    ::vtkProp3D_setup(pProp3D);
                 }
                 else if (const auto pWidgetRepresentation = vtkWidgetRepresentation::SafeDownCast(vtkObj); pWidgetRepresentation && ImGui::CollapsingHeader("vtkWidgetRepresentation", ImGuiTreeNodeFlags_DefaultOpen))
                 {
-                    if (bool v = pWidgetRepresentation->GetPickingManaged(); ImGui::Checkbox("PickingManaged", &v))
-                    {
-                        pWidgetRepresentation->SetPickingManaged(v);
-                    }
-                    if (float v = pWidgetRepresentation->GetPlaceFactor(); ImGui::SliderFloat("PlaceFactor", &v, 0., 2.))
-                    {
-                        pWidgetRepresentation->SetPlaceFactor(v);
-                    }
-                    if (float v = pWidgetRepresentation->GetHandleSize(); ImGui::SliderFloat("HandleSize", &v, 0., 20.))
-                    {
-                        pWidgetRepresentation->SetHandleSize(v);
-                    }
-                    ImGui::Text(fmt::format("InteractionState: {}", pWidgetRepresentation->GetInteractionState()).c_str());
+                    ::vtkWidgetRepresentation_setup(pWidgetRepresentation);
                 }
                 else if (const auto pActor2D = vtkActor2D::SafeDownCast(vtkObj); pActor2D && ImGui::CollapsingHeader("vtkActor2D", ImGuiTreeNodeFlags_DefaultOpen))
                 {
-                    if (float v = pActor2D->GetWidth(); ImGui::SliderFloat("Width", &v, 0, 100))
-                    {
-                        pActor2D->SetWidth(v);
-                    }
-                    if (float v = pActor2D->GetHeight(); ImGui::SliderFloat("Height", &v, 0, 100))
-                    {
-                        pActor2D->SetHeight(v);
-                    }
-                    if (float v[2]{ pActor2D->GetPosition()[0], pActor2D->GetPosition()[1] }; ImGui::DragFloat2("Position", v, 0.01f))
-                    {
-                        pActor2D->SetPosition(v[0], v[1]);
-                    }
-                    if (float v[2]{ pActor2D->GetPosition2()[0], pActor2D->GetPosition2()[1] }; ImGui::DragFloat2("Position2", v, 0.01f))
-                    {
-                        pActor2D->SetPosition2(v[0], v[1]);
-                    }
+                    ::vtkActor2D_setup(pActor2D);
                 }
+#else
+                vtkns::setupHelper<vtkProp3D, vtkActor2D, vtkWidgetRepresentation>(vtkObj);
+#endif
+                // vtkAbstractVolumeMapper
+                vtkns::setupHelper<vtkVolumeMapper>(vtkObj);
+                // vtkVolumeMapper
+                vtkns::setupHelper<vtkGPUVolumeRayCastMapper>(vtkObj);
 
                 // 继承自vtkActor2D
+#if 0
                 if (const auto pAxisActor2D = vtkAxisActor2D::SafeDownCast(vtkObj); pAxisActor2D && ImGui::CollapsingHeader("vtkAxisActor2D", ImGuiTreeNodeFlags_DefaultOpen))
                 {
-                    ImGui::Text(fmt::format("Title: {}", pAxisActor2D->GetTitle()).c_str());
-                    if (float v[2]{ pAxisActor2D->GetPoint1()[0], pAxisActor2D->GetPoint1()[1] }; ImGui::DragFloat2("Point1", v, 0.01f))
-                    {
-                        pAxisActor2D->SetPoint1(v[0], v[1]);
-                    }
-                    if (float v[2]{ pAxisActor2D->GetPoint2()[0], pAxisActor2D->GetPoint2()[1] }; ImGui::DragFloat2("Point2", v, 0.01f))
-                    {
-                        pAxisActor2D->SetPoint2(v[0], v[1]);
-                    }
-                    if (bool v = pAxisActor2D->GetRulerMode(); ImGui::Checkbox("RulerMode ", &v))
-                    {
-                        pAxisActor2D->SetRulerMode(v);
-                    }
-                    if (bool v = pAxisActor2D->GetAdjustLabels(); ImGui::Checkbox("AdjustLabels ", &v))
-                    {
-                        pAxisActor2D->SetAdjustLabels(v);
-                    }
-                    if (bool v = pAxisActor2D->GetAxisVisibility(); ImGui::Checkbox("AxisVisibility ", &v))
-                    {
-                        pAxisActor2D->SetAxisVisibility(v);
-                    }
-                    if (bool v = pAxisActor2D->GetTickVisibility(); ImGui::Checkbox("TickVisibility ", &v))
-                    {
-                        pAxisActor2D->SetTickVisibility(v);
-                    }
-                    if (bool v = pAxisActor2D->GetLabelVisibility(); ImGui::Checkbox("LabelVisibility ", &v))
-                    {
-                        pAxisActor2D->SetLabelVisibility(v);
-                    }
-                    if (bool v = pAxisActor2D->GetTitleVisibility(); ImGui::Checkbox("TitleVisibility ", &v))
-                    {
-                        pAxisActor2D->SetTitleVisibility(v);
-                    }
-                    if (float v = pAxisActor2D->GetRulerDistance(); ImGui::SliderFloat("RulerDistance", &v, 0., 20.))
-                    {
-                        pAxisActor2D->SetRulerDistance(v);
-                    }
-                    if (int v = pAxisActor2D->GetNumberOfLabels(); ImGui::DragInt("NumberOfLabels", &v))
-                    {
-                        pAxisActor2D->SetNumberOfLabels(v);
-                    }
-                    if (int v = pAxisActor2D->GetTickOffset(); ImGui::DragInt("TickOffset", &v))
-                    {
-                        pAxisActor2D->SetTickOffset(v);
-                    }
-                    if (int v = pAxisActor2D->GetTickLength(); ImGui::DragInt("TickLength", &v))
-                    {
-                        pAxisActor2D->SetTickLength(v);
-                    }
-                    if (bool v = pAxisActor2D->GetUseFontSizeFromProperty(); ImGui::Checkbox("UseFontSizeFromProperty ", &v))
-                    {
-                        pAxisActor2D->SetUseFontSizeFromProperty(v);
-                    }
-                    if (double v = pAxisActor2D->GetFontFactor(); ImGui::DragScalar("FontFactor", ImGuiDataType_Double, &v, 0.01f))
-                    {
-                        pAxisActor2D->SetFontFactor(v); // 需要手动刷新？？
-                    }
-                    vtkObjSetup("TitleTextProperty", pAxisActor2D->GetTitleTextProperty());
+
                 }
                 else if (const auto pCaptionActor2D = vtkCaptionActor2D::SafeDownCast(vtkObj); pCaptionActor2D && ImGui::CollapsingHeader("vtkCaptionActor2D", ImGuiTreeNodeFlags_DefaultOpen))
                 {
                     vtkCaptionActor2D_setup(pCaptionActor2D);
                 }
+#else
+                vtkns::setupHelper<vtkAxisActor2D, vtkCaptionActor2D>(vtkObj);
+#endif
 
                 // 继承自vtkWidgetRepresentation
                 if (const auto pBoxRepresentation = vtkBoxRepresentation::SafeDownCast(vtkObj); pBoxRepresentation && ImGui::CollapsingHeader("vtkBoxRepresentation", ImGuiTreeNodeFlags_DefaultOpen))
@@ -2471,27 +2579,21 @@ namespace vtkns
                 }
 
                 // 继承自vtkHandleRepresentation
-                if (const auto pPointHandleRepresentation2D = vtkPointHandleRepresentation2D::SafeDownCast(vtkObj); pPointHandleRepresentation2D && ImGui::CollapsingHeader("vtkPointHandleRepresentation2D", ImGuiTreeNodeFlags_DefaultOpen))
-                {
-                    if (ImGui::Button("Highlight")) pPointHandleRepresentation2D->Highlight(1);
-                }
+                vtkns::setupHelper<vtkPointHandleRepresentation2D>(vtkObj);
 
                 // 继承自vtkDistanceRepresentation
+#if 0
                 if (const auto pDistanceRepresentation2D = vtkDistanceRepresentation2D::SafeDownCast(vtkObj); pDistanceRepresentation2D && ImGui::CollapsingHeader("vtkDistanceRepresentation2D", ImGuiTreeNodeFlags_DefaultOpen))
                 {
                     vtkObjSetup("Axis", pDistanceRepresentation2D->GetAxis());
                     vtkObjSetup("AxisProperty", pDistanceRepresentation2D->GetAxisProperty());
                 }
-                else if (const auto pDistanceRepresentation3D = vtkDistanceRepresentation3D::SafeDownCast(vtkObj); pDistanceRepresentation3D && ImGui::CollapsingHeader("vtkDistanceRepresentation3D", ImGuiTreeNodeFlags_DefaultOpen))
-                {
-
-                }
+#else
+                vtkns::setupHelper<vtkDistanceRepresentation2D>(vtkObj);
+#endif
 
                 // vtkImageReslice
-                if (const auto pImageFlip = vtkImageFlip::SafeDownCast(vtkObj); pImageFlip && ImGui::CollapsingHeader("vtkImageFlip", ImGuiTreeNodeFlags_DefaultOpen))
-                {
-                    vtkImageFlip_setup(pImageFlip);
-                }
+                vtkns::setupHelper<vtkImageFlip>(vtkObj);
 
                 // vtkDataObject
 #if 0

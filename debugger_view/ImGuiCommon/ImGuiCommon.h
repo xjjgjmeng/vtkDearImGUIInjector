@@ -599,8 +599,8 @@ namespace vtkns
 
 	static const char* getDicomFile()
 	{
-		const char* retval = "D:/test_data/series/I0000000200.dcm";
-		//const char* retval = "C:\\Users\\123\\Desktop\\series\\I0000000200.dcm";
+		//const char* retval = "D:/test_data/series/I0000000200.dcm";
+		const char* retval = "C:\\Users\\123\\Desktop\\series\\I0000000200.dcm";
 		if (!std::filesystem::exists(retval))
 		{
 			throw "dicom file does not exist!";
@@ -610,13 +610,29 @@ namespace vtkns
 
 	static const char* getDicomDir()
 	{
-		const char* retval = "D:/test_data/series";
-		//const char* retval = "C:\\Users\\123\\Desktop\\series";
+		//const char* retval = "D:/test_data/series";
+		const char* retval = "C:\\Users\\123\\Desktop\\series";
 		if (!std::filesystem::exists(retval))
 		{
 			throw "dicom dir does not exist!";
 		}
 		return retval;
+	}
+
+	static vtkSmartPointer<vtkImageData> getVRData()
+	{
+		vtkNew<vtkDICOMImageReader> reader;
+		reader->SetDirectoryName(vtkns::getDicomDir());
+		reader->Update();
+		return reader->GetOutput();
+	}
+
+	static vtkSmartPointer<vtkImageData> getSliceData()
+	{
+		vtkNew<vtkDICOMImageReader> reader;
+		reader->SetFileName(vtkns::getDicomFile());
+		reader->Update();
+		return reader->GetOutput();
 	}
 
 	static void labelWorldZero(vtkRenderer* pRen)
@@ -702,4 +718,68 @@ namespace vtkns
 
 		return pActor;
 	}
+
+	static void genVR_(vtkVolume* volume, vtkImageData* data, const bool lowOpacity)
+	{
+		vtkNew<vtkGPUVolumeRayCastMapper> pMapper;
+		pMapper->SetInputData(data);
+		pMapper->SetBlendModeToComposite();
+		volume->SetMapper(pMapper);
+		::setupDefaultVolumeProperty(volume);
+		if (lowOpacity)
+		{
+			// 调节透明度让slice更清楚
+			volume->GetProperty()->GetScalarOpacity()->RemoveAllPoints();
+			volume->GetProperty()->GetScalarOpacity()->AddPoint(1000, 0.);
+			volume->GetProperty()->GetScalarOpacity()->AddPoint(5000, 0.05);
+		}
+	}
+
+	static auto genVR(vtkRenderer* ren, vtkImageData* pImg, const bool onChange, const bool lowOpacity = false)
+	{
+		vtkNew<vtkVolume> pVolume;
+		ren->AddVolume(pVolume);
+
+		if (onChange)
+		{
+			auto f = [](vtkObject* caller, unsigned long eid, void* clientdata, void* calldata)
+			{
+				auto pActor = reinterpret_cast<vtkVolume*>(((void**)clientdata)[0]);
+				const bool lowOpacity = *reinterpret_cast<bool*>(((void**)clientdata)[1]);
+				genVR_(pActor, vtkImageData::SafeDownCast(caller), lowOpacity);
+			};
+			vtkNew<vtkCallbackCommand> pCC;
+			pCC->SetCallback(f);
+			void* clientData[] = { pVolume.Get(),  new bool{lowOpacity} }; // any better way?
+			pCC->SetClientData(clientData);
+			pImg->AddObserver(vtkCommand::ModifiedEvent, pCC);
+		}
+
+		genVR_(pVolume, pImg, lowOpacity);
+
+		return pVolume;
+	}
+
+	static auto genPolyDataActor(vtkRenderer* ren, vtkAlgorithmOutput* algoOutput)
+	{
+		vtkNew<vtkPolyDataMapper> mapper;
+		mapper->SetInputConnection(algoOutput);
+
+		vtkNew<vtkActor> actor;
+		ren->AddActor(actor);
+		actor->SetMapper(mapper);
+
+		return actor;
+	}
+
+	static auto getX()
+	{
+		auto ren = vtkSmartPointer<vtkRenderer>::New();
+		auto renWin = vtkSmartPointer<vtkRenderWindow>::New();
+		renWin->AddRenderer(ren);
+		auto iren = vtkSmartPointer<vtkRenderWindowInteractor>::New();
+		iren->SetRenderWindow(renWin);
+		return std::make_tuple(renWin, ren, iren);
+	}
+#define SETUP_WINDOW auto [renWin, ren, rwi] = vtkns::getX();
 }
