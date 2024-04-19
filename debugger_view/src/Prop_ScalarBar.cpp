@@ -4,34 +4,22 @@ int main()
 {
     SETUP_WINDOW
 
-    vtkNew<vtkImageGridSource> src;
-    src->SetGridSpacing(16, 16, 0);
-    src->SetGridOrigin(0, 0, 0);
-    src->SetDataExtent(0, 63, 0, 63, 0, 0);
-    src->SetLineValue(4095);
-    src->SetFillValue(0);
-    src->SetDataScalarTypeToShort();
+    vtkNew<vtkScalarsToColors> s2c;
 
-    vtkNew<vtkImageBlend> imgBlend;
-    imgBlend->SetOpacity(0, 0.5);
-    imgBlend->SetOpacity(1, 0.5);
-    imgBlend->AddInputData(vtkns::getSliceData());
-    imgBlend->AddInputConnection(src->GetOutputPort());
-
-    vtkNew<vtkImageActor> actor;
-    actor->GetMapper()->SetInputConnection(imgBlend->GetOutputPort());
-    ren->AddViewProp(actor);
+    vtkNew<vtkScalarBarActor> bar;
+    bar->SetLookupTable(s2c);
+    ren->AddActor2D(bar);
 
     ren->ResetCamera();
 
     ::pWindow = rw;
     ::imgui_render_callback = [&]
         {
-            vtkns::vtkObjSetup("src", src, ImGuiTreeNodeFlags_DefaultOpen);
+            vtkns::vtkObjSetup("ScalarsToColors", s2c, ImGuiTreeNodeFlags_DefaultOpen);
+            vtkns::vtkObjSetup("bar", bar);
         };
 
     // Start rendering app
-    ren->SetBackground(0., 0., 0.);
     rw->Render(); // 非常重要！！
 
     /// Change to your code begins here. ///

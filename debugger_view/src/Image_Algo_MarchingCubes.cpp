@@ -11,15 +11,13 @@ int main(int argc, char* argv[])
     vtkNew<vtkRenderWindowInteractor> iren;
     iren->SetRenderWindow(renWin);
 
-    vtkNew<vtkDICOMImageReader> reader;
-    reader->SetDirectoryName(vtkns::getDicomDir());
-    reader->Update();
+    auto img = vtkns::getVRData();
 
     vtkNew<vtkRenderer> ren;
     renWin->AddRenderer(ren);
     vtkNew<vtkVolume> pVolume;
     vtkNew<vtkGPUVolumeRayCastMapper> pMapper;
-    pMapper->SetInputData(reader->GetOutput());
+    pMapper->SetInputData(img);
     pMapper->SetBlendModeToComposite();
     pVolume->SetMapper(pMapper);
     ::setupDefaultVolumeProperty(pVolume);
@@ -27,12 +25,15 @@ int main(int argc, char* argv[])
     ren->SetViewport(0, 0, 0.333, 1);
     ren->ResetCamera();
 
+    vtkNew<vtkExtractVOI> voi;
+    voi->SetInputData(img);
+    voi->SetVOI(150, 400, 400, 600, 200, 400);
+
     // vtkMarchingCubes
     vtkNew<vtkMarchingCubes> surface_mc;
-    double isoValue_mc = 1000;
-    surface_mc->SetInputData(reader->GetOutput());
+    surface_mc->SetInputConnection(voi->GetOutputPort());
     surface_mc->ComputeNormalsOn();
-    surface_mc->SetValue(0, isoValue_mc);
+    surface_mc->SetValue(0, 1000);
     vtkNew<vtkPolyDataMapper> mapper_mc;
     mapper_mc->SetInputConnection(surface_mc->GetOutputPort());
     mapper_mc->ScalarVisibilityOff();
@@ -47,10 +48,9 @@ int main(int argc, char* argv[])
 
     // vtkFlyingEdges3D
     vtkNew<vtkFlyingEdges3D> surface_fe;
-    double isoValue_fe = 1000;
-    surface_fe->SetInputData(reader->GetOutput());
+    surface_fe->SetInputConnection(voi->GetOutputPort());
     surface_fe->ComputeNormalsOn();
-    surface_fe->SetValue(0, isoValue_fe);
+    surface_fe->SetValue(0, 1000);
     vtkNew<vtkPolyDataMapper> mapper_fe;
     mapper_fe->SetInputConnection(surface_fe->GetOutputPort());
     mapper_fe->ScalarVisibilityOff();
@@ -66,11 +66,7 @@ int main(int argc, char* argv[])
     ::pWindow = renWin;
     ::imgui_render_callback = [&]
         {
-            if (ImGui::TreeNode("Log"))
-            {
-                logView.Draw();
-                ImGui::TreePop();
-            }
+            vtkns::vtkObjSetup("voi", voi);
             vtkns::vtkObjSetup("Volume", pVolume);
             vtkns::vtkObjSetup("Mapper", pMapper);
             vtkns::vtkObjSetup("MarchingCubes", surface_mc, ImGuiTreeNodeFlags_DefaultOpen);

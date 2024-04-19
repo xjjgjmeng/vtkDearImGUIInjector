@@ -43,6 +43,7 @@
 #include <vtkUnstructuredGrid.h>
 #include <vtkDoubleArray.h>
 #include <vtkHexahedron.h>
+#include <vtkConnectivityFilter.h>
 #include <vtkVoxel.h>
 #include <vtkTetra.h>
 #include <vtkElevationFilter.h>

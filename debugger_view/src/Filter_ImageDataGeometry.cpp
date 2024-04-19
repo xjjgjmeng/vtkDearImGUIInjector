@@ -21,7 +21,7 @@ int main(int argc, char* argv[])
 
     ren->ResetCamera();
 
-    ::pWindow = renWin;
+    ::pWindow = rw;
     ::imgui_render_callback = [&]
         {
             //vtkns::vtkObjSetup("elevation", elevationF, ImGuiTreeNodeFlags_DefaultOpen);
@@ -31,7 +31,7 @@ int main(int argc, char* argv[])
 
     // Start rendering app
     ren->SetBackground(0., 0., 0.);
-    renWin->Render(); // 非常重要！！
+    rw->Render(); // 非常重要！！
 
     /// Change to your code begins here. ///
     // Initialize an overlay with DearImgui elements.
@@ -44,19 +44,13 @@ int main(int argc, char* argv[])
     vtkns::DrawUI(dearImGuiOverlay);
     /// Change to your code ends here. ///
 
-    vtkNew<vtkCameraOrientationWidget> camManipulator;
-    camManipulator->SetParentRenderer(ren);
-    camManipulator->On();
-    auto rep = vtkCameraOrientationRepresentation::SafeDownCast(camManipulator->GetRepresentation());
-    rep->AnchorToLowerRight();
-
     // Start event loop
 #if 0
     renderWindow->SetSize(1920, 1000);
 #else
 #ifdef _WIN32
     // 获取窗口句柄
-    HWND hwnd = ::FindWindow(NULL, renWin->GetWindowName());
+    HWND hwnd = ::FindWindow(NULL, rw->GetWindowName());
     // 最大化窗口
     ::ShowWindow(hwnd, SW_MAXIMIZE);
 #endif

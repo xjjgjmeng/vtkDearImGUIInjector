@@ -32,9 +32,17 @@ auto getMatrixString(vtkMatrix4x4* obj)
 
 namespace
 {
-    // 使用函数模板特化，而不使用普通函数重载，可以避免子类类型继续调用基类函数？
+    // 使用函数模板特化，而不使用普通函数重载，可以避免在没有实现子类类型setupImpl的时候继续调用基类函数的问题
     template <typename T>
     void setupImpl(T*);
+
+    template <>
+    void setupImpl(vtkObject* vtkObj)
+    {
+        ImGui::Text("Pointer: %0x", vtkObj);
+        ImGui::Text("MTime: %ld", vtkObj->GetMTime());
+        ImGui::Text("Name: %s", vtkObj->GetClassName());
+    }
 
     template <>
     void setupImpl<vtkActor2D>(vtkActor2D* pActor2D)
@@ -54,6 +62,68 @@ namespace
         if (float v[2]{ pActor2D->GetPosition2()[0], pActor2D->GetPosition2()[1] }; ImGui::DragFloat2("Position2", v, 0.01f))
         {
             pActor2D->SetPosition2(v[0], v[1]);
+        }
+    }
+
+    template<>
+    void setupImpl(vtkScalarsToColors* vtkobj)
+    {
+        if (float v[2]{vtkobj->GetRange()[0], vtkobj->GetRange()[1]}; ImGui::DragFloatRange2("Range", v, v+1))
+        {
+            vtkobj->SetRange(v[0], v[1]);
+        }
+        if (double v = vtkobj->GetAlpha(); ImGui::DragScalar("Alpha", ImGuiDataType_Double, &v, 0.001f))
+        {
+            vtkobj->SetAlpha(v);
+        }
+
+        {
+            ImGui::Text("VectorMode");
+            ImGui::SameLine();
+            int v = vtkobj->GetVectorMode();
+            ImGui::RadioButton("COMPONENT", &v, vtkScalarsToColors::COMPONENT); ImGui::SameLine();
+            ImGui::RadioButton("MAGNITUDE", &v, vtkScalarsToColors::MAGNITUDE); ImGui::SameLine();
+            ImGui::RadioButton("RGBCOLORS", &v, vtkScalarsToColors::RGBCOLORS);
+            if (vtkobj->GetVectorMode() != v)
+            {
+                vtkobj->SetVectorMode(v);
+            }
+        }
+
+        if (ImGui::Button("Build")) 
+            vtkobj->Build();
+    }
+
+    template<>
+    void setupImpl(vtkLookupTable* vtkobj)
+    {
+        if (float v[2]{ vtkobj->GetTableRange()[0], vtkobj->GetTableRange()[1] }; ImGui::DragFloatRange2("TableRange", v, v + 1))
+        {
+            vtkobj->SetTableRange(v[0], v[1]);
+        }
+        if (float v[2]{ vtkobj->GetHueRange()[0], vtkobj->GetHueRange()[1] }; ImGui::DragFloatRange2("HueRange", v, v + 1, 0.01, 0, 1))
+        {
+            vtkobj->SetHueRange(v[0], v[1]);
+        }
+        if (float v[2]{ vtkobj->GetSaturationRange()[0], vtkobj->GetSaturationRange()[1] }; ImGui::DragFloatRange2("SaturationRange", v, v + 1, 0.01, 0, 1))
+        {
+            vtkobj->SetSaturationRange(v[0], v[1]);
+        }
+        if (float v[2]{ vtkobj->GetValueRange()[0], vtkobj->GetValueRange()[1] }; ImGui::DragFloatRange2("ValueRange", v, v + 1, 0.01, 0, 1))
+        {
+            vtkobj->SetValueRange(v[0], v[1]);
+        }
+        {
+            ImGui::Text("Ramp");
+            ImGui::SameLine();
+            int v = vtkobj->GetRamp();
+            ImGui::RadioButton("LINEAR", &v, VTK_RAMP_LINEAR); ImGui::SameLine();
+            ImGui::RadioButton("SCURVE", &v, VTK_RAMP_SCURVE); ImGui::SameLine();
+            ImGui::RadioButton("SQRT", &v, VTK_RAMP_SQRT);
+            if (vtkobj->GetRamp() != v)
+            {
+                vtkobj->SetRamp(v);
+            }
         }
     }
 
@@ -137,6 +207,12 @@ namespace
     }
 
     template <>
+    void setupImpl(vtkAbstractMapper* pAbstractMapper)
+    {
+        ImGui::Text(fmt::format("NumberOfClippingPlanes: {}", pAbstractMapper->GetNumberOfClippingPlanes()).c_str());
+    }
+
+    template <>
     void setupImpl(vtkMapper* obj)
     {
     
@@ -148,7 +224,8 @@ namespace
         ImGui::InputScalarN("Bounds", ImGuiDataType_Double, obj->GetBounds(), 6, nullptr, nullptr, nullptr, ImGuiInputTextFlags_ReadOnly);
     }
 
-    void vtkImageGridSource_setup(vtkImageGridSource* obj)
+    template <>
+    void setupImpl(vtkImageGridSource* obj)
     {
         if (double v = obj->GetLineValue(); ImGui::DragScalar("LineValue", ImGuiDataType_Double , &v)) obj->SetLineValue(v);
         if (double v = obj->GetFillValue(); ImGui::DragScalar("FillValue", ImGuiDataType_Double, &v)) obj->SetFillValue(v);
@@ -171,6 +248,18 @@ namespace
             obj->SetHighPoint(v);
         }
     }
+
+    template <>
+    void setupImpl(vtkImageAlgorithm* obj)
+    {}
+
+    template <>
+    void setupImpl(vtkResliceCursorWidget* obj)
+    {}
+
+    template <>
+    void setupImpl(vtkLineWidget2* obj)
+    {}
 
     template <>
     void setupImpl(vtkAxisActor2D* pAxisActor2D)
@@ -233,6 +322,115 @@ namespace
             pAxisActor2D->SetFontFactor(v); // 需要手动刷新？？
         }
         vtkns::vtkObjSetup("TitleTextProperty", pAxisActor2D->GetTitleTextProperty());
+    }
+
+    template <>
+    void setupImpl(vtkTextProperty* pTextProperty)
+    {
+        if (float v[3] = { pTextProperty->GetColor()[0],pTextProperty->GetColor()[1],pTextProperty->GetColor()[2] }; ImGui::ColorEdit3("Color", v))
+        {
+            pTextProperty->SetColor(v[0], v[1], v[2]);
+        }
+        if (double v = pTextProperty->GetOpacity(); ImGui::DragScalar("Opacity", ImGuiDataType_Double, &v, 0.01f))
+        {
+            pTextProperty->SetOpacity(v);
+        }
+        if (float v[3] = { pTextProperty->GetBackgroundColor()[0],pTextProperty->GetBackgroundColor()[1],pTextProperty->GetBackgroundColor()[2] }; ImGui::ColorEdit3("BackgroundColor", v))
+        {
+            pTextProperty->SetBackgroundColor(v[0], v[1], v[2]);
+        }
+        if (double v = pTextProperty->GetBackgroundOpacity(); ImGui::DragScalar("BackgroundOpacity", ImGuiDataType_Double, &v, 0.01f))
+        {
+            pTextProperty->SetBackgroundOpacity(v);
+        }
+        {
+            double vRGBA[4];
+            pTextProperty->GetBackgroundRGBA(vRGBA);
+            if (float v[4] = { vRGBA[0],vRGBA[1],vRGBA[2],vRGBA[3] }; ImGui::ColorEdit4("BackgroundRGBA", v))
+            {
+                pTextProperty->SetBackgroundRGBA(v[0], v[1], v[2], v[3]);
+            }
+        }
+        if (float v[3] = { pTextProperty->GetFrameColor()[0],pTextProperty->GetFrameColor()[1],pTextProperty->GetFrameColor()[2] }; ImGui::ColorEdit3("FrameColor", v))
+        {
+            pTextProperty->SetFrameColor(v[0], v[1], v[2]);
+        }
+        if (int v = pTextProperty->GetFrameWidth(); ImGui::DragInt("FrameWidth", &v))
+        {
+            pTextProperty->SetFrameWidth(v);
+        }
+        if (bool v = pTextProperty->GetFrame(); ImGui::Checkbox("Frame ", &v))
+        {
+            pTextProperty->SetFrame(v);
+        }
+        if (bool v = pTextProperty->GetBold(); ImGui::Checkbox("Bold ", &v))
+        {
+            pTextProperty->SetBold(v);
+        }
+        ImGui::SameLine();
+        if (bool v = pTextProperty->GetItalic(); ImGui::Checkbox("Italic ", &v))
+        {
+            pTextProperty->SetItalic(v);
+        }
+        if (bool v = pTextProperty->GetInteriorLinesVisibility(); ImGui::Checkbox("InteriorLinesVisibility ", &v))
+        {
+            pTextProperty->SetInteriorLinesVisibility(v);
+        }
+        if (int v = pTextProperty->GetInteriorLinesWidth(); ImGui::DragInt("InteriorLinesWidth", &v))
+        {
+            pTextProperty->SetInteriorLinesWidth(v);
+        }
+        if (float v[3] = { pTextProperty->GetInteriorLinesColor()[0],pTextProperty->GetInteriorLinesColor()[1],pTextProperty->GetInteriorLinesColor()[2] }; ImGui::ColorEdit3("InteriorLinesColor", v))
+        {
+            pTextProperty->SetInteriorLinesColor(v[0], v[1], v[2]);
+        }
+        if (double v = pTextProperty->GetCellOffset(); ImGui::DragScalar("CellOffset", ImGuiDataType_Double, &v, 0.01f))
+        {
+            pTextProperty->SetCellOffset(v);
+        }
+        if (float v = pTextProperty->GetFontSize(); ImGui::SliderFloat("FontSize", &v, 0, 100))
+        {
+            pTextProperty->SetFontSize(v);
+        }
+        if (ImGui::Button("SetFontFamilyToArial")) pTextProperty->SetFontFamilyToArial();
+        if (ImGui::Button("SetFontFamilyToCourier")) pTextProperty->SetFontFamilyToCourier();
+        if (ImGui::Button("SetFontFamilyToTimes")) pTextProperty->SetFontFamilyToTimes();
+    }
+
+    template <>
+    void setupImpl(vtkProperty2D* pProperty2D)
+    {
+        if (float v[3] = { pProperty2D->GetColor()[0],pProperty2D->GetColor()[1],pProperty2D->GetColor()[2] }; ImGui::ColorEdit3("Color", v))
+        {
+            pProperty2D->SetColor(v[0], v[1], v[2]);
+        }
+        if (double v = pProperty2D->GetOpacity(); ImGui::DragScalar("Opacity", ImGuiDataType_Double, &v, 0.01f))
+        {
+            pProperty2D->SetOpacity(v);
+        }
+        if (float v = pProperty2D->GetPointSize(); ImGui::DragFloat("PointSize", &v, 0.01f))
+        {
+            pProperty2D->SetPointSize(v);
+        }
+        if (float v = pProperty2D->GetLineWidth(); ImGui::DragFloat("LineWidth", &v, 0.01f))
+        {
+            pProperty2D->SetLineWidth(v);
+        }
+        if (int v = pProperty2D->GetLineStipplePattern(); ImGui::DragInt("LineStipplePattern", &v))
+        {
+            pProperty2D->SetLineStipplePattern(v);
+        }
+        if (int v = pProperty2D->GetLineStippleRepeatFactor(); ImGui::DragInt("LineStippleRepeatFactor", &v))
+        {
+            pProperty2D->SetLineStippleRepeatFactor(v);
+        }
+        {
+            const char* modeText[] = { "VTK_BACKGROUND_LOCATION", "VTK_FOREGROUND_LOCATION" };
+            if (auto v = pProperty2D->GetDisplayLocation(); ImGui::Combo("DisplayLocation", &v, modeText, IM_ARRAYSIZE(modeText)))
+            {
+                pProperty2D->SetDisplayLocation(v);
+            }
+        }
     }
 
     template <>
@@ -307,12 +505,28 @@ namespace
         }
     }
 
-    void vtkDataSetAlgorithm_setup(vtkDataSetAlgorithm* obj)
+    template <>
+    void setupImpl(vtkThreadedImageAlgorithm*)
+    {}
+
+    template <>
+    void setupImpl(vtkImageMapToColors* vtkobj)
+    {
+        vtkns::vtkObjSetup("LookupTable", vtkobj->GetLookupTable());
+        if (bool v = vtkobj->GetPassAlphaToOutput(); ImGui::Checkbox("PassAlphaToOutput ", &v))
+        {
+            vtkobj->SetPassAlphaToOutput(v);
+        }
+    }
+
+    template <>
+    void setupImpl(vtkDataSetAlgorithm* obj)
     {
     
     }
 
-    void vtkImageToPolyDataFilter_setup(vtkImageToPolyDataFilter* obj)
+    template <>
+    void setupImpl(vtkImageToPolyDataFilter* obj)
     {
         if (ImGui::TreeNodeEx("OutputStyle", ImGuiTreeNodeFlags_DefaultOpen))
         {
@@ -357,7 +571,8 @@ namespace
         }
     }
 
-    void vtkPlaneSource_setup(vtkPlaneSource* obj)
+    template <>
+    void setupImpl(vtkPlaneSource* obj)
     {
         if (int v = obj->GetOutputPointsPrecision(); ImGui::DragInt("OutputPointsPrecision", &v))
         {
@@ -406,19 +621,91 @@ namespace
         }
     }
 
-    void vtkFlyingEdges3D_setup(vtkFlyingEdges3D* obj)
+    template <>
+    void setupImpl(vtkMatrix4x4* obj)
     {
-        if (double v = obj->GetValue(0); ImGui::InputDouble("Value", &v, 100.f, 100.0f, "%.8f"))
+    }
+
+    template <>
+    void setupImpl(vtkImageSlab* pImageSlab)
+    {
         {
-            obj->SetValue(0, v);
+            const char* modeText[] = { "VTK_IMAGE_SLAB_MIN", "VTK_IMAGE_SLAB_MAX", "VTK_IMAGE_SLAB_MEAN", "VTK_IMAGE_SLAB_SUM" };
+            if (auto v = pImageSlab->GetOperation(); ImGui::Combo("Operation", &v, modeText, IM_ARRAYSIZE(modeText)))
+            {
+                pImageSlab->SetOperation(v);
+            }
+        }
+        {
+            const char* modeText[] = { "X", "Y", "Z" };
+            if (auto v = pImageSlab->GetOrientation(); ImGui::Combo("Orientation", &v, modeText, IM_ARRAYSIZE(modeText)))
+            {
+                pImageSlab->SetOrientation(v);
+            }
+        }
+        if (int v[2]; pImageSlab->GetSliceRange(v), ImGui::DragInt2("SliceRange", v))
+        {
+            pImageSlab->SetSliceRange(v);
         }
     }
 
-    void vtkMatrix4x4_setup(vtkMatrix4x4* obj)
+    template <>
+    void setupImpl(vtkImageThreshold* pImageThreshold)
     {
+        ImGui::Text("OutputScalarType: %d", pImageThreshold->GetOutputScalarType());
+        if (bool v = pImageThreshold->GetReplaceIn(); ImGui::Checkbox("ReplaceIn ", &v))
+        {
+            pImageThreshold->SetReplaceIn(v);
+        }
+        if (bool v = pImageThreshold->GetReplaceOut(); ImGui::Checkbox("ReplaceOut ", &v))
+        {
+            pImageThreshold->SetReplaceOut(v);
+        }
+        if (float v = pImageThreshold->GetInValue(); ImGui::DragFloat("InValue", &v))
+        {
+            pImageThreshold->SetInValue(v);
+            pImageThreshold->Update(); // 不update输出的imagedata是二维
+        }
+        if (float v = pImageThreshold->GetOutValue(); ImGui::DragFloat("OutValue", &v))
+        {
+            pImageThreshold->SetOutValue(v);
+            pImageThreshold->Update(); // 不update输出的imagedata是二维
+        }
+        {
+            float l = pImageThreshold->GetLowerThreshold();
+            float u = pImageThreshold->GetUpperThreshold();
+            if (ImGui::DragFloatRange2("ThresholdBetween", &l, &u))
+            {
+                pImageThreshold->ThresholdBetween(l, u);
+                pImageThreshold->Update(); // 不update输出的imagedata是二维
+            }
+            if (ImGui::DragFloat("ThresholdByLower", &u))
+            {
+                pImageThreshold->ThresholdByLower(u);
+            }
+            if (ImGui::DragFloat("ThresholdByUpper", &l))
+            {
+                pImageThreshold->ThresholdByUpper(l);
+            }
+        }
     }
 
-    void vtkAbstractImageInterpolator_setup(vtkAbstractImageInterpolator* obj)
+    template <>
+    void setupImpl(vtkAlgorithm* pAlgorithm)
+    {
+        if (ImGui::Button("Update"))
+        {
+            pAlgorithm->Update();
+        }
+
+        if (ImGui::Button("UpdateInformation"))
+        {
+            pAlgorithm->UpdateInformation();
+        }
+    }
+
+    template <>
+    void setupImpl(vtkAbstractImageInterpolator* obj)
     {
         if (bool v = obj->GetSlidingWindow(); ImGui::Checkbox("SlidingWindow", &v))
         {
@@ -471,7 +758,8 @@ namespace
         }
     }
 
-    void vtkImageReslice_setup(vtkImageReslice* obj)
+    template <>
+    void setupImpl(vtkImageReslice* obj)
     {
         if (ImGui::TreeNodeEx("Slab", ImGuiTreeNodeFlags_DefaultOpen))
         {
@@ -751,26 +1039,487 @@ output的origin是相对于新坐标系的，把新坐标系的origin处看作�
         vtkns::vtkObjSetup("Interpolator", obj->GetInterpolator());
     }
 
-    void vtkMarchingCubes_setup(vtkMarchingCubes* obj)
+    template <>
+    void setupImpl(vtkMarchingCubes* obj)
     {
-        if (double v = obj->GetValue(0); ImGui::InputDouble("Value", &v, 100.f, 100.0f, "%.8f"))
+        if (double v = obj->GetValue(0); ImGui::InputDouble("Value", &v, 500.f, 500.0f, "%.8f"))
         {
             obj->SetValue(0, v);
         }
+        if (bool v = obj->GetComputeNormals(); ImGui::Checkbox("ComputeNormals", &v))
+        {
+            obj->SetComputeNormals(v);
+        }
+        if (bool v = obj->GetComputeScalars(); ImGui::Checkbox("ComputeScalars", &v))
+        {
+            obj->SetComputeScalars(v);
+        }
+        if (bool v = obj->GetComputeGradients(); ImGui::Checkbox("ComputeGradients", &v))
+        {
+            obj->SetComputeGradients(v);
+        }
+        if (int v = obj->GetNumberOfContours(); ImGui::DragInt("NumberOfContours", &v))
+        {
+            obj->SetNumberOfContours(v);
+        }
     }
 
-    void vtkTransformPolyDataFilter_setup(vtkTransformPolyDataFilter* obj)
+    template <>
+    void setupImpl(vtkFlyingEdges3D* obj)
+    {
+        if (double v = obj->GetValue(0); ImGui::InputDouble("Value", &v, 500.f, 500.0f, "%.8f"))
+        {
+            obj->SetValue(0, v);
+        }
+        if (bool v = obj->GetComputeNormals(); ImGui::Checkbox("ComputeNormals", &v))
+        {
+            obj->SetComputeNormals(v);
+        }
+        if (bool v = obj->GetComputeScalars(); ImGui::Checkbox("ComputeScalars", &v))
+        {
+            obj->SetComputeScalars(v);
+        }
+        if (bool v = obj->GetComputeGradients(); ImGui::Checkbox("ComputeGradients", &v))
+        {
+            obj->SetComputeGradients(v);
+        }
+        if (int v = obj->GetNumberOfContours(); ImGui::DragInt("NumberOfContours", &v))
+        {
+            obj->SetNumberOfContours(v);
+        }
+    }
+
+    template <>
+    void setupImpl(vtkImageViewer2* pImageViewer2)
+    {
+        if (int v[3]; pImageViewer2->GetSliceRange(v), v[2] = pImageViewer2->GetSlice(), ImGui::SliderInt("Slice", &v[2], v[0], v[1]))
+        {
+            pImageViewer2->SetSlice(v[2]);
+        }
+
+        if (float v = pImageViewer2->GetColorLevel(); ImGui::SliderFloat("ColorLevel", &v, 0., 10000.))
+        {
+            pImageViewer2->SetColorLevel(v);
+        }
+
+        if (float v = pImageViewer2->GetColorWindow(); ImGui::SliderFloat("ColorWindow", &v, 0., 10000.))
+        {
+            pImageViewer2->SetColorWindow(v);
+        }
+
+        if (int v[2]{ pImageViewer2->GetSize()[0], pImageViewer2->GetSize()[1] }; ImGui::DragInt2("Size", v))
+        {
+            pImageViewer2->SetSize(v);
+        }
+
+        if (int v[2]{ pImageViewer2->GetPosition()[0], pImageViewer2->GetPosition()[1] }; ImGui::DragInt2("Position", v))
+        {
+            pImageViewer2->SetPosition(v);
+        }
+
+        {
+            const char* modeText[] = { "SLICE_ORIENTATION_YZ", "SLICE_ORIENTATION_XZ", "SLICE_ORIENTATION_XY" };
+            if (auto v = pImageViewer2->GetSliceOrientation(); ImGui::Combo("SliceOrientation", &v, modeText, IM_ARRAYSIZE(modeText)))
+            {
+                pImageViewer2->SetSliceOrientation(v);
+            }
+        }
+
+        if (bool v = pImageViewer2->GetOffScreenRendering(); ImGui::Checkbox("OffScreenRendering ", &v))
+        {
+            pImageViewer2->SetOffScreenRendering(v);
+        }
+
+        vtkns::vtkObjSetup("ImageActor", pImageViewer2->GetImageActor(), ImGuiTreeNodeFlags_DefaultOpen);
+    }
+
+    template <>
+    void setupImpl(vtkDistanceRepresentation* pDistanceRepresentation)
+    {
+        {
+            const char* modeText[] = { "Outside", "NearP1", "NearP2" };
+            ImGui::Text(fmt::format("InteractionState: {}", modeText[pDistanceRepresentation->GetInteractionState()]).c_str());
+        }
+        ImGui::Text(fmt::format("Distance: {}", pDistanceRepresentation->GetDistance()).c_str());
+        if (bool v = pDistanceRepresentation->GetRulerMode(); ImGui::Checkbox("RulerMode ", &v))
+        {
+            pDistanceRepresentation->SetRulerMode(v);
+        }
+        if (float v = pDistanceRepresentation->GetRulerDistance(); ImGui::SliderFloat("RulerDistance", &v, 0., 20.))
+        {
+            pDistanceRepresentation->SetRulerDistance(v);
+        }
+        if (int v = pDistanceRepresentation->GetNumberOfRulerTicks(); ImGui::SliderInt("NumberOfRulerTicks", &v, 0., 20.))
+        {
+            pDistanceRepresentation->SetNumberOfRulerTicks(v);
+        }
+        if (float v = pDistanceRepresentation->GetScale(); ImGui::SliderFloat("Scale", &v, 0., 10.))
+        {
+            pDistanceRepresentation->SetScale(v);
+        }
+        if (double v[3]; pDistanceRepresentation->GetPoint1WorldPosition(v), ImGui::DragScalarN("Point1WorldPosition", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), 0.0001f))
+        {
+            pDistanceRepresentation->SetPoint1WorldPosition(v);
+        }
+        if (double v[3]; pDistanceRepresentation->GetPoint2WorldPosition(v), ImGui::DragScalarN("Point2WorldPosition", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), 0.0001f))
+        {
+            pDistanceRepresentation->SetPoint2WorldPosition(v);
+        }
+        if (double v[3]; pDistanceRepresentation->GetPoint1DisplayPosition(v), ImGui::DragScalarN("Point1DisplayPosition", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), 0.1f))
+        {
+            pDistanceRepresentation->SetPoint1DisplayPosition(v);
+        }
+        if (double v[3]; pDistanceRepresentation->GetPoint2DisplayPosition(v), ImGui::DragScalarN("Point2DisplayPosition", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), 0.1f))
+        {
+            pDistanceRepresentation->SetPoint2DisplayPosition(v);
+        }
+        if (int v = pDistanceRepresentation->GetTolerance(); ImGui::DragInt("Tolerance", &v))
+        {
+            pDistanceRepresentation->SetTolerance(v);
+        }
+        vtkns::vtkObjSetup("Point1Representation", pDistanceRepresentation->GetPoint1Representation());
+        vtkns::vtkObjSetup("Point2Representation", pDistanceRepresentation->GetPoint2Representation());
+    }
+
+    template <>
+    void setupImpl(vtkLineRepresentation* pLineRepresentation)
+    {
+        if (bool v = pLineRepresentation->GetDistanceAnnotationVisibility(); ImGui::Checkbox("DistanceAnnotationVisibility ", &v))
+        {
+            pLineRepresentation->SetDistanceAnnotationVisibility(v);
+        }
+        if (bool v = pLineRepresentation->GetDirectionalLine(); ImGui::Checkbox("DirectionalLine ", &v))
+        {
+            pLineRepresentation->SetDirectionalLine(v);
+        }
+        ImGui::Text(pLineRepresentation->GetDistanceAnnotationFormat());
+        ImGui::Text(fmt::format("Distance: {}", pLineRepresentation->GetDistance()).c_str());
+        if (float v[3]{ pLineRepresentation->GetDistanceAnnotationScale()[0], pLineRepresentation->GetDistanceAnnotationScale()[1],pLineRepresentation->GetDistanceAnnotationScale()[2] }; ImGui::DragFloat3("DistanceAnnotationScale", v, .1f))
+        {
+            pLineRepresentation->SetDistanceAnnotationScale(v[0], v[1], v[2]);
+        }
+        {
+            const char* modeText[] = { "Outside", "OnP1", "OnP2", "TranslatingP1", "TranslatingP2", "OnLine", "Scaling" };
+            ImGui::Text(fmt::format("InteractionState: {}", modeText[pLineRepresentation->GetInteractionState()]).c_str());
+        }
+        vtkns::vtkObjSetup("EndPointProperty", pLineRepresentation->GetEndPointProperty());
+        vtkns::vtkObjSetup("EndPoint2Property", pLineRepresentation->GetEndPoint2Property());
+        vtkns::vtkObjSetup("LineProperty", pLineRepresentation->GetLineProperty());
+        vtkns::vtkObjSetup("SelectedLineProperty", pLineRepresentation->GetSelectedLineProperty());
+        vtkns::vtkObjSetup("DistanceAnnotationProperty", pLineRepresentation->GetDistanceAnnotationProperty());
+    }
+
+    template <>
+    void setupImpl(vtkBoxRepresentation* pBoxRepresentation)
+    {
+        if (bool v = pBoxRepresentation->GetInsideOut(); ImGui::Checkbox("InsideOut", &v))
+        {
+            pBoxRepresentation->SetInsideOut(v);
+        }
+        if (bool v = pBoxRepresentation->GetOutlineCursorWires(); ImGui::Checkbox("OutlineCursorWires", &v))
+        {
+            pBoxRepresentation->SetOutlineCursorWires(v);
+        }
+        if (bool v = pBoxRepresentation->GetOutlineFaceWires(); ImGui::Checkbox("OutlineFaceWires", &v))
+        {
+            pBoxRepresentation->SetOutlineFaceWires(v);
+        }
+        if (bool v = pBoxRepresentation->GetTwoPlaneMode(); ImGui::Checkbox("TwoPlaneMode", &v))
+        {
+            pBoxRepresentation->SetTwoPlaneMode(v);
+        }
+        if (bool v = pBoxRepresentation->GetSnapToAxes(); ImGui::Checkbox("SnapToAxes", &v))
+        {
+            pBoxRepresentation->SetSnapToAxes(v);
+        }
+        if (ImGui::Button("HandlesOn")) pBoxRepresentation->HandlesOn();
+        ImGui::SameLine();
+        if (ImGui::Button("HandlesOff")) pBoxRepresentation->HandlesOff();
+        if (ImGui::Button("StepBackward")) pBoxRepresentation->StepBackward();
+        ImGui::SameLine();
+        if (ImGui::Button("StepForward")) pBoxRepresentation->StepForward();
+    }
+
+    template <>
+    void setupImpl(vtkBorderRepresentation* pBorderRepresentation)
+    {
+        if (float v[2]{ pBorderRepresentation->GetPosition()[0], pBorderRepresentation->GetPosition()[1] }; ImGui::DragFloat2("Position", v, 0.01f))
+        {
+            pBorderRepresentation->SetPosition(v[0], v[1]);
+        }
+        if (float v[2]{ pBorderRepresentation->GetPosition2()[0], pBorderRepresentation->GetPosition2()[1] }; ImGui::DragFloat2("Position2", v, 0.01f))
+        {
+            pBorderRepresentation->SetPosition2(v[0], v[1]);
+        }
+        if (float v[3] = { pBorderRepresentation->GetBorderColor()[0],pBorderRepresentation->GetBorderColor()[1],pBorderRepresentation->GetBorderColor()[2] }; ImGui::ColorEdit3("BorderColor", v))
+        {
+            pBorderRepresentation->SetBorderColor(v[0], v[1], v[2]);
+        }
+        if (float v[3] = { pBorderRepresentation->GetPolygonColor()[0],pBorderRepresentation->GetPolygonColor()[1],pBorderRepresentation->GetPolygonColor()[2] }; ImGui::ColorEdit3("PolygonColor", v))
+        {
+            pBorderRepresentation->SetPolygonColor(v[0], v[1], v[2]);
+        }
+        if (double v = pBorderRepresentation->GetPolygonOpacity(); ImGui::DragScalar("PolygonOpacity", ImGuiDataType_Double, &v, 0.01f))
+        {
+            pBorderRepresentation->SetPolygonOpacity(v);
+        }
+        {
+            double vPolygonRGBA[4];
+            pBorderRepresentation->GetPolygonRGBA(vPolygonRGBA);
+            if (float v[4] = { vPolygonRGBA[0],vPolygonRGBA[1],vPolygonRGBA[2],vPolygonRGBA[3] }; ImGui::ColorEdit4("PolygonRGBA", v))
+            {
+                pBorderRepresentation->SetPolygonRGBA(v[0], v[1], v[2], v[3]);
+            }
+        }
+        if (double v = pBorderRepresentation->GetCornerRadiusStrength(); ImGui::DragScalar("CornerRadiusStrength", ImGuiDataType_Double, &v, 0.01f))
+        {
+            pBorderRepresentation->SetCornerRadiusStrength(v);
+        }
+        if (int v = pBorderRepresentation->GetCornerResolution(); ImGui::DragInt("CornerResolution", &v))
+        {
+            pBorderRepresentation->SetCornerResolution(v);
+        }
+        if (float v = pBorderRepresentation->GetBorderThickness(); ImGui::DragFloat("BorderThickness", &v, 0.01f))
+        {
+            pBorderRepresentation->SetBorderThickness(v);
+        }
+        if (int v = pBorderRepresentation->GetTolerance(); ImGui::DragInt("Tolerance", &v))
+        {
+            pBorderRepresentation->SetTolerance(v);
+        }
+        {
+            const char* modeText[] = { "AnyLocation", "LowerLeftCorner", "LowerRightCorner", "LowerCenter", "UpperLeftCorner", "UpperRightCorner", "UpperCenter" };
+            if (auto v = pBorderRepresentation->GetWindowLocation(); ImGui::Combo("WindowLocation", &v, modeText, IM_ARRAYSIZE(modeText)))
+            {
+                pBorderRepresentation->SetWindowLocation(v);
+            }
+        }
+        {
+            double v[2];
+            ImGui::Text(fmt::format("Size: {}", (pBorderRepresentation->GetSize(v), v)).c_str()); // ??
+        }
+        ImGui::Text(fmt::format("ShowBorderMinValue: {}", pBorderRepresentation->GetShowBorderMinValue()).c_str());
+        ImGui::Text(fmt::format("ShowBorderMaxValue: {}", pBorderRepresentation->GetShowBorderMaxValue()).c_str());
+        ImGui::Text(fmt::format("Moving: {}", pBorderRepresentation->GetMoving()).c_str());
+        {
+            const char* modeText[] = { "BORDER_OFF", "BORDER_ON", "BORDER_ACTIVE" };
+            if (auto v = pBorderRepresentation->GetShowBorder(); ImGui::Combo("ShowBorder", &v, modeText, IM_ARRAYSIZE(modeText)))
+            {
+                pBorderRepresentation->SetShowBorder(v);
+            }
+        }
+        {
+            const char* modeText[] = { "BORDER_OFF", "BORDER_ON", "BORDER_ACTIVE" };
+            if (auto v = pBorderRepresentation->GetShowVerticalBorder(); ImGui::Combo("ShowVerticalBorder", &v, modeText, IM_ARRAYSIZE(modeText)))
+            {
+                pBorderRepresentation->SetShowVerticalBorder(v);
+            }
+        }
+        {
+            const char* modeText[] = { "BORDER_OFF", "BORDER_ON", "BORDER_ACTIVE" };
+            if (auto v = pBorderRepresentation->GetShowHorizontalBorder(); ImGui::Combo("ShowHorizontalBorder", &v, modeText, IM_ARRAYSIZE(modeText)))
+            {
+                pBorderRepresentation->SetShowHorizontalBorder(v);
+            }
+        }
+        {
+            const char* modeText[] = { "BORDER_OFF", "BORDER_ON", "BORDER_ACTIVE" };
+            if (auto v = pBorderRepresentation->GetShowPolygonBackground(); ImGui::Combo("ShowPolygonBackground", &v, modeText, IM_ARRAYSIZE(modeText)))
+            {
+                pBorderRepresentation->SetShowPolygonBackground(v);
+            }
+        }
+        {
+            const char* modeText[] = { "BORDER_OFF", "BORDER_ON", "BORDER_ACTIVE" };
+            if (auto v = pBorderRepresentation->GetShowPolygon(); ImGui::Combo("ShowPolygon", &v, modeText, IM_ARRAYSIZE(modeText)))
+            {
+                pBorderRepresentation->SetShowPolygon(v);
+            }
+        }
+    }
+
+    template <>
+    void setupImpl(vtkHandleRepresentation* pHandleRepresentation)
+    {
+        {
+            char* v[] = { "Outside","Nearby", "Selecting", "Translating", "Scaling" };
+            ImGui::Text(fmt::format("InteractionState: {}", v[pHandleRepresentation->GetInteractionState()]).c_str());
+        }
+        {
+            double dv[3];
+            if (float v[3]; pHandleRepresentation->GetDisplayPosition(dv), v[0] = dv[0], v[1] = dv[1], v[2] = dv[2], ImGui::DragFloat3("DisplayPosition", v, 0.1f))
+            {
+                dv[0] = v[0];
+                dv[1] = v[1];
+                dv[2] = v[2];
+                pHandleRepresentation->SetDisplayPosition(dv);
+            }
+        }
+        {
+            double dv[3];
+            if (float v[3]; pHandleRepresentation->GetWorldPosition(dv), v[0] = dv[0], v[1] = dv[1], v[2] = dv[2], ImGui::DragFloat3("WorldPosition", v, 0.1f))
+            {
+                dv[0] = v[0];
+                dv[1] = v[1];
+                dv[2] = v[2];
+                pHandleRepresentation->SetWorldPosition(dv);
+            }
+        }
+        if (int v = pHandleRepresentation->GetTolerance(); ImGui::DragInt("Tolerance", &v))
+        {
+            pHandleRepresentation->SetTolerance(v);
+        }
+        if (bool v = pHandleRepresentation->GetActiveRepresentation(); ImGui::Checkbox("ActiveRepresentation", &v))
+        {
+            pHandleRepresentation->SetActiveRepresentation(v);
+        }
+        if (bool v = pHandleRepresentation->GetConstrained(); ImGui::Checkbox("Constrained", &v))
+        {
+            pHandleRepresentation->SetConstrained(v);
+        }
+        {
+            double v[2]{ 0.1, 0.1 };
+            if (ImGui::Button("Translate")) pHandleRepresentation->Translate(v);
+        }
+    }
+
+    template <>
+    void setupImpl(vtkTransformPolyDataFilter* obj)
     {
     }
 
-    void vtkDataObject_setup(vtkDataObject* obj)
+    template <>
+    void setupImpl(vtkDistanceWidget* pDistanceWidget)
+    {
+        {
+            const char* modeText[] = { "Start", "Define", "Manipulate" };
+            ImGui::Text(fmt::format("WidgetState: {}", modeText[pDistanceWidget->GetWidgetState()]).c_str());
+        }
+    }
+
+    template <>
+    void setupImpl(vtkBoxWidget2* pBoxWidget2)
+    {
+        if (bool v = pBoxWidget2->GetTranslationEnabled(); ImGui::Checkbox("TranslationEnabled ", &v))
+        {
+            pBoxWidget2->SetTranslationEnabled(v);
+        }
+        if (bool v = pBoxWidget2->GetRotationEnabled(); ImGui::Checkbox("RotationEnabled ", &v))
+        {
+            pBoxWidget2->SetRotationEnabled(v);
+        }
+        if (bool v = pBoxWidget2->GetScalingEnabled(); ImGui::Checkbox("ScalingEnabled ", &v))
+        {
+            pBoxWidget2->SetScalingEnabled(v);
+        }
+        if (bool v = pBoxWidget2->GetMoveFacesEnabled(); ImGui::Checkbox("MoveFacesEnabled ", &v))
+        {
+            pBoxWidget2->SetMoveFacesEnabled(v);
+        }
+    }
+
+    template <>
+    void setupImpl(vtkBorderWidget* pBorderWidget)
+    {
+        if (bool v = pBorderWidget->GetResizable(); ImGui::Checkbox("Resizable ", &v))
+        {
+            pBorderWidget->SetResizable(v);
+        }
+        if (bool v = pBorderWidget->GetSelectable(); ImGui::Checkbox("Selectable ", &v))
+        {
+            pBorderWidget->SetSelectable(v);
+        }
+    }
+
+    template <>
+    void setupImpl(vtkResliceCursor* pResliceCursor)
+    {
+        if (bool v = pResliceCursor->GetThickMode(); ImGui::Checkbox("ThickMode ", &v))
+        {
+            pResliceCursor->SetThickMode(v);
+        }
+
+        if (double v[3]; pResliceCursor->GetThickness(v), ImGui::DragScalarN("Thickness", ImGuiDataType_Double, v, 3, 0.5f))
+        {
+            pResliceCursor->SetThickness(v);
+        }
+    }
+
+    template <>
+    void setupImpl(vtkAbstractWidget* pAbstractWidget)
+    {
+        if (bool v = pAbstractWidget->GetManagesCursor(); ImGui::Checkbox("ManagesCursor ", &v))
+        {
+            pAbstractWidget->SetManagesCursor(v);
+        }
+        if (bool v = pAbstractWidget->GetProcessEvents(); ImGui::Checkbox("ProcessEvents ", &v))
+        {
+            pAbstractWidget->SetProcessEvents(v);
+        }
+        vtkns::vtkObjSetup("Representation", pAbstractWidget->GetRepresentation(), ImGuiTreeNodeFlags_DefaultOpen);
+    }
+
+    template <>
+    void setupImpl(vtkInteractorObserver* pInteractorObserver)
+    {
+        if (bool v = pInteractorObserver->GetEnabled(); ImGui::Checkbox("Enabled ", &v))
+        {
+            pInteractorObserver->SetEnabled(v);
+        }
+
+        if (ImGui::Button("On")) pInteractorObserver->On(); ImGui::SameLine();
+        if (ImGui::Button("Off")) pInteractorObserver->Off();
+    }
+
+    template <>
+    void setupImpl(vtkDataObject* obj)
     {
         ImGui::Text(fmt::format("ActualMemorySize: {}", obj->GetActualMemorySize()).c_str());
         ImGui::Text(fmt::format("DataObjectType: {}", obj->GetDataObjectType()).c_str());
         ImGui::Text(fmt::format("ExtentType: {}", obj->GetExtentType()).c_str());
     }
 
-    void vtkDataSet_setup(vtkDataSet* obj)
+    template <>
+    void setupImpl(vtkImageSliceMapper* pImageSliceMapper)
+    {
+        ImGui::Text("Orientation: %d", pImageSliceMapper->GetOrientation()); ImGui::SameLine();
+        if (ImGui::Button("OX")) pImageSliceMapper->SetOrientationToX(); ImGui::SameLine();
+        if (ImGui::Button("OY")) pImageSliceMapper->SetOrientationToY(); ImGui::SameLine();
+        if (ImGui::Button("OZ")) pImageSliceMapper->SetOrientationToZ(); ImGui::SameLine();
+        if (ImGui::Button("OI")) pImageSliceMapper->SetOrientationToI(); ImGui::SameLine();
+        if (ImGui::Button("OJ")) pImageSliceMapper->SetOrientationToJ(); ImGui::SameLine();
+        if (ImGui::Button("OK")) pImageSliceMapper->SetOrientationToK();
+        ImGui::Text("SliceNumberMinValue: %d", pImageSliceMapper->GetSliceNumberMinValue());
+        ImGui::Text("SliceNumberMaxValue: %d", pImageSliceMapper->GetSliceNumberMaxValue());
+        {
+            double v[6];
+            pImageSliceMapper->GetIndexBounds(v);
+            ImGui::InputScalarN("IndexBounds", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), nullptr, nullptr, nullptr, ImGuiInputTextFlags_ReadOnly);
+        }
+        if (int v = pImageSliceMapper->GetSliceNumber(); ImGui::DragInt("SliceNumber", &v))
+        {
+            pImageSliceMapper->SetSliceNumber(v);
+        }
+        //if (int v[6]; pImageSliceMapper->GetDisplayExtent(v), ImGui::DragScalarN("DisplayExtent", ImGuiDataType_S32, v, std::size(v)))
+        //{
+        //    pImageSliceMapper->SetDisplayExtent(v);
+        //}
+        if (double v[6]; pImageSliceMapper->GetBounds(v), ImGui::DragScalarN("Bounds", ImGuiDataType_Double, v, std::size(v), 0.01f))
+        {
+            //pImageActor->SetBounds(v);
+        }
+        if (bool v = pImageSliceMapper->GetCropping(); ImGui::Checkbox("Cropping", &v))
+        {
+            pImageSliceMapper->SetCropping(v);
+        }
+        if (int v[6]; pImageSliceMapper->GetCroppingRegion(v), ImGui::DragScalarN("CroppingRegion", ImGuiDataType_S32, v, std::size(v)))
+        {
+            pImageSliceMapper->SetCroppingRegion(v);
+        }
+    }
+
+    template <>
+    void setupImpl(vtkDataSet* obj)
     {
         ImGui::Text(fmt::format("NumberOfPoints: {}", obj->GetNumberOfPoints()).c_str());
         ImGui::Text(fmt::format("NumberOfCells: {}", obj->GetNumberOfCells()).c_str());
@@ -799,7 +1548,8 @@ output的origin是相对于新坐标系的，把新坐标系的origin处看作�
         }
     }
 
-    void vtkPointSet_setup(vtkPointSet* obj)
+    template <>
+    void setupImpl(vtkPointSet* obj)
     {
         if (ImGui::TreeNodeEx("Points"/*, ImGuiTreeNodeFlags_DefaultOpen*/))
         {
@@ -811,7 +1561,8 @@ output的origin是相对于新坐标系的，把新坐标系的origin处看作�
         }
     }
 
-    void vtkImageData_setup(vtkImageData* obj)
+    template <>
+    void setupImpl(vtkImageData* obj)
     {
         ImGui::Text(fmt::format("DataDimension: {}", obj->GetDataDimension()).c_str());
         ImGui::Text(fmt::format("ScalarType: {}", obj->GetScalarTypeAsString()).c_str());
@@ -854,7 +1605,8 @@ output的origin是相对于新坐标系的，把新坐标系的origin处看作�
         }
     }
 
-    void vtkImageResliceMapper_setup(vtkImageResliceMapper* obj)
+    template <>
+    void setupImpl(vtkImageResliceMapper* obj)
     {
         {
             const char* modeText[] = { "VTK_IMAGE_SLAB_MIN", "VTK_IMAGE_SLAB_MAX", "VTK_IMAGE_SLAB_MEAN", "VTK_IMAGE_SLAB_SUM" };
@@ -895,6 +1647,36 @@ output的origin是相对于新坐标系的，把新坐标系的origin处看作�
     }
 
     template <>
+    void setupImpl(vtkResliceImageViewer* pResliceImageViewer)
+    {
+        if (bool v = pResliceImageViewer->GetSliceScrollOnMouseWheel(); ImGui::Checkbox("SliceScrollOnMouseWheel", &v))
+        {
+            pResliceImageViewer->SetSliceScrollOnMouseWheel(v);
+        }
+
+        if (bool v = pResliceImageViewer->GetThickMode(); ImGui::Checkbox("ThickMode ", &v))
+        {
+            pResliceImageViewer->SetThickMode(v);
+        }
+
+        {
+            const char* modeText[] = { "RESLICE_AXIS_ALIGNED", "RESLICE_OBLIQUE" };
+            if (auto v = pResliceImageViewer->GetResliceMode(); ImGui::Combo("ResliceMode", &v, modeText, IM_ARRAYSIZE(modeText)))
+            {
+                pResliceImageViewer->SetResliceMode(v);
+            }
+        }
+
+        if (float v = pResliceImageViewer->GetSliceScrollFactor(); ImGui::SliderFloat("SliceScrollFactor", &v, 0., 10.))
+        {
+            pResliceImageViewer->SetSliceScrollFactor(v);
+        }
+
+        vtkns::vtkObjSetup("ResliceCursor", pResliceImageViewer->GetResliceCursor(), ImGuiTreeNodeFlags_DefaultOpen);
+        vtkns::vtkObjSetup("ResliceCursorWidget", pResliceImageViewer->GetResliceCursorWidget(), ImGuiTreeNodeFlags_DefaultOpen);
+    }
+
+    template <>
     void setupImpl(vtkImageMapper3D* obj)
     {
         if (bool v = obj->GetBorder(); ImGui::Checkbox("Border", &v))
@@ -926,9 +1708,28 @@ output的origin是相对于新坐标系的，把新坐标系的origin处看作�
         vtkns::vtkObjSetup("SlicePlane", obj->GetSlicePlane(), ImGuiTreeNodeFlags_DefaultOpen);
     }
 
-    void vtkImplicitFunction_setup(vtkImplicitFunction* obj)
+    template <>
+    void setupImpl(vtkImplicitFunction* obj)
     {
 
+    }
+
+    template <>
+    void setupImpl(vtkAbstractMapper3D* pAbstractMapper3D)
+    {
+        {
+            double v[6];
+            pAbstractMapper3D->GetBounds(v);
+            ImGui::Text(fmt::format("Bounds: {::.2f}", v).c_str());
+        }
+        {
+            double v[3];
+            pAbstractMapper3D->GetCenter(v);
+            ImGui::Text(fmt::format("Center: {::.2f}", v).c_str());
+        }
+        ImGui::Text(fmt::format("Length: {}", pAbstractMapper3D->GetLength()).c_str());
+        ImGui::Text(fmt::format("IsARayCastMapper: {}", pAbstractMapper3D->IsARayCastMapper()).c_str());
+        ImGui::Text(fmt::format("IsARenderIntoImageMapper: {}", pAbstractMapper3D->IsARenderIntoImageMapper()).c_str());
     }
 
     template <>
@@ -944,18 +1745,48 @@ output的origin是相对于新坐标系的，把新坐标系的origin处看作�
             ImGui::PopButtonRepeat();
         }
 
-        if (double v[3]; obj->GetOrigin(v), ImGui::DragScalarN("Origin", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), 0.1f))
+        if (double v[3]; obj->GetOrigin(v), ImGui::DragScalarN("Origin", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), 0.05f))
         {
             obj->SetOrigin(v);
         }
 
-        if (double v[3]; obj->GetNormal(v), ImGui::DragScalarN("Normal", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), 0.1f))
+        if (double v[3]; obj->GetNormal(v), ImGui::DragScalarN("Normal", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), 0.01f))
         {
             obj->SetNormal(v);
         }
     }
 
-    void vtkImageSlice_setup(vtkImageSlice* obj)
+    template <>
+    void setupImpl(vtkVolumeOutlineSource* pVolumeOutlineSource)
+    {
+        if (bool v = pVolumeOutlineSource->GetGenerateFaces(); ImGui::Checkbox("GenerateFaces", &v))
+        {
+            pVolumeOutlineSource->SetGenerateFaces(v);
+        }
+        if (bool v = pVolumeOutlineSource->GetGenerateScalars(); ImGui::Checkbox("GenerateScalars", &v))
+        {
+            pVolumeOutlineSource->SetGenerateScalars(v);
+        }
+        if (bool v = pVolumeOutlineSource->GetGenerateOutline(); ImGui::Checkbox("GenerateOutline", &v))
+        {
+            pVolumeOutlineSource->SetGenerateOutline(v);
+        }
+        if (float v[3] = { pVolumeOutlineSource->GetColor()[0],pVolumeOutlineSource->GetColor()[1],pVolumeOutlineSource->GetColor()[2] }; ImGui::ColorEdit3("Color", v))
+        {
+            pVolumeOutlineSource->SetColor(v[0], v[1], v[2]);
+        }
+        if (float v[3]{ pVolumeOutlineSource->GetActivePlaneColor()[0],pVolumeOutlineSource->GetActivePlaneColor()[1],pVolumeOutlineSource->GetActivePlaneColor()[2] }; ImGui::ColorEdit3("ActivePlaneColor", v))
+        {
+            pVolumeOutlineSource->SetActivePlaneColor(v[0], v[1], v[2]);
+        }
+        if (int v = pVolumeOutlineSource->GetActivePlaneId(); ImGui::SliderInt("ActivePlaneId", &v, -1, 5))
+        {
+            pVolumeOutlineSource->SetActivePlaneId(v);
+        }
+    }
+
+    template <>
+    void setupImpl(vtkImageSlice* obj)
     {
         ImGui::Text(fmt::format("MinXBound: {}", obj->GetMinXBound()).c_str());
         ImGui::Text(fmt::format("MaxXBound: {}", obj->GetMaxXBound()).c_str());
@@ -971,7 +1802,8 @@ output的origin是相对于新坐标系的，把新坐标系的origin处看作�
         vtkns::vtkObjSetup("Mapper", obj->GetMapper());
     }
 
-    void vtkImageProperty_setup(vtkImageProperty* obj)
+    template <>
+    void setupImpl(vtkImageProperty* obj)
     {
         if (double v = obj->GetColorLevel(); ImGui::DragScalar("ColorLevel", ImGuiDataType_Double, &v))
         {
@@ -1028,7 +1860,48 @@ output的origin是相对于新坐标系的，把新坐标系的origin处看作�
         vtkns::vtkObjSetup("LookupTable", obj->GetLookupTable());
     }
 
-    void vtkImageActor_setup(vtkImageActor* obj)
+    template <>
+    void setupImpl(vtkAnnotatedCubeActor* pAnnotatedCubeActor)
+    {
+        if (float v = vtkMath::RadiansFromDegrees(pAnnotatedCubeActor->GetXFaceTextRotation()); ImGui::SliderAngle("XFaceTextRotation", &v))
+        {
+            pAnnotatedCubeActor->SetXFaceTextRotation(vtkMath::DegreesFromRadians(v));
+        }
+        if (float v = vtkMath::RadiansFromDegrees(pAnnotatedCubeActor->GetYFaceTextRotation()); ImGui::SliderAngle("YFaceTextRotation", &v))
+        {
+            pAnnotatedCubeActor->SetYFaceTextRotation(vtkMath::DegreesFromRadians(v));
+        }
+        if (float v = vtkMath::RadiansFromDegrees(pAnnotatedCubeActor->GetZFaceTextRotation()); ImGui::SliderAngle("ZFaceTextRotation", &v))
+        {
+            pAnnotatedCubeActor->SetZFaceTextRotation(vtkMath::DegreesFromRadians(v));
+        }
+
+        vtkns::vtkObjSetup("CubeProperty", pAnnotatedCubeActor->GetCubeProperty());
+        vtkns::vtkObjSetup("TextEdgesProperty", pAnnotatedCubeActor->GetTextEdgesProperty());
+    }
+
+    template <>
+    void setupImpl(vtkExtractVOI* pExtractVOI)
+    {
+        if (int v[6]; pExtractVOI->GetVOI(v), ImGui::DragScalarN("VOI", ImGuiDataType_S32, v, IM_ARRAYSIZE(v)))
+        {
+            pExtractVOI->SetVOI(v);
+            pExtractVOI->Update();
+        }
+
+        {
+            int minV = 1;
+            int maxV = 8;
+            if (int v[3]; pExtractVOI->GetSampleRate(v), ImGui::DragScalarN("SampleRate", ImGuiDataType_S32, v, IM_ARRAYSIZE(v), 1.f, &minV, &maxV))
+            {
+                pExtractVOI->SetSampleRate(v);
+                pExtractVOI->Update();
+            }
+        }
+    }
+
+    template <>
+    void setupImpl(vtkImageActor* obj)
     {
         if (bool v = obj->GetForceOpaque(); ImGui::Checkbox("ForceOpaque", &v))
         {
@@ -1091,7 +1964,14 @@ output的origin是相对于新坐标系的，把新坐标系的origin处看作�
         ImGui::Text(fmt::format("FilteredAxes: {}", obj->GetFilteredAxes()).c_str());
     }
 
-    void vtk3DWidget_setup(vtk3DWidget* obj)
+    template <>
+    void setupImpl(vtkPolyDataAlgorithm* pPolyDataAlgorithm)
+    {
+        vtkns::vtkObjSetup("Output", pPolyDataAlgorithm->GetOutput());
+    }
+
+    template <>
+    void setupImpl(vtk3DWidget* obj)
     {
         if (double v = obj->GetPlaceFactor(); ImGui::DragScalar("PlaceFactor", ImGuiDataType_Double, &v, 0.1f))
         {
@@ -1100,6 +1980,35 @@ output的origin是相对于新坐标系的，把新坐标系的origin处看作�
         if (double v = obj->GetHandleSize(); ImGui::DragScalar("HandleSize", ImGuiDataType_Double, &v, 0.1f))
         {
             obj->SetHandleSize(v);
+        }
+    }
+
+    template <>
+    void setupImpl(vtkLineSource* pLineSource)
+    {
+        if (double v[3]; pLineSource->GetPoint1(v), ImGui::DragScalarN("Point1", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), 0.1f))
+        {
+            pLineSource->SetPoint1(v);
+        }
+        if (double v[3]; pLineSource->GetPoint2(v), ImGui::DragScalarN("Point2", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), 0.1f))
+        {
+            pLineSource->SetPoint2(v);
+        }
+        if (bool v = pLineSource->GetUseRegularRefinement(); ImGui::Checkbox("UseRegularRefinement", &v))
+        {
+            pLineSource->SetUseRegularRefinement(v);
+        }
+        if (int v = pLineSource->GetResolution(); ImGui::DragInt("Resolution", &v))
+        {
+            pLineSource->SetResolution(v);
+        }
+        if (int v = pLineSource->GetOutputPointsPrecision(); ImGui::DragInt("OutputPointsPrecision", &v))
+        {
+            pLineSource->SetOutputPointsPrecision(v);
+        }
+        if (pLineSource->GetPoints())
+        {
+            ImGui::Text("PointsNumber: %d", pLineSource->GetPoints()->GetNumberOfPoints());
         }
     }
 
@@ -1139,7 +2048,8 @@ output的origin是相对于新坐标系的，把新坐标系的origin处看作�
         vtkns::vtkObjSetup("SelectedProperty", obj->GetSelectedProperty());
     }
 
-    void vtkWindow_setup(vtkWindow* obj)
+    template <>
+    void setupImpl(vtkWindow* obj)
     {
 
     }
@@ -1148,6 +2058,13 @@ output的origin是相对于新坐标系的，把新坐标系的origin处看作�
     void setupImpl(vtkRenderWindow* obj)
     {
         ImGui::Text(fmt::format("NumberOfLayers: {}", obj->GetNumberOfLayers()).c_str());
+        if (int v = obj->GetMultiSamples(); ImGui::SliderInt("MultiSamples", &v, 0, 10)) obj->SetMultiSamples(v);
+    }
+
+    template <>
+    void setupImpl(vtkActor* pActor)
+    {
+        vtkns::vtkObjSetup("Property", pActor->GetProperty(), ImGuiTreeNodeFlags_DefaultOpen);
     }
 
     template <>
@@ -1183,7 +2100,8 @@ output的origin是相对于新坐标系的，把新坐标系的origin处看作�
         }
     }
 
-    void vtkCamera_setup(vtkCamera* obj)
+    template <>
+    void setupImpl(vtkCamera* obj)
     {
         constexpr auto myOff = 1;
         {
@@ -1454,7 +2372,180 @@ A value greater than 1 is a zoom-in, a value less than 1 is a zoom-out.
         }
     }
 
-    void vtkProperty_setup(vtkProperty* obj)
+    template <>
+    void setupImpl(vtkVolumeProperty* pVolumeProperty)
+    {
+        if (bool v = pVolumeProperty->GetShade(); ImGui::Checkbox("ShadeOn", &v))
+        {
+            pVolumeProperty->SetShade(v);
+        }
+        ImGui::SameLine();
+        if (bool v = pVolumeProperty->GetDisableGradientOpacity(); ImGui::Checkbox("DisableGradientOpacity", &v))
+        {
+            pVolumeProperty->SetDisableGradientOpacity(v);
+        }
+        if (float v = pVolumeProperty->GetAmbient(); ImGui::SliderFloat("Ambient", &v, 0., 1.))
+        {
+            pVolumeProperty->SetAmbient(v);
+        }
+        if (float v = pVolumeProperty->GetDiffuse(); ImGui::SliderFloat("Diffuse", &v, 0., 1.))
+        {
+            pVolumeProperty->SetDiffuse(v);
+        }
+        if (float v = pVolumeProperty->GetSpecular(); ImGui::SliderFloat("Specular", &v, 0., 1.))
+        {
+            pVolumeProperty->SetSpecular(v);
+        }
+        if (float v = pVolumeProperty->GetSpecularPower(); ImGui::SliderFloat("SpecularPower", &v, 0., 300.))
+        {
+            pVolumeProperty->SetSpecularPower(v);
+        }
+        ImGui::Text("ColorChannels: %d", pVolumeProperty->GetColorChannels());
+
+        // InterpolationType
+        {
+            const char* modeText[] = { "VTK_NEAREST_INTERPOLATION", "VTK_LINEAR_INTERPOLATION", "VTK_CUBIC_INTERPOLATION" };
+            if (auto v = pVolumeProperty->GetInterpolationType(); ImGui::Combo("InterpolationType", &v, modeText, IM_ARRAYSIZE(modeText)))
+            {
+                pVolumeProperty->SetInterpolationType(v);
+            }
+        }
+        //ScalarOpacity
+        if (ImGui::CollapsingHeader("ScalarOpacity"))
+        {
+            const auto pPiecewiseFunction = pVolumeProperty->GetScalarOpacity();
+            if (ImGui::TreeNodeEx("vtkPiecewiseFunction", ImGuiTreeNodeFlags_DefaultOpen))
+            {
+                for (auto i = 0; i < pPiecewiseFunction->GetSize(); ++i)
+                {
+                    double nodeValue[4];
+                    pPiecewiseFunction->GetNodeValue(i, nodeValue);
+                    if (float v = nodeValue[1]; ImGui::SliderFloat(fmt::format("{}", nodeValue[0]).c_str(), &v, 0., 1.))
+                    {
+                        nodeValue[1] = v;
+                        pPiecewiseFunction->SetNodeValue(i, nodeValue);
+                    }
+                }
+
+                if (bool v = pPiecewiseFunction->GetClamping(); ImGui::Checkbox("Clamping", &v))
+                {
+                    pPiecewiseFunction->SetClamping(v);
+                }
+
+                ImGui::TreePop();
+            }
+        }
+        if (ImGui::CollapsingHeader("Color"))
+        {
+            const auto pColorTransferFunction = pVolumeProperty->GetRGBTransferFunction();
+            if (ImGui::TreeNodeEx("vtkColorTransferFunction", ImGuiTreeNodeFlags_DefaultOpen))
+            {
+                for (auto i = 0; i < pColorTransferFunction->GetSize(); ++i)
+                {
+                    double nodeValue[6];
+                    pColorTransferFunction->GetNodeValue(i, nodeValue);
+                    if (float v[3] = { nodeValue[1],nodeValue[2],nodeValue[3] }; ImGui::ColorEdit3(fmt::format("{}", nodeValue[0]).c_str(), v))
+                    {
+#if 0 // 此代码无效
+                        nodeValue[1] = v[0];
+                        nodeValue[2] = v[1];
+                        nodeValue[3] = v[2];
+                        pColorTransferFunction->GetNodeValue(i, nodeValue);
+                        pColorTransferFunction->Modified();
+#else
+                        pColorTransferFunction->AddRGBPoint(nodeValue[0], v[0], v[1], v[2]);
+#endif
+                    }
+                }
+                ImGui::TreePop();
+            }
+        }
+    }
+
+    template <>
+    void setupImpl(vtkAbstractPropPicker* pAbstractPropPicker)
+    {
+        vtkns::vtkObjSetup("ViewProp", pAbstractPropPicker->GetViewProp());
+        ImGui::Text(fmt::format("ViewProp: {}", reinterpret_cast<void*>(pAbstractPropPicker->GetViewProp())).c_str());
+        ImGui::Text(fmt::format("Prop3D: {}", reinterpret_cast<void*>(pAbstractPropPicker->GetProp3D())).c_str());
+        ImGui::Text(fmt::format("Actor2D: {}", reinterpret_cast<void*>(pAbstractPropPicker->GetActor2D())).c_str());
+        ImGui::Text(fmt::format("Actor: {}", reinterpret_cast<void*>(pAbstractPropPicker->GetActor())).c_str());
+        ImGui::Text(fmt::format("Volume: {}", reinterpret_cast<void*>(pAbstractPropPicker->GetVolume())).c_str());
+        ImGui::Text(fmt::format("Assembly: {}", reinterpret_cast<void*>(pAbstractPropPicker->GetAssembly())).c_str());
+        ImGui::Text(fmt::format("PropAssembly: {}", reinterpret_cast<void*>(pAbstractPropPicker->GetPropAssembly())).c_str());
+        ImGui::Text(fmt::format("Path: {}", reinterpret_cast<void*>(pAbstractPropPicker->GetPath())).c_str());
+    }
+
+    template <>
+    void setupImpl(vtkAbstractPicker* pAbstractPicker)
+    {
+        {
+            double v[3];
+            pAbstractPicker->GetPickPosition(v);
+            ImGui::Text(fmt::format("PickPosition: {::.2f}", v).c_str());
+        }
+        {
+            double v[3];
+            pAbstractPicker->GetSelectionPoint(v);
+            ImGui::Text(fmt::format("SelectionPoint: {::.2f}", v).c_str());
+        }
+    }
+
+    template <>
+    void setupImpl(vtkPicker* pPicker)
+    {
+        if (double v = pPicker->GetTolerance(); ImGui::DragScalar("Tolerance", ImGuiDataType_Double, &v, 0.01f))
+        {
+            pPicker->SetTolerance(v);
+        }
+        ImGui::Text(fmt::format("Actors-NumberOfItems: {}", pPicker->GetActors()->GetNumberOfItems()).c_str());
+        ImGui::Text(fmt::format("Prop3Ds-NumberOfItems: {}", pPicker->GetProp3Ds()->GetNumberOfItems()).c_str());
+    }
+
+    template <>
+    void setupImpl(vtkPointPicker* pPointPicker)
+    {
+        ImGui::Text(fmt::format("PointId: {}", pPointPicker->GetPointId()).c_str());
+    }
+
+    template <>
+    void setupImpl(vtkCellPicker* pCellPicker)
+    {
+        ImGui::Text(fmt::format("PointId: {}", pCellPicker->GetPointId()).c_str());
+        ImGui::Text(fmt::format("CellId: {}", pCellPicker->GetCellId()).c_str());
+        ImGui::Text(fmt::format("SubId: {}", pCellPicker->GetSubId()).c_str());
+        {
+            double v[3];
+            pCellPicker->GetPickNormal(v);
+            ImGui::Text(fmt::format("PickNormal: {}", v).c_str());
+        }
+        {
+            int v[3];
+            pCellPicker->GetPointIJK(v);
+            ImGui::Text(fmt::format("PointIJK: {}", v).c_str());
+        }
+        {
+            int v[3];
+            pCellPicker->GetCellIJK(v);
+            ImGui::Text(fmt::format("CellIJK: {}", v).c_str());
+        }
+        {
+            double v[3];
+            pCellPicker->GetPCoords(v);
+            ImGui::Text(fmt::format("PCoords: {::.2f}", v).c_str());
+        }
+    }
+
+    template <>
+    void setupImpl(vtkPropPicker* obj)
+    {}
+
+    template <>
+    void setupImpl(vtkWorldPointPicker* obj)
+    {}
+
+    template <>
+    void setupImpl(vtkProperty* obj)
     {
         {
             ImGui::Text("Representation"); ImGui::SameLine();
@@ -1554,9 +2645,91 @@ A value greater than 1 is a zoom-in, a value less than 1 is a zoom-out.
         vtkns::vtkObjSetup("Axis", pDistanceRepresentation2D->GetAxis());
         vtkns::vtkObjSetup("AxisProperty", pDistanceRepresentation2D->GetAxisProperty());
     }
+
+    template <>
+    void setupImpl(vtkViewport* pViewport)
+    {
+        if (float v[3] = { pViewport->GetBackground()[0],pViewport->GetBackground()[1],pViewport->GetBackground()[2] }; ImGui::ColorEdit3("Background", v))
+        {
+            pViewport->SetBackground(v[0], v[1], v[2]);
+        }
+    }
+
+    template <>
+    void setupImpl(vtkRenderer* pRenderer)
+    {
+        if (ImGui::Button("ResetCamera"))
+        {
+            pRenderer->ResetCamera();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("ResetCameraClippingRange"))
+        {
+            pRenderer->ResetCameraClippingRange();
+        }
+        if (bool v = pRenderer->GetUseDepthPeelingForVolumes(); ImGui::Checkbox("UseDepthPeelingForVolumes", &v))
+        {
+            pRenderer->SetUseDepthPeelingForVolumes(v);
+        }
+        if (int v = pRenderer->GetMaximumNumberOfPeels(); ImGui::SliderInt("MaximumNumberOfPeels", &v, 0, 100))
+        {
+            pRenderer->SetMaximumNumberOfPeels(v);
+        }
+        if (float v = pRenderer->GetOcclusionRatio(); ImGui::SliderFloat("OcclusionRatio", &v, 0., 10.))
+        {
+            pRenderer->SetOcclusionRatio(v);
+        }
+    }
+
+    template <>
+    void setupImpl(vtkProp* pProp)
+    {
+        if (pProp->GetBounds())
+        {
+            ImGui::InputScalarN("Bounds", ImGuiDataType_Double, pProp->GetBounds(), 6, nullptr, nullptr, nullptr, ImGuiInputTextFlags_ReadOnly);
+        }
+        else
+        {
+            ImGui::Text("Bounds nullptr");
+        }
+
+        if (pProp->GetMatrix())
+        {
+            ImGui::InputScalarN("Matrix0", ImGuiDataType_Double, pProp->GetMatrix()->GetData() + 0, 4, nullptr, nullptr, nullptr, ImGuiInputTextFlags_ReadOnly);
+            ImGui::InputScalarN("Matrix1", ImGuiDataType_Double, pProp->GetMatrix()->GetData() + 4, 4, nullptr, nullptr, nullptr, ImGuiInputTextFlags_ReadOnly);
+            ImGui::InputScalarN("Matrix2", ImGuiDataType_Double, pProp->GetMatrix()->GetData() + 8, 4, nullptr, nullptr, nullptr, ImGuiInputTextFlags_ReadOnly);
+            ImGui::InputScalarN("Matrix3", ImGuiDataType_Double, pProp->GetMatrix()->GetData() + 12, 4, nullptr, nullptr, nullptr, ImGuiInputTextFlags_ReadOnly);
+        }
+        else
+        {
+            ImGui::Text("Matrix nullptr");
+        }
+
+        if (bool visibility = pProp->GetVisibility(); ImGui::Checkbox("Visibility ", &visibility))
+        {
+            pProp->SetVisibility(visibility);
+        }
+        ImGui::SameLine();
+        if (bool pickable = pProp->GetPickable(); ImGui::Checkbox("Pickable", &pickable))
+        {
+            pProp->SetPickable(pickable);
+        }
+        ImGui::SameLine();
+        if (bool dragable = pProp->GetDragable(); ImGui::Checkbox("Dragable", &dragable))
+        {
+            pProp->SetDragable(dragable);
+        }
+    }
+
+    template <>
+    void setupImpl(vtkVolume* pVolume)
+    {
+        vtkns::vtkObjSetup("Mapper", pVolume->GetMapper(), ImGuiTreeNodeFlags_DefaultOpen);
+        vtkns::vtkObjSetup("Property", pVolume->GetProperty());
+    }
 }
 
-namespace vtkns
+namespace
 {
     template <typename T, typename... Ts>
     void setupHelper(vtkObject* obj)
@@ -1569,11 +2742,14 @@ namespace vtkns
         {
             if constexpr (sizeof...(Ts))
             {
-                vtkns::setupHelper<Ts...>(obj);
+                ::setupHelper<Ts...>(obj);
             }
         }
     }
+}
 
+namespace vtkns
+{
     void vtkObjSetup(std::string_view objName, vtkSmartPointer<vtkObject> vtkObj, const ImGuiTreeNodeFlags flags)
     {
         if (!vtkObj)
@@ -1584,1201 +2760,92 @@ namespace vtkns
 
         if (ImGui::TreeNodeEx(objName.data(), flags))
         {
-            if (ImGui::CollapsingHeader("vtkObject", ImGuiTreeNodeFlags_DefaultOpen))
-            {
-                ImGui::Text("Pointer: %0x", vtkObj.Get());
-                ImGui::Text("MTime: %ld", vtkObj->GetMTime());
-                ImGui::Text("Name: %s", vtkObj->GetClassName());
+            ::setupHelper<vtkObject>(vtkObj);
 
-                // 继承自vtkObject
-                if (const auto pProp = vtkProp::SafeDownCast(vtkObj); pProp && ImGui::CollapsingHeader("vtkProp", ImGuiTreeNodeFlags_DefaultOpen))
-                {
-                    if (pProp->GetBounds())
-                    {
-                        ImGui::InputScalarN("Bounds", ImGuiDataType_Double, pProp->GetBounds(), 6, nullptr, nullptr, nullptr, ImGuiInputTextFlags_ReadOnly);
-                    }
-                    else
-                    {
-                        ImGui::Text("Bounds nullptr");
-                    }
-
-                    if (pProp->GetMatrix())
-                    {
-                        ImGui::InputScalarN("Matrix0", ImGuiDataType_Double, pProp->GetMatrix()->GetData() + 0, 4, nullptr, nullptr, nullptr, ImGuiInputTextFlags_ReadOnly);
-                        ImGui::InputScalarN("Matrix1", ImGuiDataType_Double, pProp->GetMatrix()->GetData() + 4, 4, nullptr, nullptr, nullptr, ImGuiInputTextFlags_ReadOnly);
-                        ImGui::InputScalarN("Matrix2", ImGuiDataType_Double, pProp->GetMatrix()->GetData() + 8, 4, nullptr, nullptr, nullptr, ImGuiInputTextFlags_ReadOnly);
-                        ImGui::InputScalarN("Matrix3", ImGuiDataType_Double, pProp->GetMatrix()->GetData() + 12, 4, nullptr, nullptr, nullptr, ImGuiInputTextFlags_ReadOnly);
-                    }
-                    else
-                    {
-                        ImGui::Text("Matrix nullptr");
-                    }
-
-                    if (bool visibility = pProp->GetVisibility(); ImGui::Checkbox("Visibility ", &visibility))
-                    {
-                        pProp->SetVisibility(visibility);
-                    }
-                    ImGui::SameLine();
-                    if (bool pickable = pProp->GetPickable(); ImGui::Checkbox("Pickable", &pickable))
-                    {
-                        pProp->SetPickable(pickable);
-                    }
-                    ImGui::SameLine();
-                    if (bool dragable = pProp->GetDragable(); ImGui::Checkbox("Dragable", &dragable))
-                    {
-                        pProp->SetDragable(dragable);
-                    }
-                }
-                else if (const auto pCamera = vtkCamera::SafeDownCast(vtkObj); pCamera && ImGui::CollapsingHeader("vtkCamera", ImGuiTreeNodeFlags_DefaultOpen))
-                {
-                    ::vtkCamera_setup(pCamera);
-                }
-                else if (const auto pViewport = vtkViewport::SafeDownCast(vtkObj); pViewport && ImGui::CollapsingHeader("vtkViewport", ImGuiTreeNodeFlags_DefaultOpen))
-                {
-                    if (float v[3] = { pViewport->GetBackground()[0],pViewport->GetBackground()[1],pViewport->GetBackground()[2] }; ImGui::ColorEdit3("Background", v))
-                    {
-                        pViewport->SetBackground(v[0], v[1], v[2]);
-                    }
-                    // ?? 是否可以嵌套
-                    if (const auto pRenderer = vtkRenderer::SafeDownCast(vtkObj); pRenderer && ImGui::CollapsingHeader("vtkRenderer", ImGuiTreeNodeFlags_DefaultOpen))
-                    {
-                        if (ImGui::Button("ResetCamera"))
-                        {
-                            pRenderer->ResetCamera();
-                        }
-                        ImGui::SameLine();
-                        if (ImGui::Button("ResetCameraClippingRange"))
-                        {
-                            pRenderer->ResetCameraClippingRange();
-                        }
-                        if (bool v = pRenderer->GetUseDepthPeelingForVolumes(); ImGui::Checkbox("UseDepthPeelingForVolumes", &v))
-                        {
-                            pRenderer->SetUseDepthPeelingForVolumes(v);
-                        }
-                        if (int v = pRenderer->GetMaximumNumberOfPeels(); ImGui::SliderInt("MaximumNumberOfPeels", &v, 0, 100))
-                        {
-                            pRenderer->SetMaximumNumberOfPeels(v);
-                        }
-                        if (float v = pRenderer->GetOcclusionRatio(); ImGui::SliderFloat("OcclusionRatio", &v, 0., 10.))
-                        {
-                            pRenderer->SetOcclusionRatio(v);
-                        }
-                    }
-                }
-                else if (const auto pDataObject = vtkDataObject::SafeDownCast(vtkObj); pDataObject && ImGui::CollapsingHeader("vtkDataObject", ImGuiTreeNodeFlags_DefaultOpen))
-                {
-                    vtkDataObject_setup(pDataObject);
-                    if (const auto pDataSet = vtkDataSet::SafeDownCast(vtkObj); pDataSet && ImGui::CollapsingHeader("vtkDataSet", ImGuiTreeNodeFlags_DefaultOpen))
-                    {
-                        vtkDataSet_setup(pDataSet);
-                        if (const auto pImageData = vtkImageData::SafeDownCast(vtkObj); pImageData && ImGui::CollapsingHeader("vtkImageData", ImGuiTreeNodeFlags_DefaultOpen))
-                        {
-                            vtkImageData_setup(pImageData);
-                        }
-                        else if (const auto pPointSet = vtkPointSet::SafeDownCast(vtkObj); pPointSet && ImGui::CollapsingHeader("vtkPointSet", ImGuiTreeNodeFlags_DefaultOpen))
-                        {
-                            ::vtkPointSet_setup(pPointSet);
-                        }
-                    }
-                }
-                else if (const auto pAbstractPicker = vtkAbstractPicker::SafeDownCast(vtkObj); pAbstractPicker && ImGui::TreeNodeEx("vtkAbstractPicker", ImGuiTreeNodeFlags_DefaultOpen))
-                {
-                    {
-                        double v[3];
-                        pAbstractPicker->GetPickPosition(v);
-                        ImGui::Text(fmt::format("PickPosition: {::.2f}", v).c_str());
-                    }
-                    {
-                        double v[3];
-                        pAbstractPicker->GetSelectionPoint(v);
-                        ImGui::Text(fmt::format("SelectionPoint: {::.2f}", v).c_str());
-                    }
-
-                    if (const auto pAbstractPropPicker = vtkAbstractPropPicker::SafeDownCast(vtkObj); pAbstractPropPicker && ImGui::TreeNodeEx("vtkAbstractPropPicker", ImGuiTreeNodeFlags_DefaultOpen))
-                    {
-                        vtkObjSetup("ViewProp", pAbstractPropPicker->GetViewProp());
-                        ImGui::Text(fmt::format("ViewProp: {}", reinterpret_cast<void*>(pAbstractPropPicker->GetViewProp())).c_str());
-                        ImGui::Text(fmt::format("Prop3D: {}", reinterpret_cast<void*>(pAbstractPropPicker->GetProp3D())).c_str());
-                        ImGui::Text(fmt::format("Actor2D: {}", reinterpret_cast<void*>(pAbstractPropPicker->GetActor2D())).c_str());
-                        ImGui::Text(fmt::format("Actor: {}", reinterpret_cast<void*>(pAbstractPropPicker->GetActor())).c_str());
-                        ImGui::Text(fmt::format("Volume: {}", reinterpret_cast<void*>(pAbstractPropPicker->GetVolume())).c_str());
-                        ImGui::Text(fmt::format("Assembly: {}", reinterpret_cast<void*>(pAbstractPropPicker->GetAssembly())).c_str());
-                        ImGui::Text(fmt::format("PropAssembly: {}", reinterpret_cast<void*>(pAbstractPropPicker->GetPropAssembly())).c_str());
-                        ImGui::Text(fmt::format("Path: {}", reinterpret_cast<void*>(pAbstractPropPicker->GetPath())).c_str());
-
-                        if (const auto pPicker = vtkPicker::SafeDownCast(vtkObj); pPicker && ImGui::TreeNodeEx("vtkPicker", ImGuiTreeNodeFlags_DefaultOpen))
-                        {
-                            if (double v = pPicker->GetTolerance(); ImGui::DragScalar("Tolerance", ImGuiDataType_Double, &v, 0.01f))
-                            {
-                                pPicker->SetTolerance(v);
-                            }
-                            ImGui::Text(fmt::format("Actors-NumberOfItems: {}", pPicker->GetActors()->GetNumberOfItems()).c_str());
-                            ImGui::Text(fmt::format("Prop3Ds-NumberOfItems: {}", pPicker->GetProp3Ds()->GetNumberOfItems()).c_str());
-
-                            if (const auto pPointPicker = vtkPointPicker::SafeDownCast(vtkObj); pPointPicker && ImGui::TreeNodeEx("vtkPointPicker", ImGuiTreeNodeFlags_DefaultOpen))
-                            {
-                                ImGui::Text(fmt::format("PointId: {}", pPointPicker->GetPointId()).c_str());
-                                ImGui::TreePop();
-                            }
-                            else if (const auto pCellPicker = vtkCellPicker::SafeDownCast(vtkObj); pCellPicker && ImGui::TreeNodeEx("vtkCellPicker", ImGuiTreeNodeFlags_DefaultOpen))
-                            {
-                                ImGui::Text(fmt::format("PointId: {}", pCellPicker->GetPointId()).c_str());
-                                ImGui::Text(fmt::format("CellId: {}", pCellPicker->GetCellId()).c_str());
-                                ImGui::Text(fmt::format("SubId: {}", pCellPicker->GetSubId()).c_str());
-                                {
-                                    double v[3];
-                                    pCellPicker->GetPickNormal(v);
-                                    ImGui::Text(fmt::format("PickNormal: {}", v).c_str());
-                                }
-                                {
-                                    int v[3];
-                                    pCellPicker->GetPointIJK(v);
-                                    ImGui::Text(fmt::format("PointIJK: {}", v).c_str());
-                                }
-                                {
-                                    int v[3];
-                                    pCellPicker->GetCellIJK(v);
-                                    ImGui::Text(fmt::format("CellIJK: {}", v).c_str());
-                                }
-                                {
-                                    double v[3];
-                                    pCellPicker->GetPCoords(v);
-                                    ImGui::Text(fmt::format("PCoords: {::.2f}", v).c_str());
-                                }
-                                ImGui::TreePop();
-                            }
-
-                            ImGui::TreePop();
-                        }
-                        else if (const auto pPropPicker = vtkPropPicker::SafeDownCast(vtkObj); pPropPicker && ImGui::TreeNodeEx("vtkPropPicker", ImGuiTreeNodeFlags_DefaultOpen))
-                        {
-                            ImGui::TreePop();
-                        }
-
-                        ImGui::TreePop();
-                    }
-                    else if (const auto pWorldPointPicker = vtkWorldPointPicker::SafeDownCast(vtkObj); pWorldPointPicker && ImGui::TreeNodeEx("vtkWorldPointPicker", ImGuiTreeNodeFlags_DefaultOpen))
-                    {
-                        ImGui::TreePop();
-                    }
-
-                    ImGui::TreePop();
-                }
-                else if (const auto pProperty = vtkProperty::SafeDownCast(vtkObj); pProperty && ImGui::TreeNodeEx("vtkProperty", ImGuiTreeNodeFlags_DefaultOpen))
-                {
-                    ::vtkProperty_setup(pProperty);
-                    ImGui::TreePop();
-                }
-                else if (const auto pImageViewer2 = vtkImageViewer2::SafeDownCast(vtkObj); pImageViewer2 && ImGui::TreeNodeEx("vtkImageViewer2", ImGuiTreeNodeFlags_DefaultOpen))
-                {
-                    if (int v[3]; pImageViewer2->GetSliceRange(v), v[2] = pImageViewer2->GetSlice(), ImGui::SliderInt("Slice", &v[2], v[0], v[1]))
-                    {
-                        pImageViewer2->SetSlice(v[2]);
-                    }
-
-                    if (float v = pImageViewer2->GetColorLevel(); ImGui::SliderFloat("ColorLevel", &v, 0., 10000.))
-                    {
-                        pImageViewer2->SetColorLevel(v);
-                    }
-
-                    if (float v = pImageViewer2->GetColorWindow(); ImGui::SliderFloat("ColorWindow", &v, 0., 10000.))
-                    {
-                        pImageViewer2->SetColorWindow(v);
-                    }
-
-                    if (int v[2]{ pImageViewer2->GetSize()[0], pImageViewer2->GetSize()[1] }; ImGui::DragInt2("Size", v))
-                    {
-                        pImageViewer2->SetSize(v);
-                    }
-
-                    if (int v[2]{ pImageViewer2->GetPosition()[0], pImageViewer2->GetPosition()[1] }; ImGui::DragInt2("Position", v))
-                    {
-                        pImageViewer2->SetPosition(v);
-                    }
-
-                    {
-                        const char* modeText[] = { "SLICE_ORIENTATION_YZ", "SLICE_ORIENTATION_XZ", "SLICE_ORIENTATION_XY" };
-                        if (auto v = pImageViewer2->GetSliceOrientation(); ImGui::Combo("SliceOrientation", &v, modeText, IM_ARRAYSIZE(modeText)))
-                        {
-                            pImageViewer2->SetSliceOrientation(v);
-                        }
-                    }
-
-                    if (bool v = pImageViewer2->GetOffScreenRendering(); ImGui::Checkbox("OffScreenRendering ", &v))
-                    {
-                        pImageViewer2->SetOffScreenRendering(v);
-                    }
-
-                    vtkns::vtkObjSetup("ImageActor", pImageViewer2->GetImageActor(), ImGuiTreeNodeFlags_DefaultOpen);
-
-                    if (const auto pResliceImageViewer = vtkResliceImageViewer::SafeDownCast(vtkObj); pResliceImageViewer && ImGui::TreeNodeEx("vtkResliceImageViewer", ImGuiTreeNodeFlags_DefaultOpen))
-                    {
-                        if (bool v = pResliceImageViewer->GetSliceScrollOnMouseWheel(); ImGui::Checkbox("SliceScrollOnMouseWheel", &v))
-                        {
-                            pResliceImageViewer->SetSliceScrollOnMouseWheel(v);
-                        }
-
-                        if (bool v = pResliceImageViewer->GetThickMode(); ImGui::Checkbox("ThickMode ", &v))
-                        {
-                            pResliceImageViewer->SetThickMode(v);
-                        }
-
-                        {
-                            const char* modeText[] = { "RESLICE_AXIS_ALIGNED", "RESLICE_OBLIQUE" };
-                            if (auto v = pResliceImageViewer->GetResliceMode(); ImGui::Combo("ResliceMode", &v, modeText, IM_ARRAYSIZE(modeText)))
-                            {
-                                pResliceImageViewer->SetResliceMode(v);
-                            }
-                        }
-
-                        if (float v = pResliceImageViewer->GetSliceScrollFactor(); ImGui::SliderFloat("SliceScrollFactor", &v, 0., 10.))
-                        {
-                            pResliceImageViewer->SetSliceScrollFactor(v);
-                        }
-
-                        vtkObjSetup("ResliceCursor", pResliceImageViewer->GetResliceCursor(), ImGuiTreeNodeFlags_DefaultOpen);
-                        vtkObjSetup("ResliceCursorWidget", pResliceImageViewer->GetResliceCursorWidget(), ImGuiTreeNodeFlags_DefaultOpen);
-
-                        ImGui::TreePop();
-                    }
-
-                    ImGui::TreePop();
-                }
-                else if (const auto pResliceCursor = vtkResliceCursor::SafeDownCast(vtkObj); pResliceCursor && ImGui::TreeNodeEx("vtkResliceCursor", ImGuiTreeNodeFlags_DefaultOpen))
-                {
-                    if (bool v = pResliceCursor->GetThickMode(); ImGui::Checkbox("ThickMode ", &v))
-                    {
-                        pResliceCursor->SetThickMode(v);
-                    }
-
-                    if (double v[3]; pResliceCursor->GetThickness(v), ImGui::DragScalarN("Thickness", ImGuiDataType_Double, v, 3, 0.5f))
-                    {
-                        pResliceCursor->SetThickness(v);
-                    }
-                    ImGui::TreePop();
-                }
-                else if (const auto pInteractorObserver = vtkInteractorObserver::SafeDownCast(vtkObj); pInteractorObserver && ImGui::CollapsingHeader("vtkInteractorObserver", ImGuiTreeNodeFlags_DefaultOpen))
-                {
-                    if (bool v = pInteractorObserver->GetEnabled(); ImGui::Checkbox("Enabled ", &v))
-                    {
-                        pInteractorObserver->SetEnabled(v);
-                    }
-
-                    if (ImGui::Button("On")) pInteractorObserver->On(); ImGui::SameLine();
-                    if (ImGui::Button("Off")) pInteractorObserver->Off();
-
-                    if (const auto pAbstractWidget = vtkAbstractWidget::SafeDownCast(vtkObj); pAbstractWidget && ImGui::CollapsingHeader("vtkAbstractWidget", ImGuiTreeNodeFlags_DefaultOpen))
-                    {
-                        if (bool v = pAbstractWidget->GetManagesCursor(); ImGui::Checkbox("ManagesCursor ", &v))
-                        {
-                            pAbstractWidget->SetManagesCursor(v);
-                        }
-                        if (bool v = pAbstractWidget->GetProcessEvents(); ImGui::Checkbox("ProcessEvents ", &v))
-                        {
-                            pAbstractWidget->SetProcessEvents(v);
-                        }
-                        vtkObjSetup("Representation", pAbstractWidget->GetRepresentation(), ImGuiTreeNodeFlags_DefaultOpen);
-                        if (const auto pResliceCursorWidget = vtkResliceCursorWidget::SafeDownCast(vtkObj); pResliceCursorWidget && ImGui::TreeNodeEx("vtkResliceCursorWidget", ImGuiTreeNodeFlags_DefaultOpen))
-                        {
-                            ImGui::TreePop();
-                        }
-                        else if (const auto pBoxWidget2 = vtkBoxWidget2::SafeDownCast(vtkObj); pBoxWidget2 && ImGui::TreeNodeEx("vtkBoxWidget2", ImGuiTreeNodeFlags_DefaultOpen))
-                        {
-                            if (bool v = pBoxWidget2->GetTranslationEnabled(); ImGui::Checkbox("TranslationEnabled ", &v))
-                            {
-                                pBoxWidget2->SetTranslationEnabled(v);
-                            }
-                            if (bool v = pBoxWidget2->GetRotationEnabled(); ImGui::Checkbox("RotationEnabled ", &v))
-                            {
-                                pBoxWidget2->SetRotationEnabled(v);
-                            }
-                            if (bool v = pBoxWidget2->GetScalingEnabled(); ImGui::Checkbox("ScalingEnabled ", &v))
-                            {
-                                pBoxWidget2->SetScalingEnabled(v);
-                            }
-                            if (bool v = pBoxWidget2->GetMoveFacesEnabled(); ImGui::Checkbox("MoveFacesEnabled ", &v))
-                            {
-                                pBoxWidget2->SetMoveFacesEnabled(v);
-                            }
-                            ImGui::TreePop();
-                        }
-                        else if (const auto pLineWidget2 = vtkLineWidget2::SafeDownCast(vtkObj); pLineWidget2 && ImGui::CollapsingHeader("vtkLineWidget2", ImGuiTreeNodeFlags_DefaultOpen))
-                        {
-                            //vtkObjSetup("LineRepresentation", pLineWidget2->GetLineRepresentation(), ImGuiTreeNodeFlags_DefaultOpen);
-                        }
-                        else if (const auto pDistanceWidget = vtkDistanceWidget::SafeDownCast(vtkObj); pDistanceWidget && ImGui::CollapsingHeader("vtkDistanceWidget", ImGuiTreeNodeFlags_DefaultOpen))
-                        {
-                            {
-                                const char* modeText[] = { "Start", "Define", "Manipulate" };
-                                ImGui::Text(fmt::format("WidgetState: {}", modeText[pDistanceWidget->GetWidgetState()]).c_str());
-                            }
-                        }
-                        else if (const auto pBorderWidget = vtkBorderWidget::SafeDownCast(vtkObj); pBorderWidget && ImGui::CollapsingHeader("vtkBorderWidget", ImGuiTreeNodeFlags_DefaultOpen))
-                        {
-                            if (bool v = pBorderWidget->GetResizable(); ImGui::Checkbox("Resizable ", &v))
-                            {
-                                pBorderWidget->SetResizable(v);
-                            }
-                            if (bool v = pBorderWidget->GetSelectable(); ImGui::Checkbox("Selectable ", &v))
-                            {
-                                pBorderWidget->SetSelectable(v);
-                            }
-                        }
-                    }
-                    else if (const auto p3DWidget = vtk3DWidget::SafeDownCast(vtkObj); p3DWidget && ImGui::CollapsingHeader("p3DWidget", ImGuiTreeNodeFlags_DefaultOpen))
-                    {
-                        vtk3DWidget_setup(p3DWidget);
-                    }
-                }
-                else if (const auto pAlgorithm = vtkAlgorithm::SafeDownCast(vtkObj); pAlgorithm && ImGui::CollapsingHeader("vtkAlgorithm", ImGuiTreeNodeFlags_DefaultOpen))
-                {
-                    if (ImGui::Button("Update"))
-                    {
-                        pAlgorithm->Update();
-                    }
-
-                    if (ImGui::Button("UpdateInformation"))
-                    {
-                        pAlgorithm->UpdateInformation();
-                    }
-                    if (const auto pImageAlgorithm = vtkImageAlgorithm::SafeDownCast(vtkObj); pImageAlgorithm && ImGui::TreeNodeEx("vtkImageAlgorithm", ImGuiTreeNodeFlags_DefaultOpen))
-                    {
-                        if (const auto pThreadedImageAlgorithm = vtkThreadedImageAlgorithm::SafeDownCast(vtkObj); pThreadedImageAlgorithm && ImGui::TreeNodeEx("vtkThreadedImageAlgorithm", ImGuiTreeNodeFlags_DefaultOpen))
-                        {
-                            if (const auto pImageSlab = vtkImageSlab::SafeDownCast(vtkObj); pImageSlab && ImGui::TreeNodeEx("vtkImageSlab", ImGuiTreeNodeFlags_DefaultOpen))
-                            {
-                                {
-                                    const char* modeText[] = { "VTK_IMAGE_SLAB_MIN", "VTK_IMAGE_SLAB_MAX", "VTK_IMAGE_SLAB_MEAN", "VTK_IMAGE_SLAB_SUM" };
-                                    if (auto v = pImageSlab->GetOperation(); ImGui::Combo("Operation", &v, modeText, IM_ARRAYSIZE(modeText)))
-                                    {
-                                        pImageSlab->SetOperation(v);
-                                    }
-                                }
-                                {
-                                    const char* modeText[] = { "X", "Y", "Z" };
-                                    if (auto v = pImageSlab->GetOrientation(); ImGui::Combo("Orientation", &v, modeText, IM_ARRAYSIZE(modeText)))
-                                    {
-                                        pImageSlab->SetOrientation(v);
-                                    }
-                                }
-                                if (int v[2]; pImageSlab->GetSliceRange(v), ImGui::DragInt2("SliceRange", v))
-                                {
-                                    pImageSlab->SetSliceRange(v);
-                                }
-
-                                ImGui::TreePop();
-                            }
-                            else if (const auto pImageThreshold = vtkImageThreshold::SafeDownCast(vtkObj); pImageThreshold && ImGui::CollapsingHeader("vtkImageThreshold", ImGuiTreeNodeFlags_DefaultOpen))
-                            {
-                                ImGui::Text("OutputScalarType: %d", pImageThreshold->GetOutputScalarType());
-                                if (bool v = pImageThreshold->GetReplaceIn(); ImGui::Checkbox("ReplaceIn ", &v))
-                                {
-                                    pImageThreshold->SetReplaceIn(v);
-                                }
-                                if (bool v = pImageThreshold->GetReplaceOut(); ImGui::Checkbox("ReplaceOut ", &v))
-                                {
-                                    pImageThreshold->SetReplaceOut(v);
-                                }
-                                if (float v = pImageThreshold->GetInValue(); ImGui::DragFloat("InValue", &v))
-                                {
-                                    pImageThreshold->SetInValue(v);
-                                }
-                                if (float v = pImageThreshold->GetOutValue(); ImGui::DragFloat("OutValue", &v))
-                                {
-                                    pImageThreshold->SetOutValue(v);
-                                }
-                                {
-                                    float l = pImageThreshold->GetLowerThreshold();
-                                    float u = pImageThreshold->GetUpperThreshold();
-                                    if (ImGui::DragFloatRange2("ThresholdBetween", &l, &u))
-                                    {
-                                        pImageThreshold->ThresholdBetween(l, u);
-                                    }
-                                    if (ImGui::DragFloat("ThresholdByLower", &u))
-                                    {
-                                        pImageThreshold->ThresholdByLower(u);
-                                    }
-                                    if (ImGui::DragFloat("ThresholdByUpper", &l))
-                                    {
-                                        pImageThreshold->ThresholdByUpper(l);
-                                    }
-                                }
-                            }
-                            else if (const auto pImageReslice = vtkImageReslice::SafeDownCast(vtkObj); pImageReslice && ImGui::CollapsingHeader("vtkImageReslice", ImGuiTreeNodeFlags_DefaultOpen))
-                            {
-                                ::vtkImageReslice_setup(pImageReslice);
-                            }
-                            ImGui::TreePop();
-                        }
-                        else if (const auto pExtractVOI = vtkExtractVOI::SafeDownCast(vtkObj); pExtractVOI && ImGui::CollapsingHeader("vtkExtractVOI", ImGuiTreeNodeFlags_DefaultOpen))
-                        {
-                            if (int v[6]; pExtractVOI->GetVOI(v), ImGui::DragScalarN("VOI", ImGuiDataType_S32, v, IM_ARRAYSIZE(v)))
-                            {
-                                pExtractVOI->SetVOI(v);
-                                pExtractVOI->Update();
-                            }
-
-                            {
-                                int minV = 1;
-                                int maxV = 8;
-                                if (int v[3]; pExtractVOI->GetSampleRate(v), ImGui::DragScalarN("SampleRate", ImGuiDataType_S32, v, IM_ARRAYSIZE(v), 1.f, &minV, &maxV))
-                                {
-                                    pExtractVOI->SetSampleRate(v);
-                                    pExtractVOI->Update();
-                                }
-                            }
-                        }
-                        else if (const auto pImageGridSource = vtkImageGridSource::SafeDownCast(vtkObj); pImageGridSource && ImGui::CollapsingHeader("vtkImageGridSource", ImGuiTreeNodeFlags_DefaultOpen))
-                        {
-                            ::vtkImageGridSource_setup(pImageGridSource);
-                        }
-                        ImGui::TreePop();
-                    }
-                    else if (const auto pPolyDataAlgorithm = vtkPolyDataAlgorithm::SafeDownCast(vtkObj); pPolyDataAlgorithm && ImGui::TreeNodeEx("vtkPolyDataAlgorithm", ImGuiTreeNodeFlags_DefaultOpen))
-                    {
-                        vtkObjSetup("Output", pPolyDataAlgorithm->GetOutput());
-
-                        if (const auto pLineSource = vtkLineSource::SafeDownCast(vtkObj); pLineSource && ImGui::TreeNodeEx("vtkLineSource", ImGuiTreeNodeFlags_DefaultOpen))
-                        {
-                            if (double v[3]; pLineSource->GetPoint1(v), ImGui::DragScalarN("Point1", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), 0.1f))
-                            {
-                                pLineSource->SetPoint1(v);
-                            }
-                            if (double v[3]; pLineSource->GetPoint2(v), ImGui::DragScalarN("Point2", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), 0.1f))
-                            {
-                                pLineSource->SetPoint2(v);
-                            }
-                            if (bool v = pLineSource->GetUseRegularRefinement(); ImGui::Checkbox("UseRegularRefinement", &v))
-                            {
-                                pLineSource->SetUseRegularRefinement(v);
-                            }
-                            if (int v = pLineSource->GetResolution(); ImGui::DragInt("Resolution", &v))
-                            {
-                                pLineSource->SetResolution(v);
-                            }
-                            if (int v = pLineSource->GetOutputPointsPrecision(); ImGui::DragInt("OutputPointsPrecision", &v))
-                            {
-                                pLineSource->SetOutputPointsPrecision(v);
-                            }
-                            if (pLineSource->GetPoints())
-                            {
-                                ImGui::Text("PointsNumber: %d", pLineSource->GetPoints()->GetNumberOfPoints());
-                            }
-
-                            ImGui::TreePop();
-                        }
-                        else if (const auto pVolumeOutlineSource = vtkVolumeOutlineSource::SafeDownCast(vtkObj); pVolumeOutlineSource && ImGui::TreeNodeEx("vtkVolumeOutlineSource", ImGuiTreeNodeFlags_DefaultOpen))
-                        {
-                            if (bool v = pVolumeOutlineSource->GetGenerateFaces(); ImGui::Checkbox("GenerateFaces", &v))
-                            {
-                                pVolumeOutlineSource->SetGenerateFaces(v);
-                            }
-                            if (bool v = pVolumeOutlineSource->GetGenerateScalars(); ImGui::Checkbox("GenerateScalars", &v))
-                            {
-                                pVolumeOutlineSource->SetGenerateScalars(v);
-                            }
-                            if (bool v = pVolumeOutlineSource->GetGenerateOutline(); ImGui::Checkbox("GenerateOutline", &v))
-                            {
-                                pVolumeOutlineSource->SetGenerateOutline(v);
-                            }
-                            if (float v[3] = { pVolumeOutlineSource->GetColor()[0],pVolumeOutlineSource->GetColor()[1],pVolumeOutlineSource->GetColor()[2] }; ImGui::ColorEdit3("Color", v))
-                            {
-                                pVolumeOutlineSource->SetColor(v[0], v[1], v[2]);
-                            }
-                            if (float v[3]{ pVolumeOutlineSource->GetActivePlaneColor()[0],pVolumeOutlineSource->GetActivePlaneColor()[1],pVolumeOutlineSource->GetActivePlaneColor()[2] }; ImGui::ColorEdit3("ActivePlaneColor", v))
-                            {
-                                pVolumeOutlineSource->SetActivePlaneColor(v[0], v[1], v[2]);
-                            }
-                            if (int v = pVolumeOutlineSource->GetActivePlaneId(); ImGui::SliderInt("ActivePlaneId", &v, -1, 5))
-                            {
-                                pVolumeOutlineSource->SetActivePlaneId(v);
-                            }
-                            ImGui::TreePop();
-                        }
-                        else if (const auto pFlyingEdges3D = vtkFlyingEdges3D::SafeDownCast(vtkObj); pFlyingEdges3D && ImGui::CollapsingHeader("vtkFlyingEdges3D", ImGuiTreeNodeFlags_DefaultOpen))
-                        {
-                            ::vtkFlyingEdges3D_setup(pFlyingEdges3D);
-                        }
-                        else if (const auto pMarchingCubes = vtkMarchingCubes::SafeDownCast(vtkObj); pMarchingCubes && ImGui::CollapsingHeader("vtkMarchingCubes", ImGuiTreeNodeFlags_DefaultOpen))
-                        {
-                            ::vtkMarchingCubes_setup(pMarchingCubes);
-                        }
-                        else if (const auto pTransformPolyDataFilter = vtkTransformPolyDataFilter::SafeDownCast(vtkObj); pTransformPolyDataFilter && ImGui::CollapsingHeader("vtkTransformPolyDataFilter", ImGuiTreeNodeFlags_DefaultOpen))
-                        {
-                            ::vtkTransformPolyDataFilter_setup(pTransformPolyDataFilter);
-                        }
-                        else if (const auto pPlaneSource = vtkPlaneSource::SafeDownCast(vtkObj); pPlaneSource && ImGui::CollapsingHeader("vtkPlaneSource", ImGuiTreeNodeFlags_DefaultOpen))
-                        {
-                            ::vtkPlaneSource_setup(pPlaneSource);
-                        }
-                        else if (const auto pImageToPolyDataFilter = vtkImageToPolyDataFilter::SafeDownCast(vtkObj); pImageToPolyDataFilter && ImGui::CollapsingHeader("vtkImageToPolyDataFilter", ImGuiTreeNodeFlags_DefaultOpen))
-                        {
-                            vtkImageToPolyDataFilter_setup(pImageToPolyDataFilter);
-                        }
-                        ImGui::TreePop();
-                    }
-                    else if (const auto pAbstractMapper = vtkAbstractMapper::SafeDownCast(vtkObj); pAbstractMapper && ImGui::CollapsingHeader("vtkAbstractMapper", ImGuiTreeNodeFlags_DefaultOpen))
-                    {
-                        ImGui::Text(fmt::format("NumberOfClippingPlanes: {}", pAbstractMapper->GetNumberOfClippingPlanes()).c_str());
-                        if (const auto pAbstractMapper3D = vtkAbstractMapper3D::SafeDownCast(vtkObj); pAbstractMapper3D && ImGui::CollapsingHeader("vtkAbstractMapper3D", ImGuiTreeNodeFlags_DefaultOpen))
-                        {
-                            {
-                                double v[6];
-                                pAbstractMapper3D->GetBounds(v);
-                                ImGui::Text(fmt::format("Bounds: {::.2f}", v).c_str());
-                            }
-                            {
-                                double v[3];
-                                pAbstractMapper3D->GetCenter(v);
-                                ImGui::Text(fmt::format("Center: {::.2f}", v).c_str());
-                            }
-                            ImGui::Text(fmt::format("Length: {}", pAbstractMapper3D->GetLength()).c_str());
-                            ImGui::Text(fmt::format("IsARayCastMapper: {}", pAbstractMapper3D->IsARayCastMapper()).c_str());
-                            ImGui::Text(fmt::format("IsARenderIntoImageMapper: {}", pAbstractMapper3D->IsARenderIntoImageMapper()).c_str());
-                        }
-                    }
-                    else if (const auto pDataSetAlgorithm = vtkDataSetAlgorithm::SafeDownCast(vtkObj); pDataSetAlgorithm && ImGui::CollapsingHeader("vtkDataSetAlgorithm", ImGuiTreeNodeFlags_DefaultOpen))
-                    {
-                        vtkDataSetAlgorithm_setup(pDataSetAlgorithm);
-                    }
-                }
-                else if (const auto pTextProperty = vtkTextProperty::SafeDownCast(vtkObj); pTextProperty && ImGui::CollapsingHeader("vtkTextProperty", ImGuiTreeNodeFlags_DefaultOpen))
-                {
-                    if (float v[3] = { pTextProperty->GetColor()[0],pTextProperty->GetColor()[1],pTextProperty->GetColor()[2] }; ImGui::ColorEdit3("Color", v))
-                    {
-                        pTextProperty->SetColor(v[0], v[1], v[2]);
-                    }
-                    if (double v = pTextProperty->GetOpacity(); ImGui::DragScalar("Opacity", ImGuiDataType_Double, &v, 0.01f))
-                    {
-                        pTextProperty->SetOpacity(v);
-                    }
-                    if (float v[3] = { pTextProperty->GetBackgroundColor()[0],pTextProperty->GetBackgroundColor()[1],pTextProperty->GetBackgroundColor()[2] }; ImGui::ColorEdit3("BackgroundColor", v))
-                    {
-                        pTextProperty->SetBackgroundColor(v[0], v[1], v[2]);
-                    }
-                    if (double v = pTextProperty->GetBackgroundOpacity(); ImGui::DragScalar("BackgroundOpacity", ImGuiDataType_Double, &v, 0.01f))
-                    {
-                        pTextProperty->SetBackgroundOpacity(v);
-                    }
-                    {
-                        double vRGBA[4];
-                        pTextProperty->GetBackgroundRGBA(vRGBA);
-                        if (float v[4] = { vRGBA[0],vRGBA[1],vRGBA[2],vRGBA[3] }; ImGui::ColorEdit4("BackgroundRGBA", v))
-                        {
-                            pTextProperty->SetBackgroundRGBA(v[0], v[1], v[2], v[3]);
-                        }
-                    }
-                    if (float v[3] = { pTextProperty->GetFrameColor()[0],pTextProperty->GetFrameColor()[1],pTextProperty->GetFrameColor()[2] }; ImGui::ColorEdit3("FrameColor", v))
-                    {
-                        pTextProperty->SetFrameColor(v[0], v[1], v[2]);
-                    }
-                    if (int v = pTextProperty->GetFrameWidth(); ImGui::DragInt("FrameWidth", &v))
-                    {
-                        pTextProperty->SetFrameWidth(v);
-                    }
-                    if (bool v = pTextProperty->GetFrame(); ImGui::Checkbox("Frame ", &v))
-                    {
-                        pTextProperty->SetFrame(v);
-                    }
-                    if (bool v = pTextProperty->GetBold(); ImGui::Checkbox("Bold ", &v))
-                    {
-                        pTextProperty->SetBold(v);
-                    }
-                    ImGui::SameLine();
-                    if (bool v = pTextProperty->GetItalic(); ImGui::Checkbox("Italic ", &v))
-                    {
-                        pTextProperty->SetItalic(v);
-                    }
-                    if (bool v = pTextProperty->GetInteriorLinesVisibility(); ImGui::Checkbox("InteriorLinesVisibility ", &v))
-                    {
-                        pTextProperty->SetInteriorLinesVisibility(v);
-                    }
-                    if (int v = pTextProperty->GetInteriorLinesWidth(); ImGui::DragInt("InteriorLinesWidth", &v))
-                    {
-                        pTextProperty->SetInteriorLinesWidth(v);
-                    }
-                    if (float v[3] = { pTextProperty->GetInteriorLinesColor()[0],pTextProperty->GetInteriorLinesColor()[1],pTextProperty->GetInteriorLinesColor()[2] }; ImGui::ColorEdit3("InteriorLinesColor", v))
-                    {
-                        pTextProperty->SetInteriorLinesColor(v[0], v[1], v[2]);
-                    }
-                    if (double v = pTextProperty->GetCellOffset(); ImGui::DragScalar("CellOffset", ImGuiDataType_Double, &v, 0.01f))
-                    {
-                        pTextProperty->SetCellOffset(v);
-                    }
-                    if (float v = pTextProperty->GetFontSize(); ImGui::SliderFloat("FontSize", &v, 0, 100))
-                    {
-                        pTextProperty->SetFontSize(v);
-                    }
-                    if (ImGui::Button("SetFontFamilyToArial")) pTextProperty->SetFontFamilyToArial();
-                    if (ImGui::Button("SetFontFamilyToCourier")) pTextProperty->SetFontFamilyToCourier();
-                    if (ImGui::Button("SetFontFamilyToTimes")) pTextProperty->SetFontFamilyToTimes();
-                }
-                else if (const auto pProperty2D = vtkProperty2D::SafeDownCast(vtkObj); pProperty2D && ImGui::CollapsingHeader("vtkProperty2D", ImGuiTreeNodeFlags_DefaultOpen))
-                {
-                    if (float v[3] = { pProperty2D->GetColor()[0],pProperty2D->GetColor()[1],pProperty2D->GetColor()[2] }; ImGui::ColorEdit3("Color", v))
-                    {
-                        pProperty2D->SetColor(v[0], v[1], v[2]);
-                    }
-                    if (double v = pProperty2D->GetOpacity(); ImGui::DragScalar("Opacity", ImGuiDataType_Double, &v, 0.01f))
-                    {
-                        pProperty2D->SetOpacity(v);
-                    }
-                    if (float v = pProperty2D->GetPointSize(); ImGui::DragFloat("PointSize", &v, 0.01f))
-                    {
-                        pProperty2D->SetPointSize(v);
-                    }
-                    if (float v = pProperty2D->GetLineWidth(); ImGui::DragFloat("LineWidth", &v, 0.01f))
-                    {
-                        pProperty2D->SetLineWidth(v);
-                    }
-                    if (int v = pProperty2D->GetLineStipplePattern(); ImGui::DragInt("LineStipplePattern", &v))
-                    {
-                        pProperty2D->SetLineStipplePattern(v);
-                    }
-                    if (int v = pProperty2D->GetLineStippleRepeatFactor(); ImGui::DragInt("LineStippleRepeatFactor", &v))
-                    {
-                        pProperty2D->SetLineStippleRepeatFactor(v);
-                    }
-                    {
-                        const char* modeText[] = { "VTK_BACKGROUND_LOCATION", "VTK_FOREGROUND_LOCATION" };
-                        if (auto v = pProperty2D->GetDisplayLocation(); ImGui::Combo("DisplayLocation", &v, modeText, IM_ARRAYSIZE(modeText)))
-                        {
-                            pProperty2D->SetDisplayLocation(v);
-                        }
-                    }
-                }
-                else if (const auto pImplicitFunction = vtkImplicitFunction::SafeDownCast(vtkObj); pImplicitFunction && ImGui::CollapsingHeader("vtkImplicitFunction", ImGuiTreeNodeFlags_DefaultOpen))
-                {
-                    vtkImplicitFunction_setup(pImplicitFunction);
-                }
-                else if (const auto pImageProperty = vtkImageProperty::SafeDownCast(vtkObj); pImageProperty && ImGui::CollapsingHeader("vtkImageProperty", ImGuiTreeNodeFlags_DefaultOpen))
-                {
-                    vtkImageProperty_setup(pImageProperty);
-                }
-                else if (const auto pWindow = vtkWindow::SafeDownCast(vtkObj); pWindow && ImGui::CollapsingHeader("vtkWindow", ImGuiTreeNodeFlags_DefaultOpen))
-                {
-                    vtkWindow_setup(pWindow);
-                }
-                else if (const auto pAbstractImageInterpolator = vtkAbstractImageInterpolator::SafeDownCast(vtkObj); pAbstractImageInterpolator && ImGui::CollapsingHeader("vtkAbstractImageInterpolator", ImGuiTreeNodeFlags_DefaultOpen))
-                {
-                    vtkAbstractImageInterpolator_setup(pAbstractImageInterpolator);
-                }
-                else if (const auto pMatrix4x4 = vtkMatrix4x4::SafeDownCast(vtkObj); pMatrix4x4 && ImGui::CollapsingHeader("vtkMatrix4x4", ImGuiTreeNodeFlags_DefaultOpen))
-                {
-                    vtkMatrix4x4_setup(pMatrix4x4);
-                }
-
-                // vtkWindow
-#if 0
-                if (const auto pRenderWindow = vtkRenderWindow::SafeDownCast(vtkObj); pRenderWindow && ImGui::CollapsingHeader("vtkRenderWindow", ImGuiTreeNodeFlags_DefaultOpen))
-                {
-                    vtkRenderWindow_setup(pRenderWindow);
-                }
-#else
-                vtkns::setupHelper<vtkRenderWindow>(vtkObj);
-#endif
-
-                // vtkDataSetAlgorithm
-#if 0
-                if (const auto pElevationFilter = vtkElevationFilter::SafeDownCast(vtkObj); pElevationFilter && ImGui::CollapsingHeader("vtkElevationFilter", ImGuiTreeNodeFlags_DefaultOpen))
-                {
-                    vtkElevationFilter_setup(pElevationFilter);
-                }
-#else
-                vtkns::setupHelper<vtkElevationFilter>(vtkObj);
-#endif
-
-                // vtkAbstractMapper3D
-                vtkns::setupHelper<vtkMapper, vtkImageMapper3D>(vtkObj);
-
-                // vtkMapper
-                vtkns::setupHelper<vtkPolyDataMapper>(vtkObj);
-
-                // vtkImplicitFunction
-                vtkns::setupHelper<vtkPlane>(vtkObj);
-
-                // vtk3DWidget
-                vtkns::setupHelper<vtkPointWidget>(vtkObj);
-
-                // 继承自vtkProp
-#if 0
-                if (const auto pProp3D = vtkProp3D::SafeDownCast(vtkObj); pProp3D && ImGui::CollapsingHeader("vtkProp3D", ImGuiTreeNodeFlags_DefaultOpen))
-                {
-                    ::vtkProp3D_setup(pProp3D);
-                }
-                else if (const auto pWidgetRepresentation = vtkWidgetRepresentation::SafeDownCast(vtkObj); pWidgetRepresentation && ImGui::CollapsingHeader("vtkWidgetRepresentation", ImGuiTreeNodeFlags_DefaultOpen))
-                {
-                    ::vtkWidgetRepresentation_setup(pWidgetRepresentation);
-                }
-                else if (const auto pActor2D = vtkActor2D::SafeDownCast(vtkObj); pActor2D && ImGui::CollapsingHeader("vtkActor2D", ImGuiTreeNodeFlags_DefaultOpen))
-                {
-                    ::vtkActor2D_setup(pActor2D);
-                }
-#else
-                vtkns::setupHelper<vtkProp3D, vtkActor2D, vtkWidgetRepresentation>(vtkObj);
-#endif
-                // vtkAbstractVolumeMapper
-                vtkns::setupHelper<vtkVolumeMapper>(vtkObj);
-                // vtkVolumeMapper
-                vtkns::setupHelper<vtkGPUVolumeRayCastMapper>(vtkObj);
-
-                // 继承自vtkActor2D
-#if 0
-                if (const auto pAxisActor2D = vtkAxisActor2D::SafeDownCast(vtkObj); pAxisActor2D && ImGui::CollapsingHeader("vtkAxisActor2D", ImGuiTreeNodeFlags_DefaultOpen))
-                {
-
-                }
-                else if (const auto pCaptionActor2D = vtkCaptionActor2D::SafeDownCast(vtkObj); pCaptionActor2D && ImGui::CollapsingHeader("vtkCaptionActor2D", ImGuiTreeNodeFlags_DefaultOpen))
-                {
-                    vtkCaptionActor2D_setup(pCaptionActor2D);
-                }
-#else
-                vtkns::setupHelper<vtkAxisActor2D, vtkCaptionActor2D>(vtkObj);
-#endif
-
-                // 继承自vtkWidgetRepresentation
-                if (const auto pBoxRepresentation = vtkBoxRepresentation::SafeDownCast(vtkObj); pBoxRepresentation && ImGui::CollapsingHeader("vtkBoxRepresentation", ImGuiTreeNodeFlags_DefaultOpen))
-                {
-                    if (bool v = pBoxRepresentation->GetInsideOut(); ImGui::Checkbox("InsideOut", &v))
-                    {
-                        pBoxRepresentation->SetInsideOut(v);
-                    }
-                    if (bool v = pBoxRepresentation->GetOutlineCursorWires(); ImGui::Checkbox("OutlineCursorWires", &v))
-                    {
-                        pBoxRepresentation->SetOutlineCursorWires(v);
-                    }
-                    if (bool v = pBoxRepresentation->GetOutlineFaceWires(); ImGui::Checkbox("OutlineFaceWires", &v))
-                    {
-                        pBoxRepresentation->SetOutlineFaceWires(v);
-                    }
-                    if (bool v = pBoxRepresentation->GetTwoPlaneMode(); ImGui::Checkbox("TwoPlaneMode", &v))
-                    {
-                        pBoxRepresentation->SetTwoPlaneMode(v);
-                    }
-                    if (bool v = pBoxRepresentation->GetSnapToAxes(); ImGui::Checkbox("SnapToAxes", &v))
-                    {
-                        pBoxRepresentation->SetSnapToAxes(v);
-                    }
-                    if (ImGui::Button("HandlesOn")) pBoxRepresentation->HandlesOn();
-                    ImGui::SameLine();
-                    if (ImGui::Button("HandlesOff")) pBoxRepresentation->HandlesOff();
-                    if (ImGui::Button("StepBackward")) pBoxRepresentation->StepBackward();
-                    ImGui::SameLine();
-                    if (ImGui::Button("StepForward")) pBoxRepresentation->StepForward();
-                }
-                else if (const auto pLineRepresentation = vtkLineRepresentation::SafeDownCast(vtkObj); pLineRepresentation && ImGui::CollapsingHeader("vtkLineRepresentation", ImGuiTreeNodeFlags_DefaultOpen))
-                {
-                    if (bool v = pLineRepresentation->GetDistanceAnnotationVisibility(); ImGui::Checkbox("DistanceAnnotationVisibility ", &v))
-                    {
-                        pLineRepresentation->SetDistanceAnnotationVisibility(v);
-                    }
-                    if (bool v = pLineRepresentation->GetDirectionalLine(); ImGui::Checkbox("DirectionalLine ", &v))
-                    {
-                        pLineRepresentation->SetDirectionalLine(v);
-                    }
-                    ImGui::Text(pLineRepresentation->GetDistanceAnnotationFormat());
-                    ImGui::Text(fmt::format("Distance: {}", pLineRepresentation->GetDistance()).c_str());
-                    if (float v[3]{ pLineRepresentation->GetDistanceAnnotationScale()[0], pLineRepresentation->GetDistanceAnnotationScale()[1],pLineRepresentation->GetDistanceAnnotationScale()[2] }; ImGui::DragFloat3("DistanceAnnotationScale", v, .1f))
-                    {
-                        pLineRepresentation->SetDistanceAnnotationScale(v[0], v[1], v[2]);
-                    }
-                    {
-                        const char* modeText[] = { "Outside", "OnP1", "OnP2", "TranslatingP1", "TranslatingP2", "OnLine", "Scaling" };
-                        ImGui::Text(fmt::format("InteractionState: {}", modeText[pLineRepresentation->GetInteractionState()]).c_str());
-                    }
-                    vtkObjSetup("EndPointProperty", pLineRepresentation->GetEndPointProperty());
-                    vtkObjSetup("EndPoint2Property", pLineRepresentation->GetEndPoint2Property());
-                    vtkObjSetup("LineProperty", pLineRepresentation->GetLineProperty());
-                    vtkObjSetup("SelectedLineProperty", pLineRepresentation->GetSelectedLineProperty());
-                    vtkObjSetup("DistanceAnnotationProperty", pLineRepresentation->GetDistanceAnnotationProperty());
-                }
-                else if (const auto pDistanceRepresentation = vtkDistanceRepresentation::SafeDownCast(vtkObj); pDistanceRepresentation && ImGui::CollapsingHeader("vtkDistanceRepresentation", ImGuiTreeNodeFlags_DefaultOpen))
-                {
-                    {
-                        const char* modeText[] = { "Outside", "NearP1", "NearP2" };
-                        ImGui::Text(fmt::format("InteractionState: {}", modeText[pDistanceRepresentation->GetInteractionState()]).c_str());
-                    }
-                    ImGui::Text(fmt::format("Distance: {}", pDistanceRepresentation->GetDistance()).c_str());
-                    if (bool v = pDistanceRepresentation->GetRulerMode(); ImGui::Checkbox("RulerMode ", &v))
-                    {
-                        pDistanceRepresentation->SetRulerMode(v);
-                    }
-                    if (float v = pDistanceRepresentation->GetRulerDistance(); ImGui::SliderFloat("RulerDistance", &v, 0., 20.))
-                    {
-                        pDistanceRepresentation->SetRulerDistance(v);
-                    }
-                    if (int v = pDistanceRepresentation->GetNumberOfRulerTicks(); ImGui::SliderInt("NumberOfRulerTicks", &v, 0., 20.))
-                    {
-                        pDistanceRepresentation->SetNumberOfRulerTicks(v);
-                    }
-                    if (float v = pDistanceRepresentation->GetScale(); ImGui::SliderFloat("Scale", &v, 0., 10.))
-                    {
-                        pDistanceRepresentation->SetScale(v);
-                    }
-                    if (double v[3]; pDistanceRepresentation->GetPoint1WorldPosition(v), ImGui::DragScalarN("Point1WorldPosition", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), 0.0001f))
-                    {
-                        pDistanceRepresentation->SetPoint1WorldPosition(v);
-                    }
-                    if (double v[3]; pDistanceRepresentation->GetPoint2WorldPosition(v), ImGui::DragScalarN("Point2WorldPosition", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), 0.0001f))
-                    {
-                        pDistanceRepresentation->SetPoint2WorldPosition(v);
-                    }
-                    if (double v[3]; pDistanceRepresentation->GetPoint1DisplayPosition(v), ImGui::DragScalarN("Point1DisplayPosition", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), 0.1f))
-                    {
-                        pDistanceRepresentation->SetPoint1DisplayPosition(v);
-                    }
-                    if (double v[3]; pDistanceRepresentation->GetPoint2DisplayPosition(v), ImGui::DragScalarN("Point2DisplayPosition", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), 0.1f))
-                    {
-                        pDistanceRepresentation->SetPoint2DisplayPosition(v);
-                    }
-                    if (int v = pDistanceRepresentation->GetTolerance(); ImGui::DragInt("Tolerance", &v))
-                    {
-                        pDistanceRepresentation->SetTolerance(v);
-                    }
-                    vtkObjSetup("Point1Representation", pDistanceRepresentation->GetPoint1Representation());
-                    vtkObjSetup("Point2Representation", pDistanceRepresentation->GetPoint2Representation());
-                }
-                else if (const auto pBorderRepresentation = vtkBorderRepresentation::SafeDownCast(vtkObj); pBorderRepresentation && ImGui::CollapsingHeader("vtkBorderRepresentation", ImGuiTreeNodeFlags_DefaultOpen))
-                {
-                    if (float v[2]{ pBorderRepresentation->GetPosition()[0], pBorderRepresentation->GetPosition()[1] }; ImGui::DragFloat2("Position", v, 0.01f))
-                    {
-                        pBorderRepresentation->SetPosition(v[0], v[1]);
-                    }
-                    if (float v[2]{ pBorderRepresentation->GetPosition2()[0], pBorderRepresentation->GetPosition2()[1] }; ImGui::DragFloat2("Position2", v, 0.01f))
-                    {
-                        pBorderRepresentation->SetPosition2(v[0], v[1]);
-                    }
-                    if (float v[3] = { pBorderRepresentation->GetBorderColor()[0],pBorderRepresentation->GetBorderColor()[1],pBorderRepresentation->GetBorderColor()[2] }; ImGui::ColorEdit3("BorderColor", v))
-                    {
-                        pBorderRepresentation->SetBorderColor(v[0], v[1], v[2]);
-                    }
-                    if (float v[3] = { pBorderRepresentation->GetPolygonColor()[0],pBorderRepresentation->GetPolygonColor()[1],pBorderRepresentation->GetPolygonColor()[2] }; ImGui::ColorEdit3("PolygonColor", v))
-                    {
-                        pBorderRepresentation->SetPolygonColor(v[0], v[1], v[2]);
-                    }
-                    if (double v = pBorderRepresentation->GetPolygonOpacity(); ImGui::DragScalar("PolygonOpacity", ImGuiDataType_Double, &v, 0.01f))
-                    {
-                        pBorderRepresentation->SetPolygonOpacity(v);
-                    }
-                    {
-                        double vPolygonRGBA[4];
-                        pBorderRepresentation->GetPolygonRGBA(vPolygonRGBA);
-                        if (float v[4] = { vPolygonRGBA[0],vPolygonRGBA[1],vPolygonRGBA[2],vPolygonRGBA[3] }; ImGui::ColorEdit4("PolygonRGBA", v))
-                        {
-                            pBorderRepresentation->SetPolygonRGBA(v[0], v[1], v[2], v[3]);
-                        }
-                    }
-                    if (double v = pBorderRepresentation->GetCornerRadiusStrength(); ImGui::DragScalar("CornerRadiusStrength", ImGuiDataType_Double, &v, 0.01f))
-                    {
-                        pBorderRepresentation->SetCornerRadiusStrength(v);
-                    }
-                    if (int v = pBorderRepresentation->GetCornerResolution(); ImGui::DragInt("CornerResolution", &v))
-                    {
-                        pBorderRepresentation->SetCornerResolution(v);
-                    }
-                    if (float v = pBorderRepresentation->GetBorderThickness(); ImGui::DragFloat("BorderThickness", &v, 0.01f))
-                    {
-                        pBorderRepresentation->SetBorderThickness(v);
-                    }
-                    if (int v = pBorderRepresentation->GetTolerance(); ImGui::DragInt("Tolerance", &v))
-                    {
-                        pBorderRepresentation->SetTolerance(v);
-                    }
-                    {
-                        const char* modeText[] = { "AnyLocation", "LowerLeftCorner", "LowerRightCorner", "LowerCenter", "UpperLeftCorner", "UpperRightCorner", "UpperCenter" };
-                        if (auto v = pBorderRepresentation->GetWindowLocation(); ImGui::Combo("WindowLocation", &v, modeText, IM_ARRAYSIZE(modeText)))
-                        {
-                            pBorderRepresentation->SetWindowLocation(v);
-                        }
-                    }
-                    {
-                        double v[2];
-                        ImGui::Text(fmt::format("Size: {}", (pBorderRepresentation->GetSize(v), v)).c_str()); // ??
-                    }
-                    ImGui::Text(fmt::format("ShowBorderMinValue: {}", pBorderRepresentation->GetShowBorderMinValue()).c_str());
-                    ImGui::Text(fmt::format("ShowBorderMaxValue: {}", pBorderRepresentation->GetShowBorderMaxValue()).c_str());
-                    ImGui::Text(fmt::format("Moving: {}", pBorderRepresentation->GetMoving()).c_str());
-                    {
-                        const char* modeText[] = { "BORDER_OFF", "BORDER_ON", "BORDER_ACTIVE" };
-                        if (auto v = pBorderRepresentation->GetShowBorder(); ImGui::Combo("ShowBorder", &v, modeText, IM_ARRAYSIZE(modeText)))
-                        {
-                            pBorderRepresentation->SetShowBorder(v);
-                        }
-                    }
-                    {
-                        const char* modeText[] = { "BORDER_OFF", "BORDER_ON", "BORDER_ACTIVE" };
-                        if (auto v = pBorderRepresentation->GetShowVerticalBorder(); ImGui::Combo("ShowVerticalBorder", &v, modeText, IM_ARRAYSIZE(modeText)))
-                        {
-                            pBorderRepresentation->SetShowVerticalBorder(v);
-                        }
-                    }
-                    {
-                        const char* modeText[] = { "BORDER_OFF", "BORDER_ON", "BORDER_ACTIVE" };
-                        if (auto v = pBorderRepresentation->GetShowHorizontalBorder(); ImGui::Combo("ShowHorizontalBorder", &v, modeText, IM_ARRAYSIZE(modeText)))
-                        {
-                            pBorderRepresentation->SetShowHorizontalBorder(v);
-                        }
-                    }
-                    {
-                        const char* modeText[] = { "BORDER_OFF", "BORDER_ON", "BORDER_ACTIVE" };
-                        if (auto v = pBorderRepresentation->GetShowPolygonBackground(); ImGui::Combo("ShowPolygonBackground", &v, modeText, IM_ARRAYSIZE(modeText)))
-                        {
-                            pBorderRepresentation->SetShowPolygonBackground(v);
-                        }
-                    }
-                    {
-                        const char* modeText[] = { "BORDER_OFF", "BORDER_ON", "BORDER_ACTIVE" };
-                        if (auto v = pBorderRepresentation->GetShowPolygon(); ImGui::Combo("ShowPolygon", &v, modeText, IM_ARRAYSIZE(modeText)))
-                        {
-                            pBorderRepresentation->SetShowPolygon(v);
-                        }
-                    }
-                }
-                else if (const auto pHandleRepresentation = vtkHandleRepresentation::SafeDownCast(vtkObj); pHandleRepresentation && ImGui::CollapsingHeader("vtkHandleRepresentation", ImGuiTreeNodeFlags_DefaultOpen))
-                {
-                    {
-                        char* v[] = { "Outside","Nearby", "Selecting", "Translating", "Scaling" };
-                        ImGui::Text(fmt::format("InteractionState: {}", v[pHandleRepresentation->GetInteractionState()]).c_str());
-                    }
-                    {
-                        double dv[3];
-                        if (float v[3]; pHandleRepresentation->GetDisplayPosition(dv), v[0] = dv[0], v[1] = dv[1], v[2] = dv[2], ImGui::DragFloat3("DisplayPosition", v, 0.1f))
-                        {
-                            dv[0] = v[0];
-                            dv[1] = v[1];
-                            dv[2] = v[2];
-                            pHandleRepresentation->SetDisplayPosition(dv);
-                        }
-                    }
-                    {
-                        double dv[3];
-                        if (float v[3]; pHandleRepresentation->GetWorldPosition(dv), v[0] = dv[0], v[1] = dv[1], v[2] = dv[2], ImGui::DragFloat3("WorldPosition", v, 0.1f))
-                        {
-                            dv[0] = v[0];
-                            dv[1] = v[1];
-                            dv[2] = v[2];
-                            pHandleRepresentation->SetWorldPosition(dv);
-                        }
-                    }
-                    if (int v = pHandleRepresentation->GetTolerance(); ImGui::DragInt("Tolerance", &v))
-                    {
-                        pHandleRepresentation->SetTolerance(v);
-                    }
-                    if (bool v = pHandleRepresentation->GetActiveRepresentation(); ImGui::Checkbox("ActiveRepresentation", &v))
-                    {
-                        pHandleRepresentation->SetActiveRepresentation(v);
-                    }
-                    if (bool v = pHandleRepresentation->GetConstrained(); ImGui::Checkbox("Constrained", &v))
-                    {
-                        pHandleRepresentation->SetConstrained(v);
-                    }
-                    {
-                        double v[2]{ 0.1, 0.1 };
-                        if (ImGui::Button("Translate")) pHandleRepresentation->Translate(v);
-                    }
-                }
-
-                // 继承自vtkHandleRepresentation
-                vtkns::setupHelper<vtkPointHandleRepresentation2D>(vtkObj);
-
-                // 继承自vtkDistanceRepresentation
-#if 0
-                if (const auto pDistanceRepresentation2D = vtkDistanceRepresentation2D::SafeDownCast(vtkObj); pDistanceRepresentation2D && ImGui::CollapsingHeader("vtkDistanceRepresentation2D", ImGuiTreeNodeFlags_DefaultOpen))
-                {
-                    vtkObjSetup("Axis", pDistanceRepresentation2D->GetAxis());
-                    vtkObjSetup("AxisProperty", pDistanceRepresentation2D->GetAxisProperty());
-                }
-#else
-                vtkns::setupHelper<vtkDistanceRepresentation2D>(vtkObj);
-#endif
-
-                // vtkImageReslice
-                vtkns::setupHelper<vtkImageFlip>(vtkObj);
-
-                // vtkDataObject
-#if 0
-                if (const auto pDataSet = vtkDataSet::SafeDownCast(vtkObj); pDataSet && ImGui::CollapsingHeader("vtkDataSet", ImGuiTreeNodeFlags_DefaultOpen))
-                {
-
-                }
-#endif
-
-                // vtkImageMapper3D
-                if (const auto pImageSliceMapper = vtkImageSliceMapper::SafeDownCast(vtkObj); pImageSliceMapper && ImGui::CollapsingHeader("vtkImageSliceMapper", ImGuiTreeNodeFlags_DefaultOpen))
-                {
-                    ImGui::Text("Orientation: %d", pImageSliceMapper->GetOrientation()); ImGui::SameLine();
-                    if (ImGui::Button("OX")) pImageSliceMapper->SetOrientationToX(); ImGui::SameLine();
-                    if (ImGui::Button("OY")) pImageSliceMapper->SetOrientationToY(); ImGui::SameLine();
-                    if (ImGui::Button("OZ")) pImageSliceMapper->SetOrientationToZ(); ImGui::SameLine();
-                    if (ImGui::Button("OI")) pImageSliceMapper->SetOrientationToI(); ImGui::SameLine();
-                    if (ImGui::Button("OJ")) pImageSliceMapper->SetOrientationToJ(); ImGui::SameLine();
-                    if (ImGui::Button("OK")) pImageSliceMapper->SetOrientationToK();
-                    ImGui::Text("SliceNumberMinValue: %d", pImageSliceMapper->GetSliceNumberMinValue());
-                    ImGui::Text("SliceNumberMaxValue: %d", pImageSliceMapper->GetSliceNumberMaxValue());
-                    {
-                        double v[6];
-                        pImageSliceMapper->GetIndexBounds(v);
-                        ImGui::InputScalarN("IndexBounds", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), nullptr, nullptr, nullptr, ImGuiInputTextFlags_ReadOnly);
-                    }
-                    if (int v = pImageSliceMapper->GetSliceNumber(); ImGui::DragInt("SliceNumber", &v))
-                    {
-                        pImageSliceMapper->SetSliceNumber(v);
-                    }
-                    //if (int v[6]; pImageSliceMapper->GetDisplayExtent(v), ImGui::DragScalarN("DisplayExtent", ImGuiDataType_S32, v, std::size(v)))
-                    //{
-                    //    pImageSliceMapper->SetDisplayExtent(v);
-                    //}
-                    if (double v[6]; pImageSliceMapper->GetBounds(v), ImGui::DragScalarN("Bounds", ImGuiDataType_Double, v, std::size(v), 0.01f))
-                    {
-                        //pImageActor->SetBounds(v);
-                    }
-                    if (bool v = pImageSliceMapper->GetCropping(); ImGui::Checkbox("Cropping", &v))
-                    {
-                        pImageSliceMapper->SetCropping(v);
-                    }
-                    if (int v[6]; pImageSliceMapper->GetCroppingRegion(v), ImGui::DragScalarN("CroppingRegion", ImGuiDataType_S32, v, std::size(v)))
-                    {
-                        pImageSliceMapper->SetCroppingRegion(v);
-                    }
-                }
-                else if (const auto pImageResliceMapper = vtkImageResliceMapper::SafeDownCast(vtkObj); pImageResliceMapper && ImGui::CollapsingHeader("vtkImageResliceMapper", ImGuiTreeNodeFlags_DefaultOpen))
-                {
-                    ::vtkImageResliceMapper_setup(pImageResliceMapper);
-                }
-
-                if (const auto pActor = vtkActor::SafeDownCast(vtkObj); pActor && ImGui::CollapsingHeader("vtkActor", ImGuiTreeNodeFlags_DefaultOpen))
-                {
-                    vtkObjSetup("Property", pActor->GetProperty(), ImGuiTreeNodeFlags_DefaultOpen);
-                }
-                else if (const auto pImageSlice = vtkImageSlice::SafeDownCast(vtkObj); pImageSlice && ImGui::TreeNodeEx("vtkImageSlice", ImGuiTreeNodeFlags_DefaultOpen))
-                {
-                    vtkImageSlice_setup(pImageSlice);
-
-                    if (const auto pImageActor = vtkImageActor::SafeDownCast(vtkObj); pImageActor && ImGui::TreeNodeEx("vtkImageActor", ImGuiTreeNodeFlags_DefaultOpen))
-                    {
-                        vtkImageActor_setup(pImageActor);
-
-                        ImGui::TreePop();
-                    }
-
-                    ImGui::TreePop();
-                }
-                else if (const auto pVolume = vtkVolume::SafeDownCast(vtkObj); pVolume && ImGui::TreeNodeEx("vtkVolume", ImGuiTreeNodeFlags_DefaultOpen))
-                {
-                    vtkObjSetup("Mapper", pVolume->GetMapper(), ImGuiTreeNodeFlags_DefaultOpen);
-                    // property
-                    if (const auto pVolumeProperty = pVolume->GetProperty(); pVolumeProperty && ImGui::TreeNodeEx("vtkVolumeProperty", ImGuiTreeNodeFlags_DefaultOpen))
-                    {
-                        if (bool v = pVolumeProperty->GetShade(); ImGui::Checkbox("ShadeOn", &v))
-                        {
-                            pVolumeProperty->SetShade(v);
-                        }
-                        ImGui::SameLine();
-                        if (bool v = pVolumeProperty->GetDisableGradientOpacity(); ImGui::Checkbox("DisableGradientOpacity", &v))
-                        {
-                            pVolumeProperty->SetDisableGradientOpacity(v);
-                        }
-                        if (float v = pVolumeProperty->GetAmbient(); ImGui::SliderFloat("Ambient", &v, 0., 1.))
-                        {
-                            pVolumeProperty->SetAmbient(v);
-                        }
-                        if (float v = pVolumeProperty->GetDiffuse(); ImGui::SliderFloat("Diffuse", &v, 0., 1.))
-                        {
-                            pVolumeProperty->SetDiffuse(v);
-                        }
-                        if (float v = pVolumeProperty->GetSpecular(); ImGui::SliderFloat("Specular", &v, 0., 1.))
-                        {
-                            pVolumeProperty->SetSpecular(v);
-                        }
-                        if (float v = pVolumeProperty->GetSpecularPower(); ImGui::SliderFloat("SpecularPower", &v, 0., 300.))
-                        {
-                            pVolumeProperty->SetSpecularPower(v);
-                        }
-                        ImGui::Text("ColorChannels: %d", pVolumeProperty->GetColorChannels());
-
-                        // InterpolationType
-                        {
-                            const char* modeText[] = { "VTK_NEAREST_INTERPOLATION", "VTK_LINEAR_INTERPOLATION", "VTK_CUBIC_INTERPOLATION" };
-                            if (auto v = pVolumeProperty->GetInterpolationType(); ImGui::Combo("InterpolationType", &v, modeText, IM_ARRAYSIZE(modeText)))
-                            {
-                                pVolumeProperty->SetInterpolationType(v);
-                            }
-                        }
-                        //ScalarOpacity
-                        if (ImGui::CollapsingHeader("ScalarOpacity"))
-                        {
-                            const auto pPiecewiseFunction = pVolumeProperty->GetScalarOpacity();
-                            if (ImGui::TreeNodeEx("vtkPiecewiseFunction", ImGuiTreeNodeFlags_DefaultOpen))
-                            {
-                                for (auto i = 0; i < pPiecewiseFunction->GetSize(); ++i)
-                                {
-                                    double nodeValue[4];
-                                    pPiecewiseFunction->GetNodeValue(i, nodeValue);
-                                    if (float v = nodeValue[1]; ImGui::SliderFloat(fmt::format("{}", nodeValue[0]).c_str(), &v, 0., 1.))
-                                    {
-                                        nodeValue[1] = v;
-                                        pPiecewiseFunction->SetNodeValue(i, nodeValue);
-                                    }
-                                }
-
-                                if (bool v = pPiecewiseFunction->GetClamping(); ImGui::Checkbox("Clamping", &v))
-                                {
-                                    pPiecewiseFunction->SetClamping(v);
-                                }
-
-                                ImGui::TreePop();
-                            }
-                        }
-                        if (ImGui::CollapsingHeader("Color"))
-                        {
-                            const auto pColorTransferFunction = pVolumeProperty->GetRGBTransferFunction();
-                            if (ImGui::TreeNodeEx("vtkColorTransferFunction", ImGuiTreeNodeFlags_DefaultOpen))
-                            {
-                                for (auto i = 0; i < pColorTransferFunction->GetSize(); ++i)
-                                {
-                                    double nodeValue[6];
-                                    pColorTransferFunction->GetNodeValue(i, nodeValue);
-                                    if (float v[3] = { nodeValue[1],nodeValue[2],nodeValue[3] }; ImGui::ColorEdit3(fmt::format("{}", nodeValue[0]).c_str(), v))
-                                    {
-#if 0 // 此代码无效
-                                        nodeValue[1] = v[0];
-                                        nodeValue[2] = v[1];
-                                        nodeValue[3] = v[2];
-                                        pColorTransferFunction->GetNodeValue(i, nodeValue);
-                                        pColorTransferFunction->Modified();
-#else
-                                        pColorTransferFunction->AddRGBPoint(nodeValue[0], v[0], v[1], v[2]);
-#endif
-                                    }
-                                }
-                                ImGui::TreePop();
-                            }
-                        }
-                        ImGui::TreePop();
-                    }
-                    ImGui::TreePop();
-                }
-                else if (const auto pAnnotatedCubeActor = vtkAnnotatedCubeActor::SafeDownCast(vtkObj); pAnnotatedCubeActor && ImGui::TreeNodeEx("vtkAnnotatedCubeActor"))
-                {
-                    if (float v = vtkMath::RadiansFromDegrees(pAnnotatedCubeActor->GetXFaceTextRotation()); ImGui::SliderAngle("XFaceTextRotation", &v))
-                    {
-                        pAnnotatedCubeActor->SetXFaceTextRotation(vtkMath::DegreesFromRadians(v));
-                    }
-                    if (float v = vtkMath::RadiansFromDegrees(pAnnotatedCubeActor->GetYFaceTextRotation()); ImGui::SliderAngle("YFaceTextRotation", &v))
-                    {
-                        pAnnotatedCubeActor->SetYFaceTextRotation(vtkMath::DegreesFromRadians(v));
-                    }
-                    if (float v = vtkMath::RadiansFromDegrees(pAnnotatedCubeActor->GetZFaceTextRotation()); ImGui::SliderAngle("ZFaceTextRotation", &v))
-                    {
-                        pAnnotatedCubeActor->SetZFaceTextRotation(vtkMath::DegreesFromRadians(v));
-                    }
-
-                    vtkObjSetup("CubeProperty", pAnnotatedCubeActor->GetCubeProperty());
-                    vtkObjSetup("TextEdgesProperty", pAnnotatedCubeActor->GetTextEdgesProperty());
-
-                    ImGui::TreePop();
-                }
-            }
+            // vtkObject
+            ::setupHelper<vtkProp
+                , vtkCamera
+                , vtkViewport
+                , vtkDataObject
+                , vtkAbstractPicker
+                , vtkProperty
+                , vtkImageViewer2
+                , vtkResliceCursor
+                , vtkInteractorObserver
+                , vtkAlgorithm
+                , vtkTextProperty
+                , vtkProperty2D
+                , vtkImplicitFunction
+                , vtkImageProperty
+                , vtkWindow
+                , vtkAbstractImageInterpolator
+                , vtkMatrix4x4
+                , vtkVolumeProperty
+                , vtkScalarsToColors>(vtkObj);
+            // vtkViewport
+            ::setupHelper<vtkRenderer>(vtkObj);
+            // vtkScalarsToColors
+            ::setupHelper<vtkLookupTable>(vtkObj);
+            // vtkDataObject
+            ::setupHelper<vtkDataSet>(vtkObj);
+            // vtkDataSet
+            ::setupHelper<vtkImageData, vtkPointSet>(vtkObj);
+            // vtkAbstractPicker
+            ::setupHelper<vtkAbstractPropPicker, vtkWorldPointPicker>(vtkObj);
+            // vtkAbstractPropPicker
+            ::setupHelper<vtkPicker, vtkPropPicker>(vtkObj);
+            // vtkPicker
+            ::setupHelper<vtkPointPicker, vtkCellPicker>(vtkObj);
+            // vtkInteractorObserver
+            ::setupHelper<vtkAbstractWidget, vtk3DWidget>(vtkObj);
+            // vtkAbstractWidget
+            ::setupHelper<vtkResliceCursorWidget, vtkBoxWidget2, vtkLineWidget2, vtkDistanceWidget, vtkBorderWidget>(vtkObj);
+            // vtkAlgorithm
+            ::setupHelper<vtkImageAlgorithm, vtkPolyDataAlgorithm, vtkAbstractMapper, vtkDataSetAlgorithm>(vtkObj);
+            // vtkImageAlgorithm
+            ::setupHelper<vtkThreadedImageAlgorithm, vtkExtractVOI, vtkImageGridSource>(vtkObj);
+            // vtkAbstractMapper
+            ::setupHelper<vtkAbstractMapper3D>(vtkObj);
+            // vtkThreadedImageAlgorithm
+            ::setupHelper<vtkImageSlab, vtkImageThreshold, vtkImageReslice, vtkImageMapToColors>(vtkObj);
+            // vtkImageViewer2
+            ::setupHelper<vtkResliceImageViewer>(vtkObj);
+            // vtkWindow
+            ::setupHelper<vtkRenderWindow>(vtkObj);
+            // vtkDataSetAlgorithm
+            ::setupHelper<vtkElevationFilter>(vtkObj);
+            // vtkPolyDataAlgorithm
+            ::setupHelper<vtkLineSource, vtkVolumeOutlineSource, vtkFlyingEdges3D, vtkMarchingCubes, vtkTransformPolyDataFilter, vtkPlaneSource, vtkImageToPolyDataFilter>(vtkObj);
+            // vtkAbstractMapper3D
+            ::setupHelper<vtkMapper, vtkImageMapper3D>(vtkObj);
+            // vtkMapper
+            ::setupHelper<vtkPolyDataMapper>(vtkObj);
+            // vtkImplicitFunction
+            ::setupHelper<vtkPlane>(vtkObj);
+            // vtk3DWidget
+            ::setupHelper<vtkPointWidget>(vtkObj);
+            // vtkProp
+            ::setupHelper<vtkProp3D, vtkActor2D, vtkWidgetRepresentation>(vtkObj);
+            // vtkProp3D
+            ::setupHelper<vtkImageSlice, vtkActor, vtkVolume, vtkAnnotatedCubeActor>(vtkObj);
+            // vtkImageSlice
+            ::setupHelper<vtkImageActor>(vtkObj);
+            // vtkAbstractVolumeMapper
+            ::setupHelper<vtkVolumeMapper>(vtkObj);
+            // vtkVolumeMapper
+            ::setupHelper<vtkGPUVolumeRayCastMapper>(vtkObj);
+            // vtkActor2D
+            ::setupHelper<vtkAxisActor2D, vtkCaptionActor2D>(vtkObj);
+            // vtkWidgetRepresentation
+            ::setupHelper<vtkBoxRepresentation, vtkLineRepresentation, vtkDistanceRepresentation, vtkBorderRepresentation, vtkHandleRepresentation>(vtkObj);
+            // vtkHandleRepresentation
+            ::setupHelper<vtkPointHandleRepresentation2D>(vtkObj);
+            // vtkDistanceRepresentation
+            ::setupHelper<vtkDistanceRepresentation2D>(vtkObj);
+            // vtkImageReslice
+            ::setupHelper<vtkImageFlip>(vtkObj);
+            // vtkImageMapper3D
+            ::setupHelper<vtkImageSliceMapper, vtkImageResliceMapper>(vtkObj);
 
             ImGui::TreePop();
         }

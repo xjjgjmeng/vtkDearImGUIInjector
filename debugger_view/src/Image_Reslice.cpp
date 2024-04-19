@@ -7,8 +7,6 @@ vtkSmartPointer<vtkImageReslice> reslice;
 #if 1 == USE_MAP_TO_COLORS
 vtkSmartPointer<vtkImageMapToColors> colorMap;
 #endif
-vtkSmartPointer<vtkRenderWindowInteractor> iren;
-vtkSmartPointer<vtkRenderWindow> renderWindow;
 double spacing[3];
 bool calcRelice2Vr = false;
 
@@ -91,9 +89,9 @@ public:
       if (this->m_slicing)
       {
           int lastPos[2];
-          iren->GetLastEventPosition(lastPos);
+          this->Interactor->GetLastEventPosition(lastPos);
           int currPos[2];
-          iren->GetEventPosition(currPos);
+          this->Interactor->GetEventPosition(currPos);
           // Increment slice position by deltaY of mouse
           resliceImg(lastPos[1] - currPos[1]);
       }
@@ -133,7 +131,7 @@ private:
 #else
         ::reslice->Update(); // 没有此句会输出的都是二维
 #endif
-        ::renderWindow->Render();
+        this->Interactor->Render();
     }
 
 public:
@@ -144,17 +142,10 @@ private:
   vtkNew<vtkBoundedPlanePointPlacer> m_placer;
 };
 
-int main(int argc, char* argv[])
+int main()
 {
-    // Create a renderer, render window, and interactor
-    auto renderer = vtkSmartPointer<vtkRenderer>::New();
-    iren = vtkSmartPointer<vtkRenderWindowInteractor>::New();
-    renderWindow = vtkSmartPointer<vtkRenderWindow>::New();
-    renderWindow->SetMultiSamples(8);
-    renderWindow->AddRenderer(renderer);
-    iren->SetRenderWindow(renderWindow);
-
-    vtkns::labelWorldZero(renderer);
+    SETUP_WINDOW
+    vtkns::labelWorldZero(ren);
 
     auto reader = vtkSmartPointer<vtkDICOMImageReader>::New();
     reader->SetDirectoryName(vtkns::getDicomDir());
@@ -171,10 +162,10 @@ int main(int argc, char* argv[])
     reslice->SetOutputDimensionality(2);
 
     // 将原始的image用线框显示出来
-    vtkns::genImgOutline(renderer, reader->GetOutput(), false)->GetProperty()->SetColor(1., 1., 0.);
+    vtkns::genImgOutline(ren, reader->GetOutput(), false)->GetProperty()->SetColor(1., 1., 0.);
     // 将reslice得到的image用线框动态表示出来
     {
-        auto actor = vtkns::genImgOutline(renderer, reslice->GetOutput(), true);
+        auto actor = vtkns::genImgOutline(ren, reslice->GetOutput(), true);
         actor->GetProperty()->SetColor(1., 0., 0.);
         actor->GetProperty()->SetLineWidth(5);
     }
@@ -195,7 +186,7 @@ int main(int argc, char* argv[])
         ren->SetBackgroundAlpha(0.2);
         vtkns::genImgOutline(ren, reader->GetOutput(), false)->GetProperty()->SetColor(1., 1., 0.);
         vtkns::genImgOutline(ren, reslice->GetOutput(), true)->GetProperty()->SetColor(1., 0., 0.);
-        renderWindow->AddRenderer(ren);
+        rw->AddRenderer(ren);
 }
     else
     {
@@ -205,7 +196,7 @@ int main(int argc, char* argv[])
         vtkNew<vtkRenderer> ren;
         ren->AddActor(actor);
         ren->SetViewport(0.8, 0.8, 1., 1.);
-        renderWindow->AddRenderer(ren);
+        rw->AddRenderer(ren);
     }
 
     {
@@ -282,7 +273,7 @@ int main(int argc, char* argv[])
             vtkNew<vtkActor> actor;
             actor->GetProperty()->SetPointSize(12);
             actor->GetProperty()->SetColor(1., 0., 0.);
-            renderer->AddActor(actor);
+            ren->AddActor(actor);
             pCC->SetClientData(actor);
             ::reslice->GetResliceAxes()->AddObserver(vtkCommand::ModifiedEvent, pCC);
             ::reslice->GetOutput()->AddObserver(vtkCommand::ModifiedEvent, pCC);
@@ -323,9 +314,9 @@ int main(int argc, char* argv[])
 #else
     actor->GetMapper()->SetInputConnection(reslice->GetOutputPort());
 #endif
-    renderer->AddActor(actor);
+    ren->AddActor(actor);
 
-    ::pWindow = renderWindow;
+    ::pWindow = rw;
     ::imgui_render_callback = [&]
     {
         vtkns::vtkObjSetup("vtkImageData", reader->GetOutput());
@@ -354,7 +345,7 @@ int main(int argc, char* argv[])
 
         if (ImGui::Button("ResetCamera"))
         {
-            renderer->ResetCamera();
+            ren->ResetCamera();
         }
 
         if (ImGui::Button("AddMarker"))
@@ -363,7 +354,7 @@ int main(int argc, char* argv[])
             text->SetInput(fmt::format("{}", ::reslice->GetResliceAxesOrigin()[2]).c_str());
             text->GetPositionCoordinate()->SetCoordinateSystemToWorld();
             text->SetPosition(actor->GetCenter());
-            renderer->AddActor(text);
+            ren->AddActor(text);
 
             static std::map<void*, vtkSmartPointer<vtkMatrix4x4>> actorMap;
             auto myMat = vtkSmartPointer<vtkMatrix4x4>::New();
@@ -401,25 +392,18 @@ int main(int argc, char* argv[])
     };
 
     // Start rendering app
-    renderer->SetBackground(0.2, 0.3, 0.4);
-    renderWindow->Render();
+    rw->Render();
 
     /// Change to your code begins here. ///
     // Initialize an overlay with DearImgui elements.
     vtkNew<vtkDearImGuiInjector> dearImGuiOverlay;
     // 💉 the overlay.
-    dearImGuiOverlay->Inject(iren);
+    dearImGuiOverlay->Inject(rwi);
     // These functions add callbacks to ImGuiSetupEvent and ImGuiDrawEvents.
     vtkns::SetupUI(dearImGuiOverlay);
     // You can draw custom user interface elements using ImGui:: namespace.
     vtkns::DrawUI(dearImGuiOverlay);
     /// Change to your code ends here. ///
-
-    vtkNew<vtkCameraOrientationWidget> camManipulator;
-    camManipulator->SetParentRenderer(renderer);
-    camManipulator->On();
-    auto rep = vtkCameraOrientationRepresentation::SafeDownCast(camManipulator->GetRepresentation());
-    rep->AnchorToLowerRight();
 
     // Start event loop
 #if 0
@@ -427,17 +411,15 @@ int main(int argc, char* argv[])
 #else
 #ifdef _WIN32
 // 获取窗口句柄
-    HWND hwnd = ::FindWindow(NULL, renderWindow->GetWindowName());
+    HWND hwnd = ::FindWindow(NULL, rw->GetWindowName());
     // 最大化窗口
     ::ShowWindow(hwnd, SW_MAXIMIZE);
 #endif
 #endif
     //vtkInteractorStyleSwitch::SafeDownCast(iren->GetInteractorStyle())->SetCurrentStyleToTrackballCamera();
     auto style = vtkSmartPointer<MyStyle>::New();
-    style->m_renderer = renderer;
-    iren->SetInteractorStyle(style);
-    iren->EnableRenderOff();
-    iren->Start();
-
-    return 0;
+    style->m_renderer = ren;
+    rwi->SetInteractorStyle(style);
+    rwi->EnableRenderOff();
+    rwi->Start();
 }
