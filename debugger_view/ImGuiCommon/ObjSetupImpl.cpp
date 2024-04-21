@@ -66,6 +66,15 @@ namespace
     }
 
     template<>
+    void setupImpl(vtkImageChangeInformation* vtkobj)
+    {
+        if (double v[3]; vtkobj->GetOutputOrigin(v), ImGui::DragScalarN("OutputOrigin", ImGuiDataType_Double, v, IM_ARRAYSIZE(v)))
+        {
+            vtkobj->SetOutputOrigin(v);
+        }
+    }
+
+    template<>
     void setupImpl(vtkScalarsToColors* vtkobj)
     {
         if (float v[2]{vtkobj->GetRange()[0], vtkobj->GetRange()[1]}; ImGui::DragFloatRange2("Range", v, v+1))
@@ -838,9 +847,9 @@ output的origin是相对于新坐标系的，把新坐标系的origin处看作�
                     ImGui::Text("RotateZ:");
                     ImGui::SameLine();
                     ImGui::PushButtonRepeat(true);
-                    if (ImGui::ArrowButton("##Z-", ImGuiDir_Left)) { f(obj->GetResliceAxes(), -5); }
+                    if (ImGui::ArrowButton("##Z-", ImGuiDir_Left)) { f(obj->GetResliceAxes(), -5); obj->Update(); }
                     ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
-                    if (ImGui::ArrowButton("##Z+", ImGuiDir_Right)) { f(obj->GetResliceAxes(), 5); }
+                    if (ImGui::ArrowButton("##Z+", ImGuiDir_Right)) { f(obj->GetResliceAxes(), 5); obj->Update(); }
                     ImGui::PopButtonRepeat();
                     ImGui::SameLine();
                     vtkns::HelpMarker(u8R"(每次绕着Z轴向左或向右旋转5°)");
@@ -856,9 +865,9 @@ output的origin是相对于新坐标系的，把新坐标系的origin处看作�
                     ImGui::Text("RotateY:");
                     ImGui::SameLine();
                     ImGui::PushButtonRepeat(true);
-                    if (ImGui::ArrowButton("##Y-", ImGuiDir_Left)) { f(obj->GetResliceAxes(), -5); }
+                    if (ImGui::ArrowButton("##Y-", ImGuiDir_Left)) { f(obj->GetResliceAxes(), -5); obj->Update(); }
                     ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
-                    if (ImGui::ArrowButton("##Y+", ImGuiDir_Right)) { f(obj->GetResliceAxes(), 5); }
+                    if (ImGui::ArrowButton("##Y+", ImGuiDir_Right)) { f(obj->GetResliceAxes(), 5); obj->Update(); }
                     ImGui::PopButtonRepeat();
                     ImGui::SameLine();
                     vtkns::HelpMarker(u8R"(每次绕着Y轴向左或向右旋转5°)");
@@ -874,9 +883,9 @@ output的origin是相对于新坐标系的，把新坐标系的origin处看作�
                     ImGui::Text("RotateX:");
                     ImGui::SameLine();
                     ImGui::PushButtonRepeat(true);
-                    if (ImGui::ArrowButton("##X-", ImGuiDir_Left)) { f(obj->GetResliceAxes(), -5); }
+                    if (ImGui::ArrowButton("##X-", ImGuiDir_Left)) { f(obj->GetResliceAxes(), -5); obj->Update(); }
                     ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
-                    if (ImGui::ArrowButton("##X+", ImGuiDir_Right)) { f(obj->GetResliceAxes(), 5); }
+                    if (ImGui::ArrowButton("##X+", ImGuiDir_Right)) { f(obj->GetResliceAxes(), 5); obj->Update(); }
                     ImGui::PopButtonRepeat();
                     ImGui::SameLine();
                     vtkns::HelpMarker(u8R"(每次绕着X轴向左或向右旋转5°)");
@@ -894,7 +903,7 @@ output的origin是相对于新坐标系的，把新坐标系的origin处看作�
             if (double v[3]; obj->GetOutputOrigin(v), ImGui::DragScalarN("Origin", ImGuiDataType_Double, v, IM_ARRAYSIZE(v)))
             {
                 obj->SetOutputOrigin(v);
-                obj->Update(); // 没有此句会输出的都是二维
+                obj->Update(); // 没有此句会输出的都是二维. 使用SetInputConnection就不需要？？
             } ImGui::SameLine(); vtkns::HelpMarker(u8R"(将reslice坐标系的origin处当中新世界的（0，0，0）
 如果输出的是2维，调节z无效，因为只reslice出一张图，所以z被忽略了？？输出图像只能在一个平面上游移)");
             //::reslice->GetOutputInformation(0)->Get(vtkDataObject::SPACING(), myArray); // 0.25
@@ -2734,7 +2743,8 @@ namespace
     template <typename T, typename... Ts>
     void setupHelper(vtkObject* obj)
     {
-        if (const auto p = T::SafeDownCast(obj); p && ImGui::CollapsingHeader(typeid(T).name(), ImGuiTreeNodeFlags_DefaultOpen))
+        constexpr auto flags = std::is_same_v<T, vtkObject>?ImGuiTreeNodeFlags_None : ImGuiTreeNodeFlags_DefaultOpen;
+        if (const auto p = T::SafeDownCast(obj); p && ImGui::CollapsingHeader(typeid(T).name(), flags))
         {
             ::setupImpl<T>(p);
         }
@@ -2803,7 +2813,7 @@ namespace vtkns
             // vtkAlgorithm
             ::setupHelper<vtkImageAlgorithm, vtkPolyDataAlgorithm, vtkAbstractMapper, vtkDataSetAlgorithm>(vtkObj);
             // vtkImageAlgorithm
-            ::setupHelper<vtkThreadedImageAlgorithm, vtkExtractVOI, vtkImageGridSource>(vtkObj);
+            ::setupHelper<vtkThreadedImageAlgorithm, vtkExtractVOI, vtkImageGridSource, vtkImageChangeInformation>(vtkObj);
             // vtkAbstractMapper
             ::setupHelper<vtkAbstractMapper3D>(vtkObj);
             // vtkThreadedImageAlgorithm

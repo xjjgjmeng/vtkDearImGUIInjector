@@ -599,8 +599,8 @@ namespace vtkns
 
 	static const char* getDicomFile()
 	{
-		const char* retval = "D:/test_data/series/I0000000200.dcm";
-		//const char* retval = "C:\\Users\\123\\Desktop\\series\\I0000000200.dcm";
+		//const char* retval = "D:/test_data/series/I0000000200.dcm";
+		const char* retval = "C:\\Users\\123\\Desktop\\series\\I0000000200.dcm";
 		if (!std::filesystem::exists(retval))
 		{
 			throw "dicom file does not exist!";
@@ -610,8 +610,8 @@ namespace vtkns
 
 	static const char* getDicomDir()
 	{
-		const char* retval = "D:/test_data/series";
-		//const char* retval = "C:\\Users\\123\\Desktop\\series";
+		//const char* retval = "D:/test_data/series";
+		const char* retval = "C:\\Users\\123\\Desktop\\series";
 		if (!std::filesystem::exists(retval))
 		{
 			throw "dicom dir does not exist!";
@@ -728,11 +728,11 @@ namespace vtkns
 		::setupDefaultVolumeProperty(volume);
 	}
 
-	static auto genVR(vtkRenderer* ren, vtkImageData* pImg, const bool onChange, const bool lowOpacity = false)
+	static auto genVR(vtkRenderer* ren, vtkImageData* pImg, const bool onChange = true, const bool lowOpacity = false)
 	{
 		vtkNew<vtkVolume> pVolume;
 		ren->AddVolume(pVolume);
-
+#if 0 // 不需要此代码
 		if (onChange)
 		{
 			auto f = [](vtkObject* caller, unsigned long eid, void* clientdata, void* calldata)
@@ -751,7 +751,7 @@ namespace vtkns
 			pCC->SetClientData(clientData);
 			pImg->AddObserver(vtkCommand::ModifiedEvent, pCC);
 		}
-
+#endif
 		genVR_(pVolume, pImg, lowOpacity);
 		if (lowOpacity)
 		{

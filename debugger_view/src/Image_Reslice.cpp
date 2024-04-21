@@ -1,14 +1,15 @@
 ﻿#include <ImGuiCommon.h>
 #include <PolyDataHelper.h>
 
-#define USE_MAP_TO_COLORS 0
+#define SHOW_NULL 0
+#define SHOW_CENTER_POINTER 1
+#define SHOW_RESLICE_PLANE 2
+#define SHOW_IMAGE_MESH 3
 
 vtkSmartPointer<vtkImageReslice> reslice;
-#if 1 == USE_MAP_TO_COLORS
-vtkSmartPointer<vtkImageMapToColors> colorMap;
-#endif
 double spacing[3];
 bool calcRelice2Vr = false;
+int currHelperActor = SHOW_NULL;
 
 class MyStyle : public vtkInteractorStyleTrackballCamera
 {
@@ -126,11 +127,7 @@ private:
         matrix->SetElement(0, 3, center[0]);
         matrix->SetElement(1, 3, center[1]);
         matrix->SetElement(2, 3, center[2]);
-#if 1 == USE_MAP_TO_COLORS
-        ::colorMap->Update();
-#else
         ::reslice->Update(); // 没有此句会输出的都是二维
-#endif
         this->Interactor->Render();
     }
 
@@ -145,24 +142,21 @@ private:
 int main()
 {
     SETUP_WINDOW
+    auto img = vtkns::getVRData();
     vtkns::labelWorldZero(ren);
-
-    auto reader = vtkSmartPointer<vtkDICOMImageReader>::New();
-    reader->SetDirectoryName(vtkns::getDicomDir());
-    reader->Update();
 
     int extent[6];
     double origin[3];
-    reader->GetOutput()->GetExtent(extent);
-    reader->GetOutput()->GetSpacing(::spacing);
-    reader->GetOutput()->GetOrigin(origin);
+    img->GetExtent(extent);
+    img->GetSpacing(::spacing);
+    img->GetOrigin(origin);
 
-    reslice = vtkSmartPointer<vtkImageReslice>::New();
-    reslice->SetInputConnection(reader->GetOutputPort());
-    reslice->SetOutputDimensionality(2);
+    ::reslice = vtkSmartPointer<vtkImageReslice>::New();
+    ::reslice->SetInputData(img);
+    ::reslice->SetOutputDimensionality(2);
 
     // 将原始的image用线框显示出来
-    vtkns::genImgOutline(ren, reader->GetOutput(), false)->GetProperty()->SetColor(1., 1., 0.);
+    vtkns::genImgOutline(ren, img, false)->GetProperty()->SetColor(1., 1., 0.);
     // 将reslice得到的image用线框动态表示出来
     {
         auto actor = vtkns::genImgOutline(ren, reslice->GetOutput(), true);
@@ -173,30 +167,7 @@ int main()
     if (3 == ::reslice->GetOutputDimensionality())
     {
         // 将切割出来的体数据渲染出来
-        vtkNew<vtkVolume> pVolume;
-        vtkNew<vtkGPUVolumeRayCastMapper> pMapper;
-        pMapper->SetInputConnection(::reslice->GetOutputPort());
-        pMapper->SetBlendModeToComposite();
-        pVolume->SetMapper(pMapper);
-        ::setupDefaultVolumeProperty(pVolume);
-        vtkNew<vtkRenderer> ren;
-        ren->AddVolume(pVolume);
-        ren->SetViewport(0.7, 0.5, 1., 1.);
-        ren->SetBackground(0, 1, 1);
-        ren->SetBackgroundAlpha(0.2);
-        vtkns::genImgOutline(ren, reader->GetOutput(), false)->GetProperty()->SetColor(1., 1., 0.);
-        vtkns::genImgOutline(ren, reslice->GetOutput(), true)->GetProperty()->SetColor(1., 0., 0.);
-        rw->AddRenderer(ren);
-}
-    else
-    {
-        // 显示一个完整图用于比较
-        vtkNew<vtkImageActor> actor;
-        actor->SetInputData(reader->GetOutput());
-        vtkNew<vtkRenderer> ren;
-        ren->AddActor(actor);
-        ren->SetViewport(0.8, 0.8, 1., 1.);
-        rw->AddRenderer(ren);
+        vtkns::genVR(ren, reslice->GetOutput(), false, true);
     }
 
     {
@@ -229,44 +200,51 @@ int main()
             auto f = [](vtkObject* caller, unsigned long eid, void* clientdata, void* calldata)
                 {
                     auto actor = reinterpret_cast<vtkActor*>(clientdata);
-#if 0
-                    if (auto mat = vtkMatrix4x4::SafeDownCast(caller))
+                    switch (::currHelperActor)
                     {
-                        double src[4]{ 0,0,0,1 };
-                        double dst[4];
-                        mat->MultiplyPoint(src, dst);
-                        vtkNs::makePoints({ {dst[0], dst[1], dst[2]} }, actor);
+                    case SHOW_CENTER_POINTER:
+                        if (auto mat = vtkMatrix4x4::SafeDownCast(caller))
+                        {
+                            double src[4]{ 0,0,0,1 };
+                            double dst[4];
+                            mat->MultiplyPoint(src, dst);
+                            vtkns::makePoints({ {dst[0], dst[1], dst[2]} }, actor);
+                        }
+                        break;
+                    case SHOW_IMAGE_MESH:
+                        if (auto img = vtkImageData::SafeDownCast(caller))
+                        {
+                            vtkNew<vtkDataSetMapper> mapper;
+                            vtkNew<vtkImageData> data;
+                            data->SetOrigin(img->GetOrigin());
+                            data->SetSpacing(img->GetSpacing());
+                            data->SetExtent(img->GetExtent());
+                            mapper->SetInputData(data);
+                            actor->SetMapper(mapper);
+                            actor->GetProperty()->SetRepresentationToWireframe();
+                            actor->GetProperty()->SetColor(0, 1, 0);
+                            actor->GetProperty()->SetOpacity(.1);
+                            actor->SetPosition(0, 0, 1); // 设置偏移方便看到后面的图像
+                        }
+                        break;
+                    case SHOW_RESLICE_PLANE:
+                        if (auto mat = vtkMatrix4x4::SafeDownCast(caller))
+                        {
+                            vtkNew<vtkPlaneSource> src;
+                            src->SetOrigin(0, 0, 0);
+                            src->SetPoint1(33, 0, 0);
+                            src->SetPoint2(0, 33, 0);
+                            src->SetCenter(mat->GetElement(0, 3), mat->GetElement(1, 3), mat->GetElement(2, 3));
+                            src->SetNormal(mat->GetElement(0, 2), mat->GetElement(1, 2), mat->GetElement(2, 2));
+                            // src->Update(); 使用GetOutputPort就不需要Update
+                            vtkNew<vtkPolyDataMapper> mapper;
+                            mapper->SetInputConnection(src->GetOutputPort());
+                            actor->SetMapper(mapper);
+                        }
+                        break;
+                    default:
+                        break;
                     }
-#elif 1
-                    if (auto img = vtkImageData::SafeDownCast(caller))
-                    {
-                        vtkNew<vtkDataSetMapper> mapper;
-                        vtkNew<vtkImageData> data;
-                        data->SetOrigin(img->GetOrigin());
-                        data->SetSpacing(img->GetSpacing());
-                        data->SetExtent(img->GetExtent());
-                        mapper->SetInputData(data);
-                        actor->SetMapper(mapper);
-                        actor->GetProperty()->SetRepresentationToWireframe();
-                        actor->GetProperty()->SetColor(0, 1, 0);
-                        actor->GetProperty()->SetOpacity(.1);
-                        actor->SetPosition(0, 0, 1); // 设置偏移方便看到后面的图像
-                    }
-#else
-                    if (auto mat = vtkMatrix4x4::SafeDownCast(caller))
-                    {
-                        vtkNew<vtkPlaneSource> src;
-                        src->SetOrigin(0, 0, 0);
-                        src->SetPoint1(13, 0, 0);
-                        src->SetPoint2(0, 13, 0);
-                        src->SetCenter(mat->GetElement(0, 3), mat->GetElement(1, 3), mat->GetElement(2, 3));
-                        src->SetNormal(mat->GetElement(0, 2), mat->GetElement(1, 2), mat->GetElement(2, 2));
-                        // src->Update(); 使用GetOutputPort就不需要Update
-                        vtkNew<vtkPolyDataMapper> mapper;
-                        mapper->SetInputConnection(src->GetOutputPort());
-                        actor->SetMapper(mapper);
-                    }
-#endif
                 };
             vtkNew<vtkCallbackCommand> pCC;
             pCC->SetCallback(f);
@@ -293,33 +271,21 @@ int main()
     reslice->SetOutputSpacing(::spacing);
     ::reslice->Update(); // 没有此句的话在一开始不能显示三维线框
 
-#if 1 == USE_MAP_TO_COLORS
-    colorMap = vtkSmartPointer<vtkImageMapToColors>::New();
-    {
-        auto colorTable = vtkSmartPointer<vtkLookupTable>::New();
-        colorTable->SetRange(0, 1000);
-        colorTable->SetValueRange(0.0, 1.0);
-        colorTable->SetSaturationRange(0.0, 0.0);
-        colorTable->SetRampToLinear();
-        colorTable->Build();
-        colorMap->SetLookupTable(colorTable);
-    }
-    colorMap->SetInputConnection(reslice->GetOutputPort());
-    colorMap->Update();
-#endif
-
-    auto actor = vtkSmartPointer<vtkImageActor>::New();
-#if 1 == USE_MAP_TO_COLORS
-    actor->SetInputData(colorMap->GetOutput());
-#else
+    vtkNew<vtkImageActor> actor;
     actor->GetMapper()->SetInputConnection(reslice->GetOutputPort());
-#endif
     ren->AddActor(actor);
 
     ::pWindow = rw;
     ::imgui_render_callback = [&]
     {
-        vtkns::vtkObjSetup("vtkImageData", reader->GetOutput());
+        {
+            ImGui::Text("HelperActor"); ImGui::SameLine();
+            ImGui::RadioButton("NULL", &currHelperActor, SHOW_NULL); ImGui::SameLine();
+            ImGui::RadioButton("CENTER_POINTER", &currHelperActor, SHOW_CENTER_POINTER); ImGui::SameLine();
+            ImGui::RadioButton("RESLICE_PLANE", &currHelperActor, SHOW_RESLICE_PLANE); ImGui::SameLine();
+            ImGui::RadioButton("IMAGE_MESH", &currHelperActor, SHOW_IMAGE_MESH);
+        }
+        vtkns::vtkObjSetup("OriginalImageData", img);
         static bool showResliceOutput = false;
         ImGui::Checkbox("ShowResliceOutput", &showResliceOutput);
         ImGui::Checkbox("Reslice2Vr", &::calcRelice2Vr); ImGui::SameLine(); vtkns::HelpMarker(u8"左键点击时将被点击的reslice上的位置映射到原始的VR空间并用点标识");
@@ -331,17 +297,6 @@ int main()
         }
         vtkns::vtkObjSetup("vtkImageActor", actor);
         vtkns::vtkObjSetup("Reslice", ::reslice, ImGuiTreeNodeFlags_DefaultOpen);
-#if 1 == USE_MAP_TO_COLORS
-        auto lookupmap = colorMap->GetLookupTable();
-        double* pRange = lookupmap->GetRange();
-        float min_ = pRange[0];
-        float max_ = pRange[1];
-        if (ImGui::DragFloatRange2("ScalarsToColorsRange", &min_, &max_, 1.f, 0.0f, 10000.0f, "Min: %lf", "Max: %lf"))
-        {
-            lookupmap->SetRange(min_, max_);
-            ::colorMap->Update();
-        }
-#endif
 
         if (ImGui::Button("ResetCamera"))
         {
