@@ -905,6 +905,28 @@ output的origin是相对于新坐标系的，把新坐标系的origin处看作�
                     ImGui::SameLine();
                     vtkns::HelpMarker(u8R"(每次绕着X轴向左或向右旋转5°)");
                 }
+                {
+                    auto f = [](vtkMatrix4x4* mat, const double x, const double y)
+                    {
+                        vtkNew<vtkTransform> transform;
+                        transform->SetMatrix(mat);
+                        transform->Translate(x,y,0);
+                        mat->DeepCopy(transform->GetMatrix());
+                    };
+                    ImGui::Text("Translate:");
+                    ImGui::SameLine();
+                    ImGui::PushButtonRepeat(true);
+                    if (ImGui::ArrowButton("##TX-", ImGuiDir_Left)) { f(obj->GetResliceAxes(), -1, 0); obj->Update(); }
+                    ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
+                    if (ImGui::ArrowButton("##TX+", ImGuiDir_Right)) { f(obj->GetResliceAxes(), 1, 0); obj->Update(); }
+                    ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
+                    if (ImGui::ArrowButton("##TY-", ImGuiDir_Up)) { f(obj->GetResliceAxes(), 0, 1); obj->Update(); }
+                    ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
+                    if (ImGui::ArrowButton("##TY+", ImGuiDir_Down)) { f(obj->GetResliceAxes(), 0, -1); obj->Update(); }
+                    ImGui::PopButtonRepeat();
+                    //ImGui::SameLine();
+                    //vtkns::HelpMarker(u8R"(每次绕着X轴向左或向右旋转5°)");
+                }
 
                 ImGui::Text(::getMatrixString(obj->GetResliceAxes()).c_str());
 

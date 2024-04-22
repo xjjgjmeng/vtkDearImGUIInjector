@@ -26,7 +26,7 @@ int main()
 
     // 将原始的image用线框显示出来
     vtkns::genImgOutline(ren, img, false);// ->GetProperty()->SetColor(1., 1., 0.);
-    vtkns::genVR(ren, img, false, true);
+    //vtkns::genVR(ren, img, false, true);
     if (3 == ::reslice->GetOutputDimensionality())
     {
         // 将切割出来的体数据渲染出来
@@ -67,6 +67,7 @@ int main()
             ::reslice->GetResliceAxesOrigin(axesOrigin);
             ::getLogView()->Add(fmt::format("origin: {}", origin));
             ::getLogView()->Add(fmt::format("axesOrigin: {}", axesOrigin));
+            //changer->SetOriginTranslation(axesOrigin[0] - img->GetCenter()[0], axesOrigin[1] - img->GetCenter()[1], axesOrigin[2] - img->GetCenter()[2]);
             //changer->SetOutputOrigin(-center[0], -center[1], -center[2]);
             //changer->SetOutputOrigin(0, 0, 0);
             //changer->SetOutputOrigin(axesOrigin[0] + origin[0], axesOrigin[1] + origin[1], 0);
@@ -77,7 +78,8 @@ int main()
         vtkNew<vtkCallbackCommand> pCC;
         pCC->SetCallback(f);
         pCC->SetClientData(changer.GetPointer());
-        ::reslice->GetOutput()->AddObserver(vtkCommand::ModifiedEvent, pCC);
+        //::reslice->GetOutput()->AddObserver(vtkCommand::ModifiedEvent, pCC);
+        ::reslice->GetResliceAxes()->AddObserver(vtkCommand::ModifiedEvent, pCC);
     }
 #endif
 
@@ -211,6 +213,14 @@ int main()
         vtkns::vtkObjSetup("vtkImageActor", actor);
         vtkns::vtkObjSetup("Reslice", ::reslice, ImGuiTreeNodeFlags_DefaultOpen);
         vtkns::vtkObjSetup("Changer", ::changer, ImGuiTreeNodeFlags_DefaultOpen);
+        if (ImGui::Button("X+"))
+        {
+            ::reslice->GetResliceAxes()->SetElement(0, 3, ::reslice->GetResliceAxes()->GetElement(0, 3) + 1);
+            //::changer->SetExtentTranslation(::changer->GetExtentTranslation()[0]-1, 0, 0);
+            auto ot = ::changer->GetOriginTranslation();
+            ot[0] += 1;
+            ::changer->SetOriginTranslation(ot);
+        }
     };
 
     // Start rendering app
