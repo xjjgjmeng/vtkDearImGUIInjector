@@ -72,6 +72,18 @@ namespace
         {
             vtkobj->SetOutputOrigin(v);
         }
+        if (double v[3]; vtkobj->GetOriginTranslation(v), ImGui::DragScalarN("OriginTranslation", ImGuiDataType_Double, v, IM_ARRAYSIZE(v)))
+        {
+            vtkobj->SetOriginTranslation(v);
+        }
+        if (int v[3]; vtkobj->GetExtentTranslation(v), ImGui::DragScalarN("ExtentTranslation", ImGuiDataType_S32, v, IM_ARRAYSIZE(v)))
+        {
+            vtkobj->SetExtentTranslation(v);
+        }
+        if (bool v = vtkobj->GetCenterImage(); ImGui::Checkbox("CenterImage", &v))
+        {
+            vtkobj->SetCenterImage(v);
+        }
     }
 
     template<>
@@ -835,7 +847,10 @@ xoy应该可以穿过imagedata，不然无输出
 -固定ResliceAxes的origin，修改output的origin，发现黑窗在世界中游走，可以看到image不同部分
 -固定ResliceAxes的origin，修改output的extent，发现黑窗在世界扩大或缩小，可以看到image的更多或更少
 output的origin是相对于新坐标系的，把新坐标系的origin处看作（0，0，0），但最后在原始的坐标系中也是一样的)");
-
+                if (ImGui::Button(u8"重置XYZ"))
+                {
+                    obj->SetResliceAxesDirectionCosines(1, 0, 0, 0, 1, 0, 0, 0, 1);
+                }
                 {
                     auto f = [](vtkMatrix4x4* mat, const double v)
                     {
@@ -847,9 +862,9 @@ output的origin是相对于新坐标系的，把新坐标系的origin处看作�
                     ImGui::Text("RotateZ:");
                     ImGui::SameLine();
                     ImGui::PushButtonRepeat(true);
-                    if (ImGui::ArrowButton("##Z-", ImGuiDir_Left)) { f(obj->GetResliceAxes(), -5); obj->Update(); }
+                    if (ImGui::ArrowButton("##Z-", ImGuiDir_Left)) { f(obj->GetResliceAxes(), -1); obj->Update(); }
                     ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
-                    if (ImGui::ArrowButton("##Z+", ImGuiDir_Right)) { f(obj->GetResliceAxes(), 5); obj->Update(); }
+                    if (ImGui::ArrowButton("##Z+", ImGuiDir_Right)) { f(obj->GetResliceAxes(), 1); obj->Update(); }
                     ImGui::PopButtonRepeat();
                     ImGui::SameLine();
                     vtkns::HelpMarker(u8R"(每次绕着Z轴向左或向右旋转5°)");
@@ -865,9 +880,9 @@ output的origin是相对于新坐标系的，把新坐标系的origin处看作�
                     ImGui::Text("RotateY:");
                     ImGui::SameLine();
                     ImGui::PushButtonRepeat(true);
-                    if (ImGui::ArrowButton("##Y-", ImGuiDir_Left)) { f(obj->GetResliceAxes(), -5); obj->Update(); }
+                    if (ImGui::ArrowButton("##Y-", ImGuiDir_Left)) { f(obj->GetResliceAxes(), -1); obj->Update(); }
                     ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
-                    if (ImGui::ArrowButton("##Y+", ImGuiDir_Right)) { f(obj->GetResliceAxes(), 5); obj->Update(); }
+                    if (ImGui::ArrowButton("##Y+", ImGuiDir_Right)) { f(obj->GetResliceAxes(), 1); obj->Update(); }
                     ImGui::PopButtonRepeat();
                     ImGui::SameLine();
                     vtkns::HelpMarker(u8R"(每次绕着Y轴向左或向右旋转5°)");
@@ -883,9 +898,9 @@ output的origin是相对于新坐标系的，把新坐标系的origin处看作�
                     ImGui::Text("RotateX:");
                     ImGui::SameLine();
                     ImGui::PushButtonRepeat(true);
-                    if (ImGui::ArrowButton("##X-", ImGuiDir_Left)) { f(obj->GetResliceAxes(), -5); obj->Update(); }
+                    if (ImGui::ArrowButton("##X-", ImGuiDir_Left)) { f(obj->GetResliceAxes(), -1); obj->Update(); }
                     ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
-                    if (ImGui::ArrowButton("##X+", ImGuiDir_Right)) { f(obj->GetResliceAxes(), 5); obj->Update(); }
+                    if (ImGui::ArrowButton("##X+", ImGuiDir_Right)) { f(obj->GetResliceAxes(), 1); obj->Update(); }
                     ImGui::PopButtonRepeat();
                     ImGui::SameLine();
                     vtkns::HelpMarker(u8R"(每次绕着X轴向左或向右旋转5°)");

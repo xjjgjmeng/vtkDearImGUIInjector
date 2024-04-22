@@ -5,6 +5,7 @@ vtkSmartPointer<vtkImageReslice> reslice;
 vtkSmartPointer<vtkImageChangeInformation> changer;
 double spacing[3];
 vtkNew<vtkActor> vrPtChangerActor;
+vtkNew<vtkActor> vrLineActor;
 vtkSmartPointer<vtkImageData> img;
 
 int main()
@@ -25,7 +26,7 @@ int main()
 
     // 将原始的image用线框显示出来
     vtkns::genImgOutline(ren, img, false);// ->GetProperty()->SetColor(1., 1., 0.);
-    //vtkns::genVR(ren, img, false, true);
+    vtkns::genVR(ren, img, false, true);
     if (3 == ::reslice->GetOutputDimensionality())
     {
         // 将切割出来的体数据渲染出来
@@ -47,17 +48,29 @@ int main()
 
     //vtkNew<vtkImageChangeInformation> changer;
     ::changer = vtkSmartPointer<vtkImageChangeInformation>::New();
+    //::changer->SetCenterImage(1);
+    //::changer->SetOutputExtentStart(0, 0, 0);
+    //::changer->SetOutputOrigin(0, 0, 0);
     changer->SetInputConnection(::reslice->GetOutputPort());
     //changer->SetOutputOrigin(0, 0, 0);
-#if 1
+#if 0
     {
         auto f = [](vtkObject* caller, unsigned long eid, void* clientdata, void* calldata)
         {
             auto changer = reinterpret_cast<vtkImageChangeInformation*>(clientdata);
-            auto origin = ::reslice->GetOutput()->GetOrigin();
-            //auto bounds = img->GetBounds();
-            auto axesOrigin = ::reslice->GetResliceAxesOrigin();
-            changer->SetOutputOrigin(axesOrigin[0] + origin[0], axesOrigin[1] + origin[1], 0);
+            double origin[3];
+            ::reslice->GetOutput()->GetOrigin(origin);
+            double center[3];
+            img->GetCenter(center);
+            auto bounds = img->GetBounds();
+            double axesOrigin[3];
+            ::reslice->GetResliceAxesOrigin(axesOrigin);
+            ::getLogView()->Add(fmt::format("origin: {}", origin));
+            ::getLogView()->Add(fmt::format("axesOrigin: {}", axesOrigin));
+            //changer->SetOutputOrigin(-center[0], -center[1], -center[2]);
+            //changer->SetOutputOrigin(0, 0, 0);
+            //changer->SetOutputOrigin(axesOrigin[0] + origin[0], axesOrigin[1] + origin[1], 0);
+            //changer->SetOutputOrigin(0-axesOrigin[0], 0-axesOrigin[1], 0);
             //changer->SetOutputOrigin((bounds[1]-bounds[0])/2.+center[0], center[1] / 2, center[2] / 2);
             //changer->SetOutputOrigin(0-(bounds[1]-bounds[0])/2, 0-(bounds[3] - bounds[2]) / 2,0);
         };
@@ -76,6 +89,8 @@ int main()
 
     //{
     //    vtkNew<vtkImageActor> actor;
+    //    actor->GetProperty()->SetColorWindow(6000);
+    //    actor->GetProperty()->SetColorLevel(2000);
     //    actor->GetMapper()->SetInputConnection(::reslice->GetOutputPort());
     //    ren->AddActor(actor);
     //}
@@ -85,7 +100,10 @@ int main()
     vrPtActor->GetProperty()->SetColor(1,0,0);
     ren->AddViewProp(vrPtActor);
 
-    
+    vrLineActor->GetProperty()->SetColor(1, 1, 0);
+    vrLineActor->GetProperty()->SetRepresentationToSurface();
+    ren->AddViewProp(vrLineActor);
+
     vrPtChangerActor->GetProperty()->SetPointSize(7);
     vrPtChangerActor->GetProperty()->SetColor(0, 1, 0);
     ren->AddViewProp(vrPtChangerActor);
@@ -108,7 +126,7 @@ int main()
                 };
             };
 
-            ::getLogView()->Add("\n\nreslcie");
+            //::getLogView()->Add("\n\nreslcie");
             {
                 auto pActor = reinterpret_cast<vtkActor*>(clientdata);
                 auto currSlice = ::reslice->GetOutput();
@@ -116,13 +134,13 @@ int main()
                 vtkns::Pts_t pts;
                 int ee[6];
                 currSlice->GetExtent(ee);
-                ::getLogView()->Add(fmt::format("ee: {}", ee));
+                //::getLogView()->Add(fmt::format("ee: {}", ee));
                 for (auto& i : getIjkList(extent))
                 {
                     double xyz[3];
                     currSlice->TransformIndexToPhysicalPoint(i[0], i[1], i[2], xyz);
-                    ::getLogView()->Add(fmt::format("ijk: {}", i));
-                    ::getLogView()->Add(fmt::format("PhysicalPoint: {::.2f}", xyz));
+                    //::getLogView()->Add(fmt::format("ijk: {}", i));
+                    //::getLogView()->Add(fmt::format("PhysicalPoint: {::.2f}", xyz));
                     // 转化为原始图像上的位置
                     double worldPt_original[4];
                     {
@@ -133,29 +151,30 @@ int main()
                     pts.push_back({ worldPt_original[0], worldPt_original[1], worldPt_original[2] });
 
                     //::getLogView()->Add(fmt::format("worldPt_img: {::.2f}", xyz));
-                    ::getLogView()->Add(fmt::format("worldPt_original: {::.2f}\n", worldPt_original));
+                    //::getLogView()->Add(fmt::format("worldPt_original: {::.2f}\n", worldPt_original));
                 }
                 vtkns::makePoints(pts, pActor);
+                vtkns::makeLines(pts, vrLineActor);
             }
-            ::getLogView()->Add("\n\nchanger");
+            //::getLogView()->Add("\n\nchanger");
             {
                 auto currSlice = ::changer->GetOutput();
                 auto extent = currSlice->GetExtent();
                 vtkns::Pts_t pts;
                 int ee[6];
                 currSlice->GetExtent(ee);
-                ::getLogView()->Add(fmt::format("ee: {}", ee));
+                //::getLogView()->Add(fmt::format("ee: {}", ee));
                 for (auto& i : getIjkList(extent))
                 {
                     double xyz[3];
                     currSlice->TransformIndexToPhysicalPoint(i[0], i[1], i[2], xyz);
-                    ::getLogView()->Add(fmt::format("ijk: {}", i));
-                    ::getLogView()->Add(fmt::format("PhysicalPoint_b: {::.2f}", xyz));
+                    //::getLogView()->Add(fmt::format("ijk: {}", i));
+                    //::getLogView()->Add(fmt::format("PhysicalPoint_b: {::.2f}", xyz));
                     auto resliceOrigin = ::reslice->GetOutput()->GetOrigin();
                     xyz[0] += resliceOrigin[0];
                     xyz[1] += resliceOrigin[1];
                     xyz[2] += resliceOrigin[2];
-                    ::getLogView()->Add(fmt::format("PhysicalPoint_a: {::.2f}", xyz));
+                    //::getLogView()->Add(fmt::format("PhysicalPoint_a: {::.2f}", xyz));
                     // 转化为原始图像上的位置
                     double worldPt_original[4];
                     {
@@ -166,7 +185,7 @@ int main()
                     pts.push_back({ worldPt_original[0], worldPt_original[1], worldPt_original[2] });
 
                     //::getLogView()->Add(fmt::format("worldPt_img: {::.2f}", xyz));
-                    ::getLogView()->Add(fmt::format("worldPt_original: {::.2f}\n", worldPt_original));
+                    //::getLogView()->Add(fmt::format("worldPt_original: {::.2f}\n", worldPt_original));
                 }
                 vtkns::makePoints(pts, vrPtChangerActor);
             }
