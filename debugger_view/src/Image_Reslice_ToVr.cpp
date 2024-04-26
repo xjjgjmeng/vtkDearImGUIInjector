@@ -3,10 +3,78 @@
 
 vtkSmartPointer<vtkImageReslice> reslice;
 vtkSmartPointer<vtkImageChangeInformation> changer;
-double spacing[3];
-vtkNew<vtkActor> vrPtChangerActor;
-vtkNew<vtkActor> vrLineActor;
+vtkNew<vtkActor> vrChangerPtActor;
+vtkNew<vtkActor> vrResliceLineActor;
+vtkNew<vtkActor> vrReslicePtActor;
 vtkSmartPointer<vtkImageData> img;
+
+class MyStyle : public vtkInteractorStyleTrackballCamera
+{
+public:
+    static MyStyle* New()
+    {
+        return new MyStyle;
+    }
+
+    MyStyle()
+    {
+        this->m_Ptplacer->SetProjectionNormalToOblique();
+        {
+            vtkNew<vtkPlane> plane;
+            plane->SetOrigin(0, 0, 0);
+            plane->SetNormal(0, 0, 1);
+            this->m_Ptplacer->SetObliquePlane(plane);
+        }
+    }
+
+    void OnLeftButtonDown() override
+    {
+        if (!this->Interactor->GetRepeatCount())
+        {
+            __super::OnLeftButtonDown();
+            return;
+        }
+
+        vtkns::Pt_t pt;
+
+        int eventPt[2];
+        this->Interactor->GetEventPosition(eventPt);
+        const auto pRenderer = this->Interactor->FindPokedRenderer(eventPt[0], eventPt[1]);
+
+        {
+            double worldOrient[9];
+            double eventPt_d[] = { eventPt[0], eventPt[1] };
+            this->m_Ptplacer->ComputeWorldPosition(pRenderer, eventPt_d, pt.data(), worldOrient);
+        }
+
+        ::logger()->Add("ChangerActorPt: {}", pt);
+
+        auto originTranslation = ::changer->GetOriginTranslation();
+        pt[0] -= originTranslation[0];
+        pt[1] -= originTranslation[1];
+        pt[2] -= originTranslation[2];
+
+        // 转化为原始图像上的位置
+        double worldPt_original[4];
+        {
+            double pt_[] = { pt[0],pt[1],pt[2], 1 };
+            ::reslice->GetResliceAxes()->MultiplyPoint(pt_, worldPt_original);
+        }
+
+        ::logger()->Add("OriginPt: {}", worldPt_original);
+
+        this->m_pts.push_back({ worldPt_original[0], worldPt_original[1], worldPt_original[2] });
+        vtkns::makePoints(this->m_pts, this->m_actor);
+        pRenderer->AddViewProp(this->m_actor);
+        this->m_actor->GetProperty()->SetPointSize(25);
+        this->Interactor->Render();
+    }
+
+private:
+    vtkNew<vtkBoundedPlanePointPlacer> m_Ptplacer;
+    vtkns::Pts_t m_pts;
+    vtkNew<vtkActor> m_actor;
+};
 
 int main()
 {
@@ -14,18 +82,12 @@ int main()
     img = vtkns::getVRData();
     vtkns::labelWorldZero(ren);
 
-    int extent[6];
-    double origin[3];
-    img->GetExtent(extent);
-    img->GetSpacing(::spacing);
-    img->GetOrigin(origin);
-
     ::reslice = vtkSmartPointer<vtkImageReslice>::New();
     ::reslice->SetInputData(img);
     ::reslice->SetOutputDimensionality(2);
 
     // 将原始的image用线框显示出来
-    vtkns::genImgOutline(ren, img, false);// ->GetProperty()->SetColor(1., 1., 0.);
+    vtkns::genImgOutline(ren, img, false);
     //vtkns::genVR(ren, img, false, true);
     if (3 == ::reslice->GetOutputDimensionality())
     {
@@ -41,79 +103,42 @@ int main()
         ::reslice->SetResliceAxesOrigin(img->GetCenter());
     }
     reslice->SetInterpolationModeToLinear();
-    //reslice->SetOutputOrigin(0, 0, 0);
-    //reslice->SetOutputExtent(0,400,0,400,0,400);
-    //reslice->SetOutputSpacing(::spacing);
     ::reslice->Update(); // 没有此句的话在一开始不能显示三维线框
 
-    //vtkNew<vtkImageChangeInformation> changer;
     ::changer = vtkSmartPointer<vtkImageChangeInformation>::New();
-    //::changer->SetCenterImage(1);
-    //::changer->SetOutputExtentStart(0, 0, 0);
-    //::changer->SetOutputOrigin(0, 0, 0);
-    changer->SetInputConnection(::reslice->GetOutputPort());
-    //changer->SetOutputOrigin(0, 0, 0);
-#if 0
-    {
-        auto f = [](vtkObject* caller, unsigned long eid, void* clientdata, void* calldata)
-        {
-            auto changer = reinterpret_cast<vtkImageChangeInformation*>(clientdata);
-            double origin[3];
-            ::reslice->GetOutput()->GetOrigin(origin);
-            double center[3];
-            img->GetCenter(center);
-            auto bounds = img->GetBounds();
-            double axesOrigin[3];
-            ::reslice->GetResliceAxesOrigin(axesOrigin);
-            ::getLogView()->Add(fmt::format("origin: {}", origin));
-            ::getLogView()->Add(fmt::format("axesOrigin: {}", axesOrigin));
-            //changer->SetOriginTranslation(axesOrigin[0] - img->GetCenter()[0], axesOrigin[1] - img->GetCenter()[1], axesOrigin[2] - img->GetCenter()[2]);
-            //changer->SetOutputOrigin(-center[0], -center[1], -center[2]);
-            //changer->SetOutputOrigin(0, 0, 0);
-            //changer->SetOutputOrigin(axesOrigin[0] + origin[0], axesOrigin[1] + origin[1], 0);
-            //changer->SetOutputOrigin(0-axesOrigin[0], 0-axesOrigin[1], 0);
-            //changer->SetOutputOrigin((bounds[1]-bounds[0])/2.+center[0], center[1] / 2, center[2] / 2);
-            //changer->SetOutputOrigin(0-(bounds[1]-bounds[0])/2, 0-(bounds[3] - bounds[2]) / 2,0);
-        };
-        vtkNew<vtkCallbackCommand> pCC;
-        pCC->SetCallback(f);
-        pCC->SetClientData(changer.GetPointer());
-        //::reslice->GetOutput()->AddObserver(vtkCommand::ModifiedEvent, pCC);
-        ::reslice->GetResliceAxes()->AddObserver(vtkCommand::ModifiedEvent, pCC);
-    }
-#endif
+    ::changer->SetInputConnection(::reslice->GetOutputPort());
 
-    vtkNew<vtkImageActor> actor;
-    actor->GetProperty()->SetColorWindow(6000);
-    actor->GetProperty()->SetColorLevel(2000);
-    actor->GetMapper()->SetInputConnection(changer->GetOutputPort());
-    ren->AddActor(actor);
+    // 用于显示reslice生成的影像
+    vtkNew<vtkImageActor> resliceImgActor;
+    resliceImgActor->GetProperty()->SetColorWindow(6000);
+    resliceImgActor->GetProperty()->SetColorLevel(2000);
+    resliceImgActor->GetMapper()->SetInputConnection(::reslice->GetOutputPort());
+    ren->AddActor(resliceImgActor);
+    resliceImgActor->VisibilityOff();
 
-    //{
-    //    vtkNew<vtkImageActor> actor;
-    //    actor->GetProperty()->SetColorWindow(6000);
-    //    actor->GetProperty()->SetColorLevel(2000);
-    //    actor->GetMapper()->SetInputConnection(::reslice->GetOutputPort());
-    //    ren->AddActor(actor);
-    //}
+    // 用于显示changer生成的影像
+    vtkNew<vtkImageActor> changerImgActor;
+    changerImgActor->GetProperty()->SetColorWindow(6000);
+    changerImgActor->GetProperty()->SetColorLevel(2000);
+    changerImgActor->GetMapper()->SetInputConnection(::changer->GetOutputPort());
+    ren->AddActor(changerImgActor);
 
-    vtkNew<vtkActor> vrPtActor;
-    vrPtActor->GetProperty()->SetPointSize(12);
-    vrPtActor->GetProperty()->SetColor(1,0,0);
-    ren->AddViewProp(vrPtActor);
+    vrReslicePtActor->GetProperty()->SetPointSize(12);
+    vrReslicePtActor->GetProperty()->SetColor(1,0,0);
+    ren->AddViewProp(vrReslicePtActor);
 
-    vrLineActor->GetProperty()->SetColor(1, 1, 0);
-    vrLineActor->GetProperty()->SetRepresentationToSurface();
-    ren->AddViewProp(vrLineActor);
+    vrResliceLineActor->GetProperty()->SetColor(1, 1, 0);
+    vrResliceLineActor->GetProperty()->SetRepresentationToSurface();
+    ren->AddViewProp(vrResliceLineActor);
 
-    vrPtChangerActor->GetProperty()->SetPointSize(7);
-    vrPtChangerActor->GetProperty()->SetColor(0, 1, 0);
-    ren->AddViewProp(vrPtChangerActor);
+    vrChangerPtActor->GetProperty()->SetPointSize(7);
+    vrChangerPtActor->GetProperty()->SetColor(0, 1, 0);
+    ren->AddViewProp(vrChangerPtActor);
 
     {
         auto f = [](vtkObject* caller, unsigned long eid, void* clientdata, void* calldata)
         {
-            auto getIjkList = [](int extent[6])
+            auto ijkList = [](int extent[6])
             {
                 return std::list<std::array<int, 3>>
                 {
@@ -127,22 +152,20 @@ int main()
                     {extent[0], extent[3], extent[5]},
                 };
             };
-
-            //::getLogView()->Add("\n\nreslcie");
+            ::logger()->Add("\n\nreslice");
             {
-                auto pActor = reinterpret_cast<vtkActor*>(clientdata);
+                //auto pActor = reinterpret_cast<vtkActor*>(clientdata);
                 auto currSlice = ::reslice->GetOutput();
-                auto extent = currSlice->GetExtent();
+                int extent[6];
+                currSlice->GetExtent(extent);
+                ::logger()->Add("extent: {}", extent);
                 vtkns::Pts_t pts;
-                int ee[6];
-                currSlice->GetExtent(ee);
-                //::getLogView()->Add(fmt::format("ee: {}", ee));
-                for (auto& i : getIjkList(extent))
+                for (auto& i : ijkList(extent))
                 {
                     double xyz[3];
                     currSlice->TransformIndexToPhysicalPoint(i[0], i[1], i[2], xyz);
-                    //::getLogView()->Add(fmt::format("ijk: {}", i));
-                    //::getLogView()->Add(fmt::format("PhysicalPoint: {::.2f}", xyz));
+                    ::logger()->Add("ijk: {}", i);
+                    ::logger()->Add("PhysicalPoint: {::.2f}", xyz);
                     // 转化为原始图像上的位置
                     double worldPt_original[4];
                     {
@@ -155,28 +178,30 @@ int main()
                     //::getLogView()->Add(fmt::format("worldPt_img: {::.2f}", xyz));
                     //::getLogView()->Add(fmt::format("worldPt_original: {::.2f}\n", worldPt_original));
                 }
-                vtkns::makePoints(pts, pActor);
-                vtkns::makeLines(pts, vrLineActor);
+                vtkns::makePoints(pts, ::vrReslicePtActor);
+                vtkns::makeLines(pts, ::vrResliceLineActor);
             }
-            //::getLogView()->Add("\n\nchanger");
+            ::logger()->Add("\n\nchanger");
             {
                 auto currSlice = ::changer->GetOutput();
-                auto extent = currSlice->GetExtent();
                 vtkns::Pts_t pts;
-                int ee[6];
-                currSlice->GetExtent(ee);
-                //::getLogView()->Add(fmt::format("ee: {}", ee));
-                for (auto& i : getIjkList(extent))
+                int extent[6];
+                currSlice->GetExtent(extent);
+                ::logger()->Add("extent: {}", extent);
+                for (auto& i : ijkList(extent))
                 {
                     double xyz[3];
                     currSlice->TransformIndexToPhysicalPoint(i[0], i[1], i[2], xyz);
-                    //::getLogView()->Add(fmt::format("ijk: {}", i));
-                    //::getLogView()->Add(fmt::format("PhysicalPoint_b: {::.2f}", xyz));
-                    auto resliceOrigin = ::reslice->GetOutput()->GetOrigin();
-                    xyz[0] += resliceOrigin[0];
-                    xyz[1] += resliceOrigin[1];
-                    xyz[2] += resliceOrigin[2];
-                    //::getLogView()->Add(fmt::format("PhysicalPoint_a: {::.2f}", xyz));
+                    ::logger()->Add("ijk: {}", i);
+                    ::logger()->Add("PhysicalPoint_b: {::.2f}", xyz);
+                    //auto resliceOrigin = ::reslice->GetOutput()->GetOrigin();
+                    double originTranslation[3];
+                    ::changer->GetOriginTranslation(originTranslation);
+                    ::logger()->Add("OriginTranslation: {}", originTranslation);
+                    xyz[0] -= originTranslation[0];
+                    xyz[1] -= originTranslation[1];
+                    xyz[2] -= originTranslation[2];
+                    ::logger()->Add("PhysicalPoint_a: {::.2f}", xyz);
                     // 转化为原始图像上的位置
                     double worldPt_original[4];
                     {
@@ -189,12 +214,12 @@ int main()
                     //::getLogView()->Add(fmt::format("worldPt_img: {::.2f}", xyz));
                     //::getLogView()->Add(fmt::format("worldPt_original: {::.2f}\n", worldPt_original));
                 }
-                vtkns::makePoints(pts, vrPtChangerActor);
+                vtkns::makePoints(pts, ::vrChangerPtActor);
             }
         };
         vtkNew<vtkCallbackCommand> pCC;
         pCC->SetCallback(f);
-        pCC->SetClientData(vrPtActor);
+        //pCC->SetClientData(vrPtActor);
         ::changer->GetOutput()->AddObserver(vtkCommand::ModifiedEvent, pCC);
     }
 
@@ -203,6 +228,8 @@ int main()
     {
         static bool showResliceOutput = false;
         ImGui::Checkbox("ShowResliceAndChangerOutput", &showResliceOutput);
+        ImGui::SameLine();
+        if (bool v = resliceImgActor->GetVisibility(); ImGui::Checkbox("ShowResliceImg", &v)) resliceImgActor->SetVisibility(v);
         if (showResliceOutput)
         {
             ImGui::Begin("ResliceOutput");
@@ -210,16 +237,24 @@ int main()
             vtkns::vtkObjSetup("Changer", changer->GetOutput(), ImGuiTreeNodeFlags_DefaultOpen);
             ImGui::End();
         }
-        vtkns::vtkObjSetup("vtkImageActor", actor);
+        vtkns::vtkObjSetup("vtkImageActor", changerImgActor);
         vtkns::vtkObjSetup("Reslice", ::reslice, ImGuiTreeNodeFlags_DefaultOpen);
         vtkns::vtkObjSetup("Changer", ::changer, ImGuiTreeNodeFlags_DefaultOpen);
-        if (ImGui::Button("X+"))
         {
-            ::reslice->GetResliceAxes()->SetElement(0, 3, ::reslice->GetResliceAxes()->GetElement(0, 3) + 1);
-            //::changer->SetExtentTranslation(::changer->GetExtentTranslation()[0]-1, 0, 0);
-            auto ot = ::changer->GetOriginTranslation();
-            ot[0] += 1;
-            ::changer->SetOriginTranslation(ot);
+            auto f = [](const int idx, const int v)
+                {
+                    ::reslice->GetResliceAxes()->SetElement(idx, 3, ::reslice->GetResliceAxes()->GetElement(idx, 3) + v);
+                    double ot[3];
+                    ::changer->GetOriginTranslation(ot);
+                    ot[idx] += v;
+                    ::changer->SetOriginTranslation(ot);
+                };
+            if (ImGui::Button("X+")) f(0, 1); ImGui::SameLine();
+            if (ImGui::Button("X-")) f(0, -1); ImGui::SameLine();
+            if (ImGui::Button("Y+")) f(1, 1); ImGui::SameLine();
+            if (ImGui::Button("Y-")) f(1, -1);/* ImGui::SameLine();
+            if (ImGui::Button("Z+")) f(2, 1); ImGui::SameLine();
+            if (ImGui::Button("Z-")) f(2, -1);*/
         }
     };
 
@@ -248,7 +283,8 @@ int main()
     ::ShowWindow(hwnd, SW_MAXIMIZE);
 #endif
 #endif
-    vtkInteractorStyleSwitch::SafeDownCast(rwi->GetInteractorStyle())->SetCurrentStyleToTrackballCamera();
+    //vtkInteractorStyleSwitch::SafeDownCast(rwi->GetInteractorStyle())->SetCurrentStyleToTrackballCamera();
+    rwi->SetInteractorStyle(vtkNew<MyStyle>{});
     rwi->EnableRenderOff();
     rwi->Start();
 }

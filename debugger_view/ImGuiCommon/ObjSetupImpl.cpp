@@ -16,20 +16,6 @@ namespace vtkns
     }
 }
 
-auto getMatrixString(vtkMatrix4x4* obj)
-{
-#if 1
-    return fmt::format("Element:\n\t{:.5f}\t{:.5f}\t{:.5f}\t{:.5f}\n\t{:.5f}\t{:.5f}\t{:.5f}\t{:.5f}\n\t{:.5f}\t{:.5f}\t{:.5f}\t{:.5f}\n\t{:.5f}\t{:.5f}\t{:.5f}\t{:.5f}",
-        obj->GetElement(0, 0), obj->GetElement(0, 1), obj->GetElement(0, 2), obj->GetElement(0, 3),
-        obj->GetElement(1, 0), obj->GetElement(1, 1), obj->GetElement(1, 2), obj->GetElement(1, 3),
-        obj->GetElement(2, 0), obj->GetElement(2, 1), obj->GetElement(2, 2), obj->GetElement(2, 3),
-        obj->GetElement(3, 0), obj->GetElement(3, 1), obj->GetElement(3, 2), obj->GetElement(3, 3));
-#else
-    return fmt::format("Element:\n\t{}",
-        *(double(*)[4][4])(obj->GetData()));
-#endif
-}
-
 namespace
 {
     // 使用函数模板特化，而不使用普通函数重载，可以避免在没有实现子类类型setupImpl的时候继续调用基类函数的问题
@@ -89,7 +75,7 @@ namespace
     template<>
     void setupImpl(vtkScalarsToColors* vtkobj)
     {
-        if (float v[2]{vtkobj->GetRange()[0], vtkobj->GetRange()[1]}; ImGui::DragFloatRange2("Range", v, v+1))
+        if (float v[2]{ vtkobj->GetRange()[0], vtkobj->GetRange()[1] }; ImGui::DragFloatRange2("Range", v, v + 1))
         {
             vtkobj->SetRange(v[0], v[1]);
         }
@@ -111,7 +97,7 @@ namespace
             }
         }
 
-        if (ImGui::Button("Build")) 
+        if (ImGui::Button("Build"))
             vtkobj->Build();
     }
 
@@ -236,7 +222,7 @@ namespace
     template <>
     void setupImpl(vtkMapper* obj)
     {
-    
+
     }
 
     template <>
@@ -248,7 +234,7 @@ namespace
     template <>
     void setupImpl(vtkImageGridSource* obj)
     {
-        if (double v = obj->GetLineValue(); ImGui::DragScalar("LineValue", ImGuiDataType_Double , &v)) obj->SetLineValue(v);
+        if (double v = obj->GetLineValue(); ImGui::DragScalar("LineValue", ImGuiDataType_Double, &v)) obj->SetLineValue(v);
         if (double v = obj->GetFillValue(); ImGui::DragScalar("FillValue", ImGuiDataType_Double, &v)) obj->SetFillValue(v);
         if (int v[3]; obj->GetGridSpacing(v), ImGui::DragScalarN("GridSpacing", ImGuiDataType_S32, v, IM_ARRAYSIZE(v))) obj->SetGridSpacing(v);
         if (int v[3]; obj->GetGridOrigin(v), ImGui::DragScalarN("GridOrigin", ImGuiDataType_S32, v, IM_ARRAYSIZE(v))) obj->SetGridOrigin(v);
@@ -543,7 +529,7 @@ namespace
     template <>
     void setupImpl(vtkDataSetAlgorithm* obj)
     {
-    
+
     }
 
     template <>
@@ -853,12 +839,12 @@ output的origin是相对于新坐标系的，把新坐标系的origin处看作�
                 }
                 {
                     auto f = [](vtkMatrix4x4* mat, const double v)
-                    {
-                        vtkNew<vtkTransform> transform;
-                        transform->SetMatrix(mat);
-                        transform->RotateZ(v);
-                        mat->DeepCopy(transform->GetMatrix());
-                    };
+                        {
+                            vtkNew<vtkTransform> transform;
+                            transform->SetMatrix(mat);
+                            transform->RotateZ(v);
+                            mat->DeepCopy(transform->GetMatrix());
+                        };
                     ImGui::Text("RotateZ:");
                     ImGui::SameLine();
                     ImGui::PushButtonRepeat(true);
@@ -871,12 +857,12 @@ output的origin是相对于新坐标系的，把新坐标系的origin处看作�
                 }
                 {
                     auto f = [](vtkMatrix4x4* mat, const double v)
-                    {
-                        vtkNew<vtkTransform> transform;
-                        transform->SetMatrix(mat);
-                        transform->RotateY(v);
-                        mat->DeepCopy(transform->GetMatrix());
-                    };
+                        {
+                            vtkNew<vtkTransform> transform;
+                            transform->SetMatrix(mat);
+                            transform->RotateY(v);
+                            mat->DeepCopy(transform->GetMatrix());
+                        };
                     ImGui::Text("RotateY:");
                     ImGui::SameLine();
                     ImGui::PushButtonRepeat(true);
@@ -889,12 +875,12 @@ output的origin是相对于新坐标系的，把新坐标系的origin处看作�
                 }
                 {
                     auto f = [](vtkMatrix4x4* mat, const double v)
-                    {
-                        vtkNew<vtkTransform> transform;
-                        transform->SetMatrix(mat);
-                        transform->RotateX(v);
-                        mat->DeepCopy(transform->GetMatrix());
-                    };
+                        {
+                            vtkNew<vtkTransform> transform;
+                            transform->SetMatrix(mat);
+                            transform->RotateX(v);
+                            mat->DeepCopy(transform->GetMatrix());
+                        };
                     ImGui::Text("RotateX:");
                     ImGui::SameLine();
                     ImGui::PushButtonRepeat(true);
@@ -906,29 +892,57 @@ output的origin是相对于新坐标系的，把新坐标系的origin处看作�
                     vtkns::HelpMarker(u8R"(每次绕着X轴向左或向右旋转5°)");
                 }
                 {
-                    auto f = [](vtkMatrix4x4* mat, const double x, const double y)
-                    {
-                        vtkNew<vtkTransform> transform;
-                        transform->SetMatrix(mat);
-                        transform->Translate(x,y,0);
-                        mat->DeepCopy(transform->GetMatrix());
-                    };
+                    static bool useVtkTransform = true;
+                    auto f = [](vtkMatrix4x4* mat, const double x, const double y, const double z)
+                        {
+                            if (useVtkTransform)
+                            {
+                                vtkNew<vtkTransform> transform;
+                                transform->SetMatrix(mat);
+                                transform->Translate(x, y, z);
+                                mat->DeepCopy(transform->GetMatrix());
+                            }
+                            else
+                            {
+                                double myMat[] = {
+                                    1.,0.,0.,x,
+                                    0.,1.,0.,y,
+                                    0.,0.,1.,z,
+                                    0.,0.,0.,1.
+                                };
+                                double r[16];
+                                vtkMatrix4x4::Multiply4x4(myMat, mat->GetData(), r);
+                                mat->DeepCopy(r);
+                            }
+                        };
                     ImGui::Text("Translate:");
                     ImGui::SameLine();
                     ImGui::PushButtonRepeat(true);
-                    if (ImGui::ArrowButton("##TX-", ImGuiDir_Left)) { f(obj->GetResliceAxes(), -1, 0); obj->Update(); }
+                    if (ImGui::ArrowButton("##TX-", ImGuiDir_Left)) { f(obj->GetResliceAxes(), -1, 0, 0); obj->Update(); }
                     ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
-                    if (ImGui::ArrowButton("##TX+", ImGuiDir_Right)) { f(obj->GetResliceAxes(), 1, 0); obj->Update(); }
+                    if (ImGui::ArrowButton("##TX+", ImGuiDir_Right)) { f(obj->GetResliceAxes(), 1, 0, 0); obj->Update(); }
+                    ImGui::SameLine();
+                    vtkns::HelpMarker(u8R"(沿着X方向平移)");
                     ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
-                    if (ImGui::ArrowButton("##TY-", ImGuiDir_Up)) { f(obj->GetResliceAxes(), 0, 1); obj->Update(); }
+                    if (ImGui::ArrowButton("##TY-", ImGuiDir_Up)) { f(obj->GetResliceAxes(), 0, 1, 0); obj->Update(); }
                     ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
-                    if (ImGui::ArrowButton("##TY+", ImGuiDir_Down)) { f(obj->GetResliceAxes(), 0, -1); obj->Update(); }
+                    if (ImGui::ArrowButton("##TY+", ImGuiDir_Down)) { f(obj->GetResliceAxes(), 0, -1, 0); obj->Update(); }
+                    ImGui::SameLine();
+                    vtkns::HelpMarker(u8R"(沿着Y方向平移)");
+                    ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
+                    if (ImGui::ArrowButton("##TZ-", ImGuiDir_Left)) { f(obj->GetResliceAxes(), 0, 0, -1); obj->Update(); }
+                    ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
+                    if (ImGui::ArrowButton("##TZ+", ImGuiDir_Right)) { f(obj->GetResliceAxes(), 0, 0, 1); obj->Update(); }
+                    ImGui::SameLine();
+                    vtkns::HelpMarker(u8R"(沿着Z方向平移)");
                     ImGui::PopButtonRepeat();
-                    //ImGui::SameLine();
-                    //vtkns::HelpMarker(u8R"(每次绕着X轴向左或向右旋转5°)");
+                    ImGui::SameLine();
+                    ImGui::Checkbox("UseVtkTransform", &useVtkTransform);
+                    ImGui::SameLine();
+                    vtkns::HelpMarker(u8R"(平移的方式: 使用vtkTransform(选中)，使用自定义矩阵(非选中))");
                 }
 
-                ImGui::Text(::getMatrixString(obj->GetResliceAxes()).c_str());
+                ImGui::Text(vtkns::getMatrixString(obj->GetResliceAxes()).c_str());
 
                 ImGui::TreePop();
             }
@@ -2780,7 +2794,7 @@ namespace
     template <typename T, typename... Ts>
     void setupHelper(vtkObject* obj)
     {
-        constexpr auto flags = std::is_same_v<T, vtkObject>?ImGuiTreeNodeFlags_None : ImGuiTreeNodeFlags_DefaultOpen;
+        constexpr auto flags = std::is_same_v<T, vtkObject> ? ImGuiTreeNodeFlags_None : ImGuiTreeNodeFlags_DefaultOpen;
         if (const auto p = T::SafeDownCast(obj); p && ImGui::CollapsingHeader(typeid(T).name(), flags))
         {
             ::setupImpl<T>(p);

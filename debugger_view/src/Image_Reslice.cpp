@@ -55,8 +55,8 @@ public:
               ::reslice->GetResliceAxes()->MultiplyPoint(pt, worldPt_original);
           }
 
-          ::getLogView()->Add(fmt::format("worldPt_img: {::.2f}", worldPt_img));
-          ::getLogView()->Add(fmt::format("worldPt_original: {::.2f}\n", worldPt_original));
+          ::logger()->Add(fmt::format("worldPt_img: {::.2f}", worldPt_img));
+          ::logger()->Add(fmt::format("worldPt_original: {::.2f}\n", worldPt_original));
           vtkns::makePoints({ {worldPt_img[0], worldPt_img[1], worldPt_img[2]}}, actor_image);
           vtkns::makePoints({ {worldPt_original[0], worldPt_original[1], worldPt_original[2]}}, actor_original);
       }

@@ -22,16 +22,16 @@ public:
         // 通过placer获取当前鼠标所在的pixel坐标在当前slice（plane）的xyz坐标
         double eventPt_d[] = { eventPt[0], eventPt[1] };
         this->m_placer->ComputeWorldPosition(pRenderer, eventPt_d, worldPt, worldOrient);
-        ::getLogView()->Add(fmt::format("EventPosition: {}", eventPt));
-        ::getLogView()->Add(fmt::format("worldPos: {::.2f}", worldPt));
-        ::getLogView()->Add(fmt::format("worldOrient: {::.2f}", worldOrient));
-        ::getLogView()->Add(fmt::format("ValidateWorldPosition: {}", this->m_placer->ValidateWorldPosition(worldPt)));
+        ::logger()->Add(fmt::format("EventPosition: {}", eventPt));
+        ::logger()->Add(fmt::format("worldPos: {::.2f}", worldPt));
+        ::logger()->Add(fmt::format("worldOrient: {::.2f}", worldOrient));
+        ::logger()->Add(fmt::format("ValidateWorldPosition: {}", this->m_placer->ValidateWorldPosition(worldPt)));
         {
             // 将确定的slice上的xyz坐标转化为vr中的ijk坐标
             // 获取当前鼠标所在的voxel
             double ijk[3];
             this->m_img->TransformPhysicalPointToContinuousIndex(worldPt, ijk);
-            ::getLogView()->Add(fmt::format("ContinuousIndex: {::.2f}", ijk));
+            ::logger()->Add(fmt::format("ContinuousIndex: {::.2f}", ijk));
         }
     
         if (m_move)

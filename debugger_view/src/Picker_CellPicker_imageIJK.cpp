@@ -14,15 +14,15 @@ public:
     {
         int eventPt[2];
         this->GetInteractor()->GetEventPosition(eventPt);
-        ::getLogView()->Add(fmt::format("EventPosition: {}", eventPt));
+        ::logger()->Add(fmt::format("EventPosition: {}", eventPt));
         if (const auto renderer = this->GetInteractor()->FindPokedRenderer(eventPt[0], eventPt[1]))
         {
-            vtkns::printWorldPt(*::getLogView(), renderer, eventPt[0], eventPt[1]);
+            vtkns::printWorldPt(*::logger(), renderer, eventPt[0], eventPt[1]);
 
             this->GetInteractor()->GetPicker()->Pick(eventPt[0], eventPt[1], 0, renderer);
             vtkns::Pt_t pickedPt;
             this->GetInteractor()->GetPicker()->GetPickPosition(pickedPt.data()); // 获取pick的世界坐标
-            ::getLogView()->Add(fmt::format("pickedPt: {}", pickedPt));
+            ::logger()->Add(fmt::format("pickedPt: {}", pickedPt));
 
             if (m_b)
             {
@@ -51,7 +51,7 @@ public:
                 //pt2[1] += len * normal[1];
                 //pt2[2] += len * normal[2];
                 auto pt2 = vtkns::advance(pickedPt, normal, len);
-                ::getLogView()->Add(fmt::format("len: {}", std::sqrt(vtkMath::Distance2BetweenPoints(pickedPt.data(), pt2.data()))));
+                ::logger()->Add(fmt::format("len: {}", std::sqrt(vtkMath::Distance2BetweenPoints(pickedPt.data(), pt2.data()))));
                 this->m_normal->GetProperty()->SetColor(1, 0, 0);
                 this->m_normal->GetProperty()->SetLineWidth(3);
                 this->m_normalPt->GetProperty()->SetColor(0, 1, 0);

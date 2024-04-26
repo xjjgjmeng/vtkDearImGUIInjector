@@ -14,7 +14,7 @@ public:
         vtkPointWidget* pointWidget = reinterpret_cast<vtkPointWidget*>(caller);
         double position[3];
         pointWidget->GetPosition(position);
-        ::getLogView()->Add(fmt::format("Position: {::.2f}", position));
+        ::logger()->Add(fmt::format("Position: {::.2f}", position));
     }
 };
 

@@ -360,6 +360,23 @@ namespace
 
 namespace vtkns
 {
+	static auto getMatrixString(vtkMatrix4x4* obj)
+	{
+#if 1
+		return fmt::format("Element:\n\t{:.5f}\t{:.5f}\t{:.5f}\t{:.5f}\n\t{:.5f}\t{:.5f}\t{:.5f}\t{:.5f}\n\t{:.5f}\t{:.5f}\t{:.5f}\t{:.5f}\n\t{:.5f}\t{:.5f}\t{:.5f}\t{:.5f}",
+			obj->GetElement(0, 0), obj->GetElement(0, 1), obj->GetElement(0, 2), obj->GetElement(0, 3),
+			obj->GetElement(1, 0), obj->GetElement(1, 1), obj->GetElement(1, 2), obj->GetElement(1, 3),
+			obj->GetElement(2, 0), obj->GetElement(2, 1), obj->GetElement(2, 2), obj->GetElement(2, 3),
+			obj->GetElement(3, 0), obj->GetElement(3, 1), obj->GetElement(3, 2), obj->GetElement(3, 3));
+#else
+		return fmt::format("Element:\n\t{}",
+			*(double(*)[4][4])(obj->GetData()));
+#endif
+	}
+}
+
+namespace vtkns
+{
     void HelpMarker(const char* desc);
     void vtkObjSetup(std::string_view objName, vtkSmartPointer<vtkObject> vtkObj, const ImGuiTreeNodeFlags = 0);
 	struct LogView
@@ -383,8 +400,11 @@ namespace vtkns
 			LineOffsets.push_back(0);
 		}
 
-		void Add(const std::string_view& log)
+		template <typename... Ts>
+		void Add(Ts&&... args)
 		{
+			auto log = fmt::format(std::forward<Ts>(args)...);
+
 			if (this->ShowTimestamp)
 			{
 				AddLog(fmt::format("{} {}\n", std::chrono::system_clock::now(), log).c_str());
@@ -495,10 +515,19 @@ namespace vtkns
 static std::function<void()> imgui_render_callback;
 static vtkWeakPointer<vtkRenderWindow> pWindow;
 static bool showLogView = false;
-static vtkns::LogView* getLogView()
+static vtkns::LogView* logger()
 {
 	static vtkns::LogView o;
 	return &o;
+}
+
+namespace vtkns
+{
+	template <typename... Ts>
+	void log(Ts&&... args)
+	{
+		::logger()->Add(std::forward<Ts>(args)...);
+	}
 }
 
 namespace vtkns
@@ -567,7 +596,7 @@ namespace vtkns
 			if (::showLogView)
 			{
 				ImGui::Begin("Log");
-				::getLogView()->Draw();
+				::logger()->Draw();
 				ImGui::End();
 			}
 		};
@@ -599,8 +628,8 @@ namespace vtkns
 
 	static const char* getDicomFile()
 	{
-		//const char* retval = "D:/test_data/series/I0000000200.dcm";
-		const char* retval = "C:\\Users\\123\\Desktop\\series\\I0000000200.dcm";
+		const char* retval = "D:/test_data/series/I0000000200.dcm";
+		//const char* retval = "C:\\Users\\123\\Desktop\\series\\I0000000200.dcm";
 		if (!std::filesystem::exists(retval))
 		{
 			throw "dicom file does not exist!";
@@ -610,8 +639,8 @@ namespace vtkns
 
 	static const char* getDicomDir()
 	{
-		//const char* retval = "D:/test_data/series";
-		const char* retval = "C:\\Users\\123\\Desktop\\series";
+		const char* retval = "D:/test_data/series";
+		//const char* retval = "C:\\Users\\123\\Desktop\\series";
 		if (!std::filesystem::exists(retval))
 		{
 			throw "dicom dir does not exist!";
@@ -635,9 +664,10 @@ namespace vtkns
 		return reader->GetOutput();
 	}
 
-	static void labelWorldZero(vtkRenderer* pRen)
+	static void labelWorldZero(vtkRenderer* pRen, const bool b = true)
 	{
 		// 在世界原点放置一个标记
+		if (b)
 		{
 			vtkNew<vtkSphereSource> pointSource;
 			pointSource->SetCenter(0, 0, 0);

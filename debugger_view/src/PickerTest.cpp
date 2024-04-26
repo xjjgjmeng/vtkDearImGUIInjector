@@ -10,7 +10,7 @@ public:
 
     void Pick() override
     {
-        ::getLogView()->Add("Pick func");
+        ::logger()->Add("Pick func");
         __super::Pick();
     }
 };
@@ -26,15 +26,15 @@ public:
     {
         int eventPt[2];
         this->GetInteractor()->GetEventPosition(eventPt);
-        ::getLogView()->Add(fmt::format("EventPosition: {}", eventPt));
+        ::logger()->Add(fmt::format("EventPosition: {}", eventPt));
         if (const auto renderer = this->GetInteractor()->FindPokedRenderer(eventPt[0], eventPt[1]))
         {
-            vtkns::printWorldPt(*::getLogView(), renderer, eventPt[0], eventPt[1]);
+            vtkns::printWorldPt(*::logger(), renderer, eventPt[0], eventPt[1]);
 
             this->GetInteractor()->GetPicker()->Pick(eventPt[0], eventPt[1], 0, renderer);
             double pickedPt[3];
             this->GetInteractor()->GetPicker()->GetPickPosition(pickedPt); // 获取pick的世界坐标
-            ::getLogView()->Add(fmt::format("pickedPt: {}", pickedPt));
+            ::logger()->Add(fmt::format("pickedPt: {}", pickedPt));
             if (vtkPointPicker::SafeDownCast(this->GetInteractor()->GetPicker()) || vtkWorldPointPicker::SafeDownCast(this->GetInteractor()->GetPicker()))
             {
                 // 在点击的位置放置一个点
@@ -130,8 +130,8 @@ public:
     void OnLeftButtonDown() override
     {
         __super::OnLeftButtonDown(); // 此函数会调用vtkInteractorStyleTrackballActor::FindPickedActor，更新InteractionPicker变量
-        ::getLogView()->Add(fmt::format("InteractionProp: {}", reinterpret_cast<void*>(this->InteractionProp)));
-        ::getLogView()->Add(fmt::format("GetViewProp: {}", reinterpret_cast<void*>(this->InteractionPicker->GetViewProp())));
+        ::logger()->Add(fmt::format("InteractionProp: {}", reinterpret_cast<void*>(this->InteractionProp)));
+        ::logger()->Add(fmt::format("GetViewProp: {}", reinterpret_cast<void*>(this->InteractionPicker->GetViewProp())));
     }
 };
 vtkStandardNewMacro(MyActorStyle);
