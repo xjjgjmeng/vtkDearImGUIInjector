@@ -185,3 +185,6 @@
 #include <imgui.h>
 
 #include "PolyDataHelper.h"
+#include "MatrixHelper.h"
+#include "ImageSharpenFilter.h"
+#include "DrawFreeLineStyle.h"

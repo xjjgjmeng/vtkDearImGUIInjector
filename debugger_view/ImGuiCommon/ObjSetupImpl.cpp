@@ -631,6 +631,112 @@ namespace
     template <>
     void setupImpl(vtkMatrix4x4* obj)
     {
+        if (ImGui::TreeNodeEx("Data", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            if (ImGui::DragScalarN("Row0", ImGuiDataType_Double, obj->GetData()+ 0, 4, 0.1f)) obj->Modified();
+            if (ImGui::DragScalarN("Row1", ImGuiDataType_Double, obj->GetData()+ 4, 4, 0.1f)) obj->Modified();
+            if (ImGui::DragScalarN("Row2", ImGuiDataType_Double, obj->GetData()+ 8, 4, 0.1f)) obj->Modified();
+            if (ImGui::DragScalarN("Row3", ImGuiDataType_Double, obj->GetData()+12, 4, 0.1f)) obj->Modified();
+            ImGui::TreePop();
+        }
+        ImGui::Text(fmt::format("Determinant:{}", obj->Determinant()).c_str());
+        if (ImGui::Button("Invert")) obj->Invert(); ImGui::SameLine();
+        if (ImGui::Button("Transpose")) obj->Transpose(); ImGui::SameLine();
+        if (ImGui::Button("Zero")) obj->Zero(); ImGui::SameLine();
+        if (ImGui::Button("Identity")) obj->Identity(); ImGui::SameLine();
+        obj->IsIdentity() ? ImGui::Text("IsIdentity") : ImGui::TextDisabled("IsIdentity");
+        ImGui::Text(vtkns::getMatrixString(obj).c_str());
+        {
+            if (ImGui::TreeNodeEx(u8"操作", ImGuiTreeNodeFlags_DefaultOpen))
+            {
+                static bool useVtkTransform = true;
+                ImGui::Checkbox("UseVtkTransform", &useVtkTransform);
+                ImGui::SameLine();
+                vtkns::HelpMarker(u8R"(使用vtkTransform(选中)，使用自定义矩阵(非选中))");
+                if (auto b = ImGui::TreeNodeEx(u8"旋转", ImGuiTreeNodeFlags_DefaultOpen); ImGui::SameLine(), vtkns::HelpMarker(u8R"(每次绕轴旋转5°)"), b)
+                {
+                    {
+                        ImGui::Text("X:");
+                        ImGui::SameLine();
+                        ImGui::PushButtonRepeat(true); // PushButtonRepeat??
+                        if (ImGui::ArrowButton("##X-", ImGuiDir_Left)) { vtkns::mat::rotate(obj, 0, -1, useVtkTransform); }
+                        ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
+                        if (ImGui::ArrowButton("##X+", ImGuiDir_Right)) { vtkns::mat::rotate(obj, 0, 1, useVtkTransform); }
+                        ImGui::PopButtonRepeat();
+                    }
+                    ImGui::SameLine();
+                    {
+                        ImGui::Text("Y:");
+                        ImGui::SameLine();
+                        ImGui::PushButtonRepeat(true);
+                        if (ImGui::ArrowButton("##Y-", ImGuiDir_Left)) { vtkns::mat::rotate(obj, 1, -1, useVtkTransform); }
+                        ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
+                        if (ImGui::ArrowButton("##Y+", ImGuiDir_Right)) { vtkns::mat::rotate(obj, 1, 1, useVtkTransform); }
+                        ImGui::PopButtonRepeat();
+                    }
+                    ImGui::SameLine();
+                    {
+                        ImGui::Text("Z:");
+                        ImGui::SameLine();
+                        ImGui::PushButtonRepeat(true);
+                        if (ImGui::ArrowButton("##Z-", ImGuiDir_Left)) { vtkns::mat::rotate(obj, 2, -1, useVtkTransform); }
+                        ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
+                        if (ImGui::ArrowButton("##Z+", ImGuiDir_Right)) { vtkns::mat::rotate(obj, 2, 1, useVtkTransform); }
+                        ImGui::PopButtonRepeat();
+                    }
+                    ImGui::TreePop();
+                }
+                if (auto b = ImGui::TreeNodeEx(u8"平移", ImGuiTreeNodeFlags_DefaultOpen); ImGui::SameLine(), vtkns::HelpMarker(u8R"(每次沿轴移动1)"), b)
+                {
+                    ImGui::PushButtonRepeat(true); // PushButtonRepeat??
+                    if (ImGui::ArrowButton("##X-", ImGuiDir_Left)) { vtkns::mat::translate(obj, -1, 0, 0, useVtkTransform); }
+                    ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
+                    if (ImGui::ArrowButton("##X+", ImGuiDir_Right)) { vtkns::mat::translate(obj, 1, 0, 0, useVtkTransform); }
+                    ImGui::SameLine();
+                    vtkns::HelpMarker(u8R"(沿着X方向平移)");
+                    ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
+                    if (ImGui::ArrowButton("##Y-", ImGuiDir_Left)) { vtkns::mat::translate(obj, 0, -1, 0, useVtkTransform); }
+                    ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
+                    if (ImGui::ArrowButton("##Y+", ImGuiDir_Right)) { vtkns::mat::translate(obj, 0, 1, 0, useVtkTransform); }
+                    ImGui::SameLine();
+                    vtkns::HelpMarker(u8R"(沿着Y方向平移)");
+                    ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
+                    if (ImGui::ArrowButton("##Z-", ImGuiDir_Left)) { vtkns::mat::translate(obj, 0, 0, -1, useVtkTransform); }
+                    ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
+                    if (ImGui::ArrowButton("##Z+", ImGuiDir_Right)) { vtkns::mat::translate(obj, 0, 0, 1, useVtkTransform); }
+                    ImGui::SameLine();
+                    vtkns::HelpMarker(u8R"(沿着Z方向平移)");
+                    ImGui::PopButtonRepeat();
+                    ImGui::TreePop();
+                }
+                if (auto b = ImGui::TreeNodeEx(u8"缩放", ImGuiTreeNodeFlags_DefaultOpen); ImGui::SameLine(), vtkns::HelpMarker(u8R"(每次缩放0.5或2)"), b)
+                {
+                    constexpr auto n = 0.5;
+                    constexpr auto p = 2;
+                    ImGui::PushButtonRepeat(true); // PushButtonRepeat??
+                    ImGui::Text("X:");
+                    ImGui::SameLine();
+                    if (ImGui::ArrowButton("##X-", ImGuiDir_Left)) { vtkns::mat::scale(obj, n, 1, 1, useVtkTransform); }
+                    ImGui::SameLine();
+                    if (ImGui::ArrowButton("##X+", ImGuiDir_Right)) { vtkns::mat::scale(obj, p, 1, 1, useVtkTransform); }
+                    ImGui::SameLine();
+                    ImGui::Text("Y:");
+                    ImGui::SameLine();
+                    if (ImGui::ArrowButton("##Y-", ImGuiDir_Left)) { vtkns::mat::scale(obj, 1, n, 1, useVtkTransform); }
+                    ImGui::SameLine();
+                    if (ImGui::ArrowButton("##Y+", ImGuiDir_Right)) { vtkns::mat::scale(obj, 1, p, 1, useVtkTransform); }
+                    ImGui::SameLine();
+                    ImGui::Text("Z:");
+                    ImGui::SameLine();
+                    if (ImGui::ArrowButton("##Z-", ImGuiDir_Left)) { vtkns::mat::scale(obj, 1, 1, n, useVtkTransform); }
+                    ImGui::SameLine();
+                    if (ImGui::ArrowButton("##Z+", ImGuiDir_Right)) { vtkns::mat::scale(obj, 1, 1, p, useVtkTransform); }
+                    ImGui::PopButtonRepeat();
+                    ImGui::TreePop();
+                }
+                ImGui::TreePop();
+            }
+        }
     }
 
     template <>
@@ -801,9 +907,9 @@ namespace
 
             ImGui::TreePop();
         }
-
+        vtkns::vtkObjSetup("ResliceAxes", obj->GetResliceAxes(), ImGuiTreeNodeFlags_DefaultOpen);
         {
-            if (auto b = ImGui::TreeNodeEx("ResliceAxes", ImGuiTreeNodeFlags_DefaultOpen); ImGui::SameLine(), vtkns::HelpMarker(u8R"(1.将reslice坐标系放到origin指定的位置
+            if (auto b = ImGui::TreeNodeEx("ResliceAxes_2", ImGuiTreeNodeFlags_DefaultOpen); ImGui::SameLine(), vtkns::HelpMarker(u8R"(1.将reslice坐标系放到origin指定的位置
 2.根据xoy平面reslice一个slice
 3.根据设置的output相关的origin，spacing和extent选取此slice的一部分
 4.将最终得到vtkImageData在旧世界中呈现)"), b)
@@ -837,112 +943,6 @@ output的origin是相对于新坐标系的，把新坐标系的origin处看作�
                 {
                     obj->SetResliceAxesDirectionCosines(1, 0, 0, 0, 1, 0, 0, 0, 1);
                 }
-                {
-                    auto f = [](vtkMatrix4x4* mat, const double v)
-                        {
-                            vtkNew<vtkTransform> transform;
-                            transform->SetMatrix(mat);
-                            transform->RotateZ(v);
-                            mat->DeepCopy(transform->GetMatrix());
-                        };
-                    ImGui::Text("RotateZ:");
-                    ImGui::SameLine();
-                    ImGui::PushButtonRepeat(true);
-                    if (ImGui::ArrowButton("##Z-", ImGuiDir_Left)) { f(obj->GetResliceAxes(), -1); obj->Update(); }
-                    ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
-                    if (ImGui::ArrowButton("##Z+", ImGuiDir_Right)) { f(obj->GetResliceAxes(), 1); obj->Update(); }
-                    ImGui::PopButtonRepeat();
-                    ImGui::SameLine();
-                    vtkns::HelpMarker(u8R"(每次绕着Z轴向左或向右旋转5°)");
-                }
-                {
-                    auto f = [](vtkMatrix4x4* mat, const double v)
-                        {
-                            vtkNew<vtkTransform> transform;
-                            transform->SetMatrix(mat);
-                            transform->RotateY(v);
-                            mat->DeepCopy(transform->GetMatrix());
-                        };
-                    ImGui::Text("RotateY:");
-                    ImGui::SameLine();
-                    ImGui::PushButtonRepeat(true);
-                    if (ImGui::ArrowButton("##Y-", ImGuiDir_Left)) { f(obj->GetResliceAxes(), -1); obj->Update(); }
-                    ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
-                    if (ImGui::ArrowButton("##Y+", ImGuiDir_Right)) { f(obj->GetResliceAxes(), 1); obj->Update(); }
-                    ImGui::PopButtonRepeat();
-                    ImGui::SameLine();
-                    vtkns::HelpMarker(u8R"(每次绕着Y轴向左或向右旋转5°)");
-                }
-                {
-                    auto f = [](vtkMatrix4x4* mat, const double v)
-                        {
-                            vtkNew<vtkTransform> transform;
-                            transform->SetMatrix(mat);
-                            transform->RotateX(v);
-                            mat->DeepCopy(transform->GetMatrix());
-                        };
-                    ImGui::Text("RotateX:");
-                    ImGui::SameLine();
-                    ImGui::PushButtonRepeat(true);
-                    if (ImGui::ArrowButton("##X-", ImGuiDir_Left)) { f(obj->GetResliceAxes(), -1); obj->Update(); }
-                    ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
-                    if (ImGui::ArrowButton("##X+", ImGuiDir_Right)) { f(obj->GetResliceAxes(), 1); obj->Update(); }
-                    ImGui::PopButtonRepeat();
-                    ImGui::SameLine();
-                    vtkns::HelpMarker(u8R"(每次绕着X轴向左或向右旋转5°)");
-                }
-                {
-                    static bool useVtkTransform = true;
-                    auto f = [](vtkMatrix4x4* mat, const double x, const double y, const double z)
-                        {
-                            if (useVtkTransform)
-                            {
-                                vtkNew<vtkTransform> transform;
-                                transform->SetMatrix(mat);
-                                transform->Translate(x, y, z);
-                                mat->DeepCopy(transform->GetMatrix());
-                            }
-                            else
-                            {
-                                double myMat[] = {
-                                    1.,0.,0.,x,
-                                    0.,1.,0.,y,
-                                    0.,0.,1.,z,
-                                    0.,0.,0.,1.
-                                };
-                                double r[16];
-                                vtkMatrix4x4::Multiply4x4(myMat, mat->GetData(), r);
-                                mat->DeepCopy(r);
-                            }
-                        };
-                    ImGui::Text("Translate:");
-                    ImGui::SameLine();
-                    ImGui::PushButtonRepeat(true);
-                    if (ImGui::ArrowButton("##TX-", ImGuiDir_Left)) { f(obj->GetResliceAxes(), -1, 0, 0); obj->Update(); }
-                    ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
-                    if (ImGui::ArrowButton("##TX+", ImGuiDir_Right)) { f(obj->GetResliceAxes(), 1, 0, 0); obj->Update(); }
-                    ImGui::SameLine();
-                    vtkns::HelpMarker(u8R"(沿着X方向平移)");
-                    ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
-                    if (ImGui::ArrowButton("##TY-", ImGuiDir_Up)) { f(obj->GetResliceAxes(), 0, 1, 0); obj->Update(); }
-                    ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
-                    if (ImGui::ArrowButton("##TY+", ImGuiDir_Down)) { f(obj->GetResliceAxes(), 0, -1, 0); obj->Update(); }
-                    ImGui::SameLine();
-                    vtkns::HelpMarker(u8R"(沿着Y方向平移)");
-                    ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
-                    if (ImGui::ArrowButton("##TZ-", ImGuiDir_Left)) { f(obj->GetResliceAxes(), 0, 0, -1); obj->Update(); }
-                    ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
-                    if (ImGui::ArrowButton("##TZ+", ImGuiDir_Right)) { f(obj->GetResliceAxes(), 0, 0, 1); obj->Update(); }
-                    ImGui::SameLine();
-                    vtkns::HelpMarker(u8R"(沿着Z方向平移)");
-                    ImGui::PopButtonRepeat();
-                    ImGui::SameLine();
-                    ImGui::Checkbox("UseVtkTransform", &useVtkTransform);
-                    ImGui::SameLine();
-                    vtkns::HelpMarker(u8R"(平移的方式: 使用vtkTransform(选中)，使用自定义矩阵(非选中))");
-                }
-
-                ImGui::Text(vtkns::getMatrixString(obj->GetResliceAxes()).c_str());
 
                 ImGui::TreePop();
             }
