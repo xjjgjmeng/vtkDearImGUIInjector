@@ -126,6 +126,7 @@
 #include <vtkCamera.h>
 #include <vtkImageDataOutlineFilter.h>
 #include <vtkWorldPointPicker.h>
+#include <vtkAppendPolyData.h>
 #include <vtkInformationVector.h>
 #include <vtkTextActor.h>
 #include <vtkTextProperty.h>
@@ -136,6 +137,10 @@
 #include <vtkInformation.h>
 #include <vtkMath.h>
 #include <vtkBox.h>
+#include <vtkImageToImageStencil.h>
+#include <vtkImageStencil.h>
+#include <vtkImageStencilData.h>
+#include <vtkPolyDataToImageStencil.h>
 #include <vtkBoundedPointSource.h>
 #include <vtkRegularPolygonSource.h>
 #include <vtkROIStencilSource.h>

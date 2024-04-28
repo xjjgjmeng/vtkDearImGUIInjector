@@ -1,5 +1,14 @@
 ﻿#include "ImGuiCommon.h"
 
+namespace
+{
+    template <typename... Ts>
+    void ImGuiText(Ts&&... args)
+    {
+        ImGui::Text(fmt::format(std::forward<Ts>(args)...).c_str());
+    }
+}
+
 namespace vtkns
 {
     void HelpMarker(const char* desc)
@@ -131,6 +140,22 @@ namespace
             {
                 vtkobj->SetRamp(v);
             }
+        }
+        ::ImGuiText("NumberOfColors: {}", vtkobj->GetNumberOfColors());
+        ::ImGuiText("NumberOfTableValues: {}", vtkobj->GetNumberOfTableValues());
+        if (ImGui::TreeNodeEx("TableValues"))
+        {
+            for (auto i = 0; i < vtkobj->GetNumberOfTableValues(); ++i)
+            {
+                double vRGBA[4];
+                vtkobj->GetTableValue(i, vRGBA);
+                if (float v[4] = { vRGBA[0],vRGBA[1],vRGBA[2],vRGBA[3] }; ImGui::ColorEdit4(std::to_string(i).c_str(), v))
+                {
+                    vtkobj->SetTableValue(i, v[0], v[1], v[2], v[3]);
+                }
+            }
+
+            ImGui::TreePop();
         }
     }
 
@@ -1097,6 +1122,7 @@ output的origin是相对于新坐标系的，把新坐标系的origin处看作�
         }
 
         vtkns::vtkObjSetup("Interpolator", obj->GetInterpolator());
+        vtkns::vtkObjSetup("Stencil", obj->GetStencil());
     }
 
     template <>
@@ -2694,6 +2720,75 @@ A value greater than 1 is a zoom-in, a value less than 1 is a zoom-out.
     }
 
     template <>
+    void setupImpl(vtkImageStencilData* vtkobj)
+    {
+        if (double v[3]; vtkobj->GetOrigin(v), ImGui::DragScalarN("Origin", ImGuiDataType_Double, v, IM_ARRAYSIZE(v)))
+        {
+            vtkobj->SetOrigin(v);
+        }
+        if (int v[6]; vtkobj->GetExtent(v), ImGui::DragScalarN("Extent", ImGuiDataType_S32, v, IM_ARRAYSIZE(v)))
+        {
+            vtkobj->SetExtent(v);
+        }
+        if (double v[3]; vtkobj->GetSpacing(v), ImGui::DragScalarN("Spacing", ImGuiDataType_Double, v, IM_ARRAYSIZE(v)))
+        {
+            vtkobj->SetSpacing(v);
+        }
+    }
+
+    template <>
+    void setupImpl(vtkImageStencilAlgorithm* vtkobj)
+    {
+    
+    }
+
+    template <>
+    void setupImpl(vtkImageToImageStencil* vtkobj)
+    {
+        {
+            float l = vtkobj->GetLowerThreshold();
+            float u = vtkobj->GetUpperThreshold();
+            if (ImGui::DragFloatRange2("ThresholdBetween", &l, &u))
+            {
+                vtkobj->ThresholdBetween(l, u);
+            }
+            if (ImGui::DragFloat("ThresholdByLower", &u))
+            {
+                vtkobj->ThresholdByLower(u);
+            }
+            if (ImGui::DragFloat("ThresholdByUpper", &l))
+            {
+                vtkobj->ThresholdByUpper(l);
+            }
+        }
+    }
+
+    template <>
+    void setupImpl(vtkImageStencil* vtkobj)
+    {
+        if (bool v = vtkobj->GetReverseStencil(); ImGui::Checkbox("ReverseStencil", &v))
+        {
+            vtkobj->SetReverseStencil(v);
+        }
+
+        if (double v = vtkobj->GetBackgroundValue(); ImGui::DragScalar("BackgroundValue", ImGuiDataType_Double, &v, 0.01f))
+        {
+            vtkobj->SetBackgroundValue(v);
+        }
+
+        {
+            auto bgColor = vtkobj->GetBackgroundColor();
+            if (float v[4] = { bgColor[0],bgColor[1],bgColor[2],bgColor[3]}; ImGui::ColorEdit4("BackgroundColor", v))
+            {
+                vtkobj->SetBackgroundColor(v[0], v[1], v[2], v[3]);
+            }
+        }
+
+        vtkns::vtkObjSetup("Stencil", vtkobj->GetStencil());
+        vtkns::vtkObjSetup("BackgroundInput", vtkobj->GetBackgroundInput());
+    }
+
+    template <>
     void setupImpl(vtkPointHandleRepresentation2D* pPointHandleRepresentation2D)
     {
         if (ImGui::Button("Highlight")) pPointHandleRepresentation2D->Highlight(1);
@@ -2848,7 +2943,7 @@ namespace vtkns
             // vtkScalarsToColors
             ::setupHelper<vtkLookupTable>(vtkObj);
             // vtkDataObject
-            ::setupHelper<vtkDataSet>(vtkObj);
+            ::setupHelper<vtkDataSet, vtkImageStencilData>(vtkObj);
             // vtkDataSet
             ::setupHelper<vtkImageData, vtkPointSet>(vtkObj);
             // vtkAbstractPicker
@@ -2862,13 +2957,15 @@ namespace vtkns
             // vtkAbstractWidget
             ::setupHelper<vtkResliceCursorWidget, vtkBoxWidget2, vtkLineWidget2, vtkDistanceWidget, vtkBorderWidget>(vtkObj);
             // vtkAlgorithm
-            ::setupHelper<vtkImageAlgorithm, vtkPolyDataAlgorithm, vtkAbstractMapper, vtkDataSetAlgorithm>(vtkObj);
+            ::setupHelper<vtkImageAlgorithm, vtkImageStencilAlgorithm, vtkPolyDataAlgorithm, vtkAbstractMapper, vtkDataSetAlgorithm>(vtkObj);
+            // vtkImageStencilAlgorithm
+            ::setupHelper<vtkImageToImageStencil>(vtkObj);
             // vtkImageAlgorithm
             ::setupHelper<vtkThreadedImageAlgorithm, vtkExtractVOI, vtkImageGridSource, vtkImageChangeInformation>(vtkObj);
             // vtkAbstractMapper
             ::setupHelper<vtkAbstractMapper3D>(vtkObj);
             // vtkThreadedImageAlgorithm
-            ::setupHelper<vtkImageSlab, vtkImageThreshold, vtkImageReslice, vtkImageMapToColors>(vtkObj);
+            ::setupHelper<vtkImageSlab, vtkImageStencil, vtkImageThreshold, vtkImageReslice, vtkImageMapToColors>(vtkObj);
             // vtkImageViewer2
             ::setupHelper<vtkResliceImageViewer>(vtkObj);
             // vtkWindow

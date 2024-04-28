@@ -15,7 +15,6 @@ int main(int argc, char* argv[])
     pImageThreshold->SetInValue(255);
     pImageThreshold->ReplaceOutOn();
     pImageThreshold->SetOutValue(0);
-    pImageThreshold->Update();
 
     vtkNew<vtkImageActor> imgActor;
     imgActor->GetMapper()->SetInputConnection(pImageThreshold->GetOutputPort());
@@ -67,7 +66,7 @@ int main(int argc, char* argv[])
     ::ShowWindow(hwnd, SW_MAXIMIZE);
 #endif
 #endif
-    //vtkInteractorStyleSwitch::SafeDownCast(iren->GetInteractorStyle())->SetCurrentStyleToTrackballCamera();
+    vtkInteractorStyleSwitch::SafeDownCast(rwi->GetInteractorStyle())->SetCurrentStyleToTrackballCamera();
     rwi->EnableRenderOff();
     rwi->Start();
 
