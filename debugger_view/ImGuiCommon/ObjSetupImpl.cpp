@@ -141,6 +141,17 @@ namespace
                 vtkobj->SetRamp(v);
             }
         }
+        {
+            static double currV = 0;
+            currV = std::clamp(currV, vtkobj->GetTableRange()[0], vtkobj->GetTableRange()[1]);
+            int v = vtkobj->GetIndex(currV);
+            if (ImGui::DragScalar("GetIndex", ImGuiDataType_Double, &currV))
+            {
+                v = vtkobj->GetIndex(currV);
+            }
+            ImGui::SameLine();
+            ::ImGuiText("[{}]", v);
+        }
         ::ImGuiText("NumberOfColors: {}", vtkobj->GetNumberOfColors());
         ::ImGuiText("NumberOfTableValues: {}", vtkobj->GetNumberOfTableValues());
         if (ImGui::TreeNodeEx("TableValues"))
@@ -514,6 +525,8 @@ namespace
         {
             pVolumeMapper->SetCroppingRegionPlanes(v);
         }
+
+        vtkns::vtkObjSetup("Input", pVolumeMapper->GetInput());
     }
 
     template <>

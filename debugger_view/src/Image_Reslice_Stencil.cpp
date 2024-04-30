@@ -71,14 +71,17 @@ int main()
         thresholdFilter->ThresholdByUpper(1);
         thresholdFilter->SetInValue(1);
         thresholdFilter->SetOutValue(1);
-        thresholdFilter->Update();
 
         vtkNew<vtkPolyDataToImageStencil> p2iStencil;
         p2iStencil->SetInputConnection(polydataAppender->GetOutputPort());
+#if 0
         p2iStencil->SetOutputOrigin(img->GetOrigin());
         p2iStencil->SetOutputSpacing(img->GetSpacing());
         p2iStencil->SetOutputWholeExtent(img->GetExtent());
-        p2iStencil->Update();
+#else
+        p2iStencil->SetInformationInput(img);
+#endif
+
         vtkNew<vtkImageStencil> imgStencil;
         imgStencil->SetInputConnection(thresholdFilter->GetOutputPort());
         imgStencil->SetStencilConnection(p2iStencil->GetOutputPort());
@@ -91,7 +94,6 @@ int main()
         maskReslice->SetResliceAxes(reslice->GetResliceAxes()); // 使用同一个矩阵
         maskReslice->InterpolateOff();
         maskReslice->AutoCropOutputOn();
-        maskReslice->Update();
 
         vtkNew<vtkImageMapToColors> maskColors;
         {

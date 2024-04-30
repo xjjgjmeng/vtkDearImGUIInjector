@@ -1,22 +1,25 @@
 ﻿#include <ImGuiCommon.h>
 
-//vtkns::LogView logView;
-
 // https://blog.csdn.net/shenziheng1/article/details/54744911
 
-int main(int argc, char* argv[])
+int main()
 {
     SETUP_WINDOW
+    auto img = vtkns::getSliceData();
 
     vtkNew<vtkImageThreshold> pImageThreshold;
-    pImageThreshold->SetInputData(vtkns::getVRData());
+    pImageThreshold->SetInputData(img);
     pImageThreshold->ThresholdBetween(-1500, -500);
     pImageThreshold->ReplaceInOn();
-    pImageThreshold->SetInValue(255);
+    //pImageThreshold->SetInValue(255);
+    pImageThreshold->SetInValue(img->GetScalarRange()[1]);
     pImageThreshold->ReplaceOutOn();
-    pImageThreshold->SetOutValue(0);
+    //pImageThreshold->SetOutValue(0);
+    pImageThreshold->SetOutValue(img->GetScalarRange()[0]);
 
     vtkNew<vtkImageActor> imgActor;
+    imgActor->GetProperty()->SetColorLevel(2200);
+    imgActor->GetProperty()->SetColorWindow(6500);
     imgActor->GetMapper()->SetInputConnection(pImageThreshold->GetOutputPort());
     ren->AddViewProp(imgActor);
 
@@ -26,6 +29,7 @@ int main(int argc, char* argv[])
 
     ren->ResetCamera();
 
+    ::pWindow = rw;
     ::imgui_render_callback = [&]
         {
             static bool showOutputImg = false;
@@ -60,7 +64,7 @@ int main(int argc, char* argv[])
     renderWindow->SetSize(1920, 1000);
 #else
 #ifdef _WIN32
-// 获取窗口句柄
+    // 获取窗口句柄
     HWND hwnd = ::FindWindow(NULL, rw->GetWindowName());
     // 最大化窗口
     ::ShowWindow(hwnd, SW_MAXIMIZE);
@@ -69,6 +73,4 @@ int main(int argc, char* argv[])
     vtkInteractorStyleSwitch::SafeDownCast(rwi->GetInteractorStyle())->SetCurrentStyleToTrackballCamera();
     rwi->EnableRenderOff();
     rwi->Start();
-
-    return 0;
 }
