@@ -12,6 +12,15 @@
 #include "vtkDearImGuiInjector.h"
 
 #include "vtkActor.h"
+#include <vtkTubeFilter.h>
+#include <vtkVectorText.h>
+#include <vtkimplicitModeller.h>
+#include <vtkContourFilter.h>
+#include <vtkPolydataNormals.h>
+#include <vtkWarpTo.h>
+#include <vtkLinearExtrusionFilter.h>
+#include <vtkRotationalExtrusionFilter.h>
+#include <vtkRegularPolygonSource.h>
 #include "vtkCallbackCommand.h"
 #include "vtkCameraOrientationWidget.h"
 #include "vtkCameraOrientationRepresentation.h"
@@ -193,3 +202,4 @@
 #include "MatrixHelper.h"
 #include "ImageSharpenFilter.h"
 #include "DrawFreeLineStyle.h"
+#include "ImGuiHelper.h"

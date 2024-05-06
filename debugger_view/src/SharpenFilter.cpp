@@ -2,7 +2,7 @@
 
 int main(int argc, char* argv[])
 {
-    SETUP_WINDOW
+    BEFORE_MY_CODE
 
     vtkNew<ImageSharpenFilter> filter;
     filter->SetInputData(vtkns::getSliceData());

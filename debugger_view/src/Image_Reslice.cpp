@@ -141,7 +141,7 @@ private:
 
 int main()
 {
-    SETUP_WINDOW
+    BEFORE_MY_CODE
     auto img = vtkns::getVRData();
     vtkns::labelWorldZero(ren);
 
@@ -371,7 +371,6 @@ int main()
     ::ShowWindow(hwnd, SW_MAXIMIZE);
 #endif
 #endif
-    //vtkInteractorStyleSwitch::SafeDownCast(iren->GetInteractorStyle())->SetCurrentStyleToTrackballCamera();
     auto style = vtkSmartPointer<MyStyle>::New();
     style->m_renderer = ren;
     rwi->SetInteractorStyle(style);

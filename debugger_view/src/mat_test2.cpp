@@ -3,7 +3,7 @@
 
 int main()
 {
-    SETUP_WINDOW
+    BEFORE_MY_CODE
     vtkns::labelWorldZero(ren, false);
 
     vtkNew<vtkActor> actor;
@@ -110,37 +110,10 @@ int main()
                         vtkMatrix4x4::Multiply4x4(arr, myMat->GetData(), r);
                         myMat->DeepCopy(r);
                     };
-                {
-                    ImGui::Text(u8"平移X:");
-                    ImGui::SameLine();
-                    ImGui::PushButtonRepeat(true);
-                    if (ImGui::ArrowButton("##X-", ImGuiDir_Left)) { f(0, -mystep); }
-                    ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
-                    if (ImGui::ArrowButton("##X+", ImGuiDir_Right)) { f(0, mystep); }
-                    ImGui::PopButtonRepeat();
-                }
-                ImGui::SameLine();
-                {
-                    ImGui::Text(u8"平移Y:");
-                    ImGui::SameLine();
-                    ImGui::PushButtonRepeat(true);
-                    if (ImGui::ArrowButton("##Y-", ImGuiDir_Left)) { f(1, -mystep); }
-                    ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
-                    if (ImGui::ArrowButton("##Y+", ImGuiDir_Right)) { f(1, mystep); }
-                    ImGui::PopButtonRepeat();
-                }
-                ImGui::SameLine();
-                {
-                    ImGui::Text(u8"平移Z:");
-                    ImGui::SameLine();
-                    ImGui::PushButtonRepeat(true);
-                    if (ImGui::ArrowButton("##Z-", ImGuiDir_Left)) { f(2, -mystep); }
-                    ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
-                    if (ImGui::ArrowButton("##Z+", ImGuiDir_Right)) { f(2, mystep); }
-                    ImGui::PopButtonRepeat();
-                }
-                ImGui::SameLine();
-                vtkns::HelpMarker(u8R"(坐标轴正方向为平移正方向)");
+                vtkns::ArrowButton(u8"平移X", [&] {f(0, -mystep); }, [&] {f(0, mystep); }); vtkns::ArrowButtonSameLine();
+                vtkns::ArrowButton(u8"平移Y", [&] {f(1, -mystep); }, [&] {f(1, mystep); }); vtkns::ArrowButtonSameLine();
+                vtkns::ArrowButton(u8"平移Z", [&] {f(2, -mystep); }, [&] {f(2, mystep); });
+                ImGui::SameLine(); vtkns::HelpMarker(u8R"(坐标轴正方向为平移正方向)");
             }
             // 缩放
             {
@@ -172,37 +145,9 @@ int main()
                         vtkMatrix4x4::Multiply4x4(arr, myMat->GetData(), r);
                         myMat->DeepCopy(r);
                     };
-                {
-                    ImGui::Text(u8"缩放X:");
-                    ImGui::SameLine();
-                    ImGui::PushButtonRepeat(true);
-                    if (ImGui::ArrowButton("##SX-", ImGuiDir_Left)) { f(0, n); }
-                    ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
-                    if (ImGui::ArrowButton("##SX+", ImGuiDir_Right)) { f(0, p); }
-                    ImGui::PopButtonRepeat();
-                }
-                ImGui::SameLine();
-                {
-                    ImGui::Text(u8"缩放Y:");
-                    ImGui::SameLine();
-                    ImGui::PushButtonRepeat(true);
-                    if (ImGui::ArrowButton("##SY-", ImGuiDir_Left)) { f(1, n); }
-                    ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
-                    if (ImGui::ArrowButton("##SY+", ImGuiDir_Right)) { f(1, p); }
-                    ImGui::PopButtonRepeat();
-                }
-                ImGui::SameLine();
-                {
-                    ImGui::Text(u8"缩放Z:");
-                    ImGui::SameLine();
-                    ImGui::PushButtonRepeat(true);
-                    if (ImGui::ArrowButton("##SZ-", ImGuiDir_Left)) { f(2, n); }
-                    ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
-                    if (ImGui::ArrowButton("##SZ+", ImGuiDir_Right)) { f(2, p); }
-                    ImGui::PopButtonRepeat();
-                }
-                ImGui::SameLine();
-                vtkns::HelpMarker(u8R"()");
+                vtkns::ArrowButton(u8"缩放X", [&] {f(0, n); }, [&] {f(0, p); }); vtkns::ArrowButtonSameLine();
+                vtkns::ArrowButton(u8"缩放Y", [&] {f(1, n); }, [&] {f(1, p); }); vtkns::ArrowButtonSameLine();
+                vtkns::ArrowButton(u8"缩放Z", [&] {f(2, n); }, [&] {f(2, p); });
             }
 #if 0
             // Rodrigues' rotation formula
@@ -296,67 +241,13 @@ v和得到的r的长度一致)");
                         vtkMatrix4x4::Multiply4x4(arr.data(), myMat->GetData(), r);
                         myMat->DeepCopy(r);
                     };
-                {
-                    ImGui::Text(u8"旋转X:");
-                    ImGui::SameLine();
-                    ImGui::PushButtonRepeat(true);
-                    if (ImGui::ArrowButton("##XR-", ImGuiDir_Left)) { f(0, -mystep); }
-                    ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
-                    if (ImGui::ArrowButton("##XR+", ImGuiDir_Right)) { f(0, mystep); }
-                    ImGui::PopButtonRepeat();
-                }
-                ImGui::SameLine();
-                {
-                    ImGui::Text(u8"旋转Y:");
-                    ImGui::SameLine();
-                    ImGui::PushButtonRepeat(true);
-                    if (ImGui::ArrowButton("##YR-", ImGuiDir_Left)) { f(1, -mystep); }
-                    ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
-                    if (ImGui::ArrowButton("##YR+", ImGuiDir_Right)) { f(1, mystep); }
-                    ImGui::PopButtonRepeat();
-                }
-                ImGui::SameLine();
-                {
-                    ImGui::Text(u8"旋转Z:");
-                    ImGui::SameLine();
-                    ImGui::PushButtonRepeat(true);
-                    if (ImGui::ArrowButton("##ZR-", ImGuiDir_Left)) { f(2, -mystep); }
-                    ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
-                    if (ImGui::ArrowButton("##ZR+", ImGuiDir_Right)) { f(2, mystep); }
-                    ImGui::PopButtonRepeat();
-                }
-                ImGui::SameLine();
-                vtkns::HelpMarker(u8R"(右手握住旋转轴，大拇指指向正方向，四指弯曲的方向为旋转的正方向
+                vtkns::ArrowButton(u8"旋转X", [&] {f(0, -mystep); }, [&] {f(0, mystep); }); vtkns::ArrowButtonSameLine();
+                vtkns::ArrowButton(u8"旋转Y", [&] {f(1, -mystep); }, [&] {f(1, mystep); }); vtkns::ArrowButtonSameLine();
+                vtkns::ArrowButton(u8"旋转Z", [&] {f(2, -mystep); }, [&] {f(2, mystep); });
+                ImGui::SameLine(); vtkns::HelpMarker(u8R"(右手握住旋转轴，大拇指指向正方向，四指弯曲的方向为旋转的正方向
 5.625°)");
             }
         };
 
-    // Start rendering app
-    rw->Render();
-
-    /// Change to your code begins here. ///
-    // Initialize an overlay with DearImgui elements.
-    vtkNew<vtkDearImGuiInjector> dearImGuiOverlay;
-    // 💉 the overlay.
-    dearImGuiOverlay->Inject(rwi);
-    // These functions add callbacks to ImGuiSetupEvent and ImGuiDrawEvents.
-    vtkns::SetupUI(dearImGuiOverlay);
-    // You can draw custom user interface elements using ImGui:: namespace.
-    vtkns::DrawUI(dearImGuiOverlay);
-    /// Change to your code ends here. ///
-
-    // Start event loop
-#if 0
-    renderWindow->SetSize(1920, 1000);
-#else
-#ifdef _WIN32
-// 获取窗口句柄
-    HWND hwnd = ::FindWindow(NULL, rw->GetWindowName());
-    // 最大化窗口
-    ::ShowWindow(hwnd, SW_MAXIMIZE);
-#endif
-#endif
-    vtkInteractorStyleSwitch::SafeDownCast(rwi->GetInteractorStyle())->SetCurrentStyleToTrackballCamera();
-    rwi->EnableRenderOff();
-    rwi->Start();
+    AFTER_MY_CODE
 }

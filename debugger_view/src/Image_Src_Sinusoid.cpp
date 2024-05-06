@@ -2,7 +2,7 @@
 
 int main()
 {
-    SETUP_WINDOW
+    BEFORE_MY_CODE
 
     vtkNew<vtkImageSinusoidSource> src;
     src->SetWholeExtent(0, 99, 0, 99, 0, 99);

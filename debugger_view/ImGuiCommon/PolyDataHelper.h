@@ -9,6 +9,8 @@
 #include <vtkActor2D.h>
 #include <vtkActor.h>
 #include <vtkTextActor.h>
+#include <vtkRenderer.h>
+#include <vtkPolydataMapper.h>
 
 namespace vtkns
 {
@@ -32,4 +34,6 @@ namespace vtkns
 
     vtkSmartPointer<vtkTextActor> genTextActor();
     std::string doubleToString(const double v);
+
+    std::pair<vtkActor*, vtkPolyDataMapper*> renderPolydata(vtkRenderer* ren, vtkAlgorithmOutput* algoOutPort);
 }

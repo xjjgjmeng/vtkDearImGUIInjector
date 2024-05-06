@@ -2,7 +2,7 @@
 
 int main()
 {
-    SETUP_WINDOW
+    BEFORE_MY_CODE
 
     vtkNew<vtkExtractVOI> voi;
     voi->SetInputData(vtkns::getVRData());

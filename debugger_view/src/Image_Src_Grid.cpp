@@ -2,7 +2,7 @@
 
 int main()
 {
-    SETUP_WINDOW
+    BEFORE_MY_CODE
 
     vtkNew<vtkImageGridSource> src;
     src->SetGridSpacing(16, 16, 0);

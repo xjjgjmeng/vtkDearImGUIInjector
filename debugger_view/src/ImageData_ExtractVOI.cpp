@@ -83,7 +83,7 @@ namespace
 
 int main(int argc, char* argv[])
 {
-    SETUP_WINDOW
+    BEFORE_MY_CODE
     auto pImg = vtkns::getVRData();
 
     vtkns::genImgOutline(ren, pImg, false);

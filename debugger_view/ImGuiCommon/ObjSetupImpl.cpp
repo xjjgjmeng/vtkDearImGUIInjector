@@ -1,14 +1,5 @@
 ﻿#include "ImGuiCommon.h"
 
-namespace
-{
-    template <typename... Ts>
-    void ImGuiText(Ts&&... args)
-    {
-        ImGui::Text(fmt::format(std::forward<Ts>(args)...).c_str());
-    }
-}
-
 namespace vtkns
 {
     void HelpMarker(const char* desc)
@@ -27,7 +18,7 @@ namespace vtkns
 
 namespace
 {
-    // 使用函数模板特化，而不使用普通函数重载，可以避免在没有实现子类类型setupImpl的时候继续调用基类函数的问题
+    // 使用函数模板特化（且不提供默认实现），而不使用普通函数重载，可以避免在没有实现子类类型setupImpl的时候继续调用基类函数的问题
     template <typename T>
     void setupImpl(T*);
 
@@ -40,7 +31,7 @@ namespace
     }
 
     template <>
-    void setupImpl<vtkActor2D>(vtkActor2D* pActor2D)
+    void setupImpl(vtkActor2D* pActor2D)
     {
         if (float v = pActor2D->GetWidth(); ImGui::SliderFloat("Width", &v, 0, 100))
         {
@@ -150,10 +141,10 @@ namespace
                 v = vtkobj->GetIndex(currV);
             }
             ImGui::SameLine();
-            ::ImGuiText("[{}]", v);
+            vtkns::ImGuiText("[{}]", v);
         }
-        ::ImGuiText("NumberOfColors: {}", vtkobj->GetNumberOfColors());
-        ::ImGuiText("NumberOfTableValues: {}", vtkobj->GetNumberOfTableValues());
+        vtkns::ImGuiText("NumberOfColors: {}", vtkobj->GetNumberOfColors());
+        vtkns::ImGuiText("NumberOfTableValues: {}", vtkobj->GetNumberOfTableValues());
         if (ImGui::TreeNodeEx("TableValues"))
         {
             for (auto i = 0; i < vtkobj->GetNumberOfTableValues(); ++i)
@@ -293,8 +284,10 @@ namespace
     }
 
     template <>
-    void setupImpl(vtkImageAlgorithm* obj)
-    {}
+    void setupImpl(vtkImageAlgorithm* vtkobj)
+    {
+        vtkns::vtkObjSetup("Output", vtkobj->GetOutput());
+    }
 
     template <>
     void setupImpl(vtkResliceCursorWidget* obj)
@@ -693,83 +686,25 @@ namespace
                 vtkns::HelpMarker(u8R"(使用vtkTransform(选中)，使用自定义矩阵(非选中))");
                 if (auto b = ImGui::TreeNodeEx(u8"旋转", ImGuiTreeNodeFlags_DefaultOpen); ImGui::SameLine(), vtkns::HelpMarker(u8R"(每次绕轴旋转5°)"), b)
                 {
-                    {
-                        ImGui::Text("X:");
-                        ImGui::SameLine();
-                        ImGui::PushButtonRepeat(true); // PushButtonRepeat??
-                        if (ImGui::ArrowButton("##X-", ImGuiDir_Left)) { vtkns::mat::rotate(obj, 0, -1, useVtkTransform); }
-                        ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
-                        if (ImGui::ArrowButton("##X+", ImGuiDir_Right)) { vtkns::mat::rotate(obj, 0, 1, useVtkTransform); }
-                        ImGui::PopButtonRepeat();
-                    }
-                    ImGui::SameLine();
-                    {
-                        ImGui::Text("Y:");
-                        ImGui::SameLine();
-                        ImGui::PushButtonRepeat(true);
-                        if (ImGui::ArrowButton("##Y-", ImGuiDir_Left)) { vtkns::mat::rotate(obj, 1, -1, useVtkTransform); }
-                        ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
-                        if (ImGui::ArrowButton("##Y+", ImGuiDir_Right)) { vtkns::mat::rotate(obj, 1, 1, useVtkTransform); }
-                        ImGui::PopButtonRepeat();
-                    }
-                    ImGui::SameLine();
-                    {
-                        ImGui::Text("Z:");
-                        ImGui::SameLine();
-                        ImGui::PushButtonRepeat(true);
-                        if (ImGui::ArrowButton("##Z-", ImGuiDir_Left)) { vtkns::mat::rotate(obj, 2, -1, useVtkTransform); }
-                        ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
-                        if (ImGui::ArrowButton("##Z+", ImGuiDir_Right)) { vtkns::mat::rotate(obj, 2, 1, useVtkTransform); }
-                        ImGui::PopButtonRepeat();
-                    }
+                    vtkns::ArrowButton("X", [&] { vtkns::mat::rotate(obj, 0, -1, useVtkTransform); }, [&] { vtkns::mat::rotate(obj, 0, 1, useVtkTransform); }); vtkns::ArrowButtonSameLine();
+                    vtkns::ArrowButton("Y", [&] { vtkns::mat::rotate(obj, 1, -1, useVtkTransform); }, [&] { vtkns::mat::rotate(obj, 1, 1, useVtkTransform); }); vtkns::ArrowButtonSameLine();
+                    vtkns::ArrowButton("Z", [&] { vtkns::mat::rotate(obj, 2, -1, useVtkTransform); }, [&] { vtkns::mat::rotate(obj, 2, 1, useVtkTransform); });
                     ImGui::TreePop();
                 }
                 if (auto b = ImGui::TreeNodeEx(u8"平移", ImGuiTreeNodeFlags_DefaultOpen); ImGui::SameLine(), vtkns::HelpMarker(u8R"(每次沿轴移动1)"), b)
                 {
-                    ImGui::PushButtonRepeat(true); // PushButtonRepeat??
-                    if (ImGui::ArrowButton("##X-", ImGuiDir_Left)) { vtkns::mat::translate(obj, -1, 0, 0, useVtkTransform); }
-                    ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
-                    if (ImGui::ArrowButton("##X+", ImGuiDir_Right)) { vtkns::mat::translate(obj, 1, 0, 0, useVtkTransform); }
-                    ImGui::SameLine();
-                    vtkns::HelpMarker(u8R"(沿着X方向平移)");
-                    ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
-                    if (ImGui::ArrowButton("##Y-", ImGuiDir_Left)) { vtkns::mat::translate(obj, 0, -1, 0, useVtkTransform); }
-                    ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
-                    if (ImGui::ArrowButton("##Y+", ImGuiDir_Right)) { vtkns::mat::translate(obj, 0, 1, 0, useVtkTransform); }
-                    ImGui::SameLine();
-                    vtkns::HelpMarker(u8R"(沿着Y方向平移)");
-                    ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
-                    if (ImGui::ArrowButton("##Z-", ImGuiDir_Left)) { vtkns::mat::translate(obj, 0, 0, -1, useVtkTransform); }
-                    ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
-                    if (ImGui::ArrowButton("##Z+", ImGuiDir_Right)) { vtkns::mat::translate(obj, 0, 0, 1, useVtkTransform); }
-                    ImGui::SameLine();
-                    vtkns::HelpMarker(u8R"(沿着Z方向平移)");
-                    ImGui::PopButtonRepeat();
+                    vtkns::ArrowButton("X", [&] { vtkns::mat::translate(obj, -1, 0, 0, useVtkTransform); }, [&] { vtkns::mat::translate(obj, 1, 0, 0, useVtkTransform); }); vtkns::ArrowButtonSameLine();
+                    vtkns::ArrowButton("Y", [&] { vtkns::mat::translate(obj, 0, -1, 0, useVtkTransform); }, [&] { vtkns::mat::translate(obj, 0, 1, 0, useVtkTransform); }); vtkns::ArrowButtonSameLine();
+                    vtkns::ArrowButton("Z", [&] { vtkns::mat::translate(obj, 0, 0, -1, useVtkTransform); }, [&] { vtkns::mat::translate(obj, 0, 0, 1, useVtkTransform); });
                     ImGui::TreePop();
                 }
                 if (auto b = ImGui::TreeNodeEx(u8"缩放", ImGuiTreeNodeFlags_DefaultOpen); ImGui::SameLine(), vtkns::HelpMarker(u8R"(每次缩放0.5或2)"), b)
                 {
                     constexpr auto n = 0.5;
                     constexpr auto p = 2;
-                    ImGui::PushButtonRepeat(true); // PushButtonRepeat??
-                    ImGui::Text("X:");
-                    ImGui::SameLine();
-                    if (ImGui::ArrowButton("##X-", ImGuiDir_Left)) { vtkns::mat::scale(obj, n, 1, 1, useVtkTransform); }
-                    ImGui::SameLine();
-                    if (ImGui::ArrowButton("##X+", ImGuiDir_Right)) { vtkns::mat::scale(obj, p, 1, 1, useVtkTransform); }
-                    ImGui::SameLine();
-                    ImGui::Text("Y:");
-                    ImGui::SameLine();
-                    if (ImGui::ArrowButton("##Y-", ImGuiDir_Left)) { vtkns::mat::scale(obj, 1, n, 1, useVtkTransform); }
-                    ImGui::SameLine();
-                    if (ImGui::ArrowButton("##Y+", ImGuiDir_Right)) { vtkns::mat::scale(obj, 1, p, 1, useVtkTransform); }
-                    ImGui::SameLine();
-                    ImGui::Text("Z:");
-                    ImGui::SameLine();
-                    if (ImGui::ArrowButton("##Z-", ImGuiDir_Left)) { vtkns::mat::scale(obj, 1, 1, n, useVtkTransform); }
-                    ImGui::SameLine();
-                    if (ImGui::ArrowButton("##Z+", ImGuiDir_Right)) { vtkns::mat::scale(obj, 1, 1, p, useVtkTransform); }
-                    ImGui::PopButtonRepeat();
+                    vtkns::ArrowButton("X", [&] { vtkns::mat::scale(obj, n, 1, 1, useVtkTransform); }, [&] { vtkns::mat::scale(obj, p, 1, 1, useVtkTransform); }); vtkns::ArrowButtonSameLine();
+                    vtkns::ArrowButton("Y", [&] { vtkns::mat::scale(obj, 1, n, 1, useVtkTransform); }, [&] { vtkns::mat::scale(obj, 1, p, 1, useVtkTransform); }); vtkns::ArrowButtonSameLine();
+                    vtkns::ArrowButton("Z", [&] { vtkns::mat::scale(obj, 1, 1, n, useVtkTransform); }, [&] { vtkns::mat::scale(obj, 1, 1, p, useVtkTransform); });
                     ImGui::TreePop();
                 }
                 ImGui::TreePop();
@@ -1663,9 +1598,10 @@ output的origin是相对于新坐标系的，把新坐标系的origin处看作�
     template <>
     void setupImpl(vtkImageData* obj)
     {
-        ImGui::Text(fmt::format("DataDimension: {}", obj->GetDataDimension()).c_str());
-        ImGui::Text(fmt::format("ScalarType: {}", obj->GetScalarTypeAsString()).c_str());
-        ImGui::Text(fmt::format("ScalarSize: {}", obj->GetScalarSize()).c_str());
+        vtkns::ImGuiText("NumberOfScalarComponents: {}", obj->GetNumberOfScalarComponents());
+        vtkns::ImGuiText("DataDimension: {}", obj->GetDataDimension());
+        vtkns::ImGuiText("ScalarType: {}", obj->GetScalarTypeAsString());
+        vtkns::ImGuiText("ScalarSize: {}", obj->GetScalarSize());
         {
             int v[3];
             obj->GetDimensions(v);
@@ -2752,7 +2688,7 @@ A value greater than 1 is a zoom-in, a value less than 1 is a zoom-out.
     template <>
     void setupImpl(vtkImageStencilAlgorithm* vtkobj)
     {
-    
+        vtkns::vtkObjSetup("Output", vtkobj->GetOutput());
     }
 
     template <>
@@ -2799,6 +2735,12 @@ A value greater than 1 is a zoom-in, a value less than 1 is a zoom-out.
 
         vtkns::vtkObjSetup("Stencil", vtkobj->GetStencil());
         vtkns::vtkObjSetup("BackgroundInput", vtkobj->GetBackgroundInput());
+        ImGui::SameLine();
+        vtkns::HelpMarker(R"(void vtkImageStencil::SetBackgroundInputData(vtkImageData* data)
+{
+  this->SetInputData(1, data);
+}
+)");
     }
 
     template <>

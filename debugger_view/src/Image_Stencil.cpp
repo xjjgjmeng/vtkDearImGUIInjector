@@ -7,9 +7,9 @@ namespace {
 
 int main()
 {
-    SETUP_WINDOW
+    BEFORE_MY_CODE
+    rwi->SetInteractorStyle(vtkNew<vtkInteractorStyleImage>{});
 
-    vtkNew<vtkNamedColors> colors;
     vtkNew<vtkImageData> imageRed;
     CreateColorImage(imageRed, 0);
     vtkNew<vtkImageData> imageGreen;
@@ -21,60 +21,37 @@ int main()
     imageToImageStencil->SetInputData(mask);
     imageToImageStencil->ThresholdByUpper(122);
 
-    vtkNew<vtkImageStencil> stencil;
-    stencil->SetInputConnection(2, imageToImageStencil->GetOutputPort());
-    stencil->SetBackgroundInputData(imageGreen);
-    stencil->SetInputData(imageRed);
-    stencil->ReverseStencilOn();
-    stencil->Update();
+    vtkNew<vtkImageStencil> imgStencil;
+#if 0
+    imgStencil->SetInputConnection(2, imageToImageStencil->GetOutputPort());
+#else
+    imgStencil->SetStencilConnection(imageToImageStencil->GetOutputPort());
+#endif
+    //imgStencil->SetBackgroundInputData(imageGreen);
+    //imgStencil->SetBackgroundColor(1, 1, 0, 1);
+    imgStencil->SetBackgroundValue(123);
+    imgStencil->SetInputData(imageRed);
+    imgStencil->ReverseStencilOn();
+    imgStencil->Update();
 
     vtkNew<vtkImageActor> actor;
-    actor->GetMapper()->SetInputConnection(stencil->GetOutputPort());
+    actor->GetMapper()->SetInputConnection(imgStencil->GetOutputPort());
     ren->AddViewProp(actor);
 
-    ::pWindow = rw;
     ::imgui_render_callback = [&]
     {
         vtkns::vtkObjSetup("imageToImageStencil", imageToImageStencil, ImGuiTreeNodeFlags_DefaultOpen);
-        vtkns::vtkObjSetup("stencil", stencil, ImGuiTreeNodeFlags_DefaultOpen);
+        vtkns::vtkObjSetup("imgStencil", imgStencil, ImGuiTreeNodeFlags_DefaultOpen);
         vtkns::vtkObjSetup("vtkImageActor", actor);
     };
 
-    // Start rendering app
-    rw->Render();
-
-    /// Change to your code begins here. ///
-    // Initialize an overlay with DearImgui elements.
-    vtkNew<vtkDearImGuiInjector> dearImGuiOverlay;
-    // 💉 the overlay.
-    dearImGuiOverlay->Inject(rwi);
-    // These functions add callbacks to ImGuiSetupEvent and ImGuiDrawEvents.
-    vtkns::SetupUI(dearImGuiOverlay);
-    // You can draw custom user interface elements using ImGui:: namespace.
-    vtkns::DrawUI(dearImGuiOverlay);
-    /// Change to your code ends here. ///
-
-    // Start event loop
-#if 0
-    renderWindow->SetSize(1920, 1000);
-#else
-#ifdef _WIN32
-// 获取窗口句柄
-    HWND hwnd = ::FindWindow(NULL, rw->GetWindowName());
-    // 最大化窗口
-    ::ShowWindow(hwnd, SW_MAXIMIZE);
-#endif
-#endif
-    //vtkInteractorStyleSwitch::SafeDownCast(rwi->GetInteractorStyle())->SetCurrentStyleToTrackballCamera();
-    rwi->SetInteractorStyle(vtkNew<vtkInteractorStyleImage>{});
-    rwi->EnableRenderOff();
-    rwi->Start();
+    AFTER_MY_CODE
 }
 
 namespace {
     void CreateColorImage(vtkImageData* image, const unsigned int channel)
     {
-        unsigned int dim = 20;
+        unsigned int dim = 200;
 
         image->SetDimensions(dim, dim, 1);
         image->AllocateScalars(VTK_UNSIGNED_CHAR, 3);
@@ -98,7 +75,7 @@ namespace {
 
     void CreateMask(vtkImageData* image)
     {
-        unsigned int dim = 20;
+        unsigned int dim = 200;
 
         image->SetDimensions(dim, dim, 1);
         image->AllocateScalars(VTK_UNSIGNED_CHAR, 1);

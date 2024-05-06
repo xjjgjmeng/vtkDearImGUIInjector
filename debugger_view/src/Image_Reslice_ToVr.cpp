@@ -78,7 +78,7 @@ private:
 
 int main()
 {
-    SETUP_WINDOW
+    BEFORE_MY_CODE
     img = vtkns::getVRData();
     vtkns::labelWorldZero(ren);
 

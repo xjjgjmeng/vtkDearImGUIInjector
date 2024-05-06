@@ -2,7 +2,7 @@
 
 int main()
 {
-    SETUP_WINDOW
+    BEFORE_MY_CODE
 
     vtkNew<vtkScalarsToColors> s2c;
 

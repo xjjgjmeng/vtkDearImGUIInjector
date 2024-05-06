@@ -2,7 +2,7 @@
 
 int main(int argc, char* argv[])
 {
-    SETUP_WINDOW
+    BEFORE_MY_CODE
     auto img = vtkns::getVRData();
 
     // vtkns::labelWorldZero(ren);

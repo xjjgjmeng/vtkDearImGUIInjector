@@ -617,7 +617,7 @@ namespace vtkns
 			if (imguiInitStatus)
 			{
 				auto io = ImGui::GetIO();
-				io.Fonts->AddFontFromFileTTF("C:/Windows/Fonts/simhei.ttf", 15.f, nullptr, io.Fonts->GetGlyphRangesChineseFull());
+				io.Fonts->AddFontFromFileTTF("C:/Windows/Fonts/simhei.ttf", 15.8f, nullptr, io.Fonts->GetGlyphRangesChineseFull());
 			}
 		};
 		uiSetup->SetCallback(uiSetupFunction);
@@ -626,8 +626,8 @@ namespace vtkns
 
 	static const char* getDicomFile()
 	{
-		const char* retval = "D:/test_data/series/I0000000200.dcm";
-		//const char* retval = "C:\\Users\\123\\Desktop\\series\\I0000000200.dcm";
+		//const char* retval = "D:/test_data/series/I0000000200.dcm";
+		const char* retval = "C:\\Users\\123\\Desktop\\series\\I0000000200.dcm";
 		if (!std::filesystem::exists(retval))
 		{
 			throw "dicom file does not exist!";
@@ -637,8 +637,8 @@ namespace vtkns
 
 	static const char* getDicomDir()
 	{
-		const char* retval = "D:/test_data/series";
-		//const char* retval = "C:\\Users\\123\\Desktop\\series";
+		//const char* retval = "D:/test_data/series";
+		const char* retval = "C:\\Users\\123\\Desktop\\series";
 		if (!std::filesystem::exists(retval))
 		{
 			throw "dicom dir does not exist!";
@@ -812,6 +812,9 @@ namespace vtkns
 		renWin->AddRenderer(ren);
 		auto iren = vtkSmartPointer<vtkRenderWindowInteractor>::New();
 		iren->SetRenderWindow(renWin);
+		vtkInteractorStyleSwitch::SafeDownCast(iren->GetInteractorStyle())->SetCurrentStyleToTrackballCamera();
+
+		::pWindow = renWin;
 
 		// 相机方向
 		auto camManipulator = vtkSmartPointer<vtkCameraOrientationWidget>::New();
@@ -822,5 +825,37 @@ namespace vtkns
 
 		return std::make_tuple(renWin, ren, iren, camManipulator);
 	}
-#define SETUP_WINDOW auto [rw, ren, rwi, camManipulator] = vtkns::getX();
+#define BEFORE_MY_CODE auto [rw, ren, rwi, camManipulator] = vtkns::getX();
+
+	static auto after_my_code_func = [](auto&& rw, auto&& rwi)
+	{
+		// Start rendering app
+		rw->Render(); // 非常重要！！
+
+		/// Change to your code begins here. ///
+		// Initialize an overlay with DearImgui elements.
+		vtkNew<vtkDearImGuiInjector> dearImGuiOverlay;
+		// 💉 the overlay.
+		dearImGuiOverlay->Inject(rwi);
+		// These functions add callbacks to ImGuiSetupEvent and ImGuiDrawEvents.
+		vtkns::SetupUI(dearImGuiOverlay);
+		// You can draw custom user interface elements using ImGui:: namespace.
+		vtkns::DrawUI(dearImGuiOverlay);
+		/// Change to your code ends here. ///
+
+		// Start event loop
+#if 0
+		renderWindow->SetSize(1920, 1000);
+#else
+#ifdef _WIN32
+		// 获取窗口句柄
+		HWND hwnd = ::FindWindow(NULL, rw->GetWindowName());
+		// 最大化窗口
+		::ShowWindow(hwnd, SW_MAXIMIZE);
+#endif
+#endif
+		rwi->EnableRenderOff();
+		rwi->Start();
+	};
+#define AFTER_MY_CODE vtkns::after_my_code_func(rw, rwi);
 }

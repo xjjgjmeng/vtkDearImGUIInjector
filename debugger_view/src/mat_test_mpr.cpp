@@ -2,7 +2,7 @@
 
 int main()
 {
-    SETUP_WINDOW
+    BEFORE_MY_CODE
     auto img = vtkns::getVRData();
     vtkns::labelWorldZero(ren);
 
@@ -108,33 +108,9 @@ int main()
                         matA->Element[2][3] = matB->Element[2][3];
                         matA->Modified();
                     };
-                    {
-                        ImGui::Text("X:");
-                        ImGui::SameLine();
-                        ImGui::PushButtonRepeat(true);
-                        if (ImGui::ArrowButton("##X-", ImGuiDir_Left)) { f(-1, 0, 0); }
-                        ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
-                        if (ImGui::ArrowButton("##X+", ImGuiDir_Right)) { f(1, 0, 0); }
-                        ImGui::PopButtonRepeat();
-                    }
-                    {
-                        ImGui::Text("Y:");
-                        ImGui::SameLine();
-                        ImGui::PushButtonRepeat(true);
-                        if (ImGui::ArrowButton("##Y-", ImGuiDir_Left)) { f(0, -1, 0); }
-                        ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
-                        if (ImGui::ArrowButton("##Y+", ImGuiDir_Right)) { f(0, 1, 0); }
-                        ImGui::PopButtonRepeat();
-                    }
-                    {
-                        ImGui::Text("Z:");
-                        ImGui::SameLine();
-                        ImGui::PushButtonRepeat(true);
-                        if (ImGui::ArrowButton("##Z-", ImGuiDir_Left)) { f(0, 0, -1); }
-                        ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
-                        if (ImGui::ArrowButton("##Z+", ImGuiDir_Right)) { f(0, 0, 1); }
-                        ImGui::PopButtonRepeat();
-                    }
+                    vtkns::ArrowButton("X", [&] {f(-1, 0, 0); }, [&] {f(1, 0, 0); }); vtkns::ArrowButtonSameLine();
+                    vtkns::ArrowButton("Y", [&] {f(0, -1, 0); }, [&] {f(0, 1, 0); }); vtkns::ArrowButtonSameLine();
+                    vtkns::ArrowButton("Z", [&] {f(0, 0, -1); }, [&] {f(0, 0, 1); });
                     ImGui::TreePop();
                 }
                 if (ImGui::TreeNodeEx(u8"MPR_ROTATE", ImGuiTreeNodeFlags_DefaultOpen))
@@ -159,15 +135,7 @@ int main()
                         lockedMatX = genMatX(); // 需要更新X
                     };
                     const auto step = vtkMath::Pi() / 2 / 2 / 2 / 2;
-                    {
-                        ImGui::Text("Z:");
-                        ImGui::SameLine();
-                        ImGui::PushButtonRepeat(true);
-                        if (ImGui::ArrowButton("##Z-", ImGuiDir_Left)) { f(-step); }
-                        ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
-                        if (ImGui::ArrowButton("##Z+", ImGuiDir_Right)) { f(step); }
-                        ImGui::PopButtonRepeat();
-                    }
+                    vtkns::ArrowButton("Z", [&] {f(-step); }, [&] {f(step); });
                     ImGui::TreePop();
                 }
             }

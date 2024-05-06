@@ -130,4 +130,13 @@ namespace vtkns
         std::snprintf(buf, sizeof(buf), "%.2f", v);
         return buf;
     }
+    std::pair<vtkActor*, vtkPolyDataMapper*> renderPolydata(vtkRenderer* ren, vtkAlgorithmOutput* algoOutPort)
+    {
+        vtkNew<vtkPolyDataMapper> mapper;
+        mapper->SetInputConnection(algoOutPort);
+        vtkNew<vtkActor> actor;
+        actor->SetMapper(mapper);
+        ren->AddActor(actor);
+        return std::make_pair(actor.Get(), mapper.Get());
+    }
 }
