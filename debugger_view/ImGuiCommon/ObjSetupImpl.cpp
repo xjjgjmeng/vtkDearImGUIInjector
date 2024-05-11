@@ -892,19 +892,23 @@ namespace
                 if (ImGui::DragScalarN("DirectionCosinesX", ImGuiDataType_Double, xyz, 3, .01f))
                 {
                     obj->SetResliceAxesDirectionCosines(xyz);
+                    obj->Update();
                 }
                 if (ImGui::DragScalarN("DirectionCosinesY", ImGuiDataType_Double, xyz + 3, 3, .01f))
                 {
                     obj->SetResliceAxesDirectionCosines(xyz);
+                    obj->Update();
                 }
                 if (ImGui::DragScalarN("DirectionCosinesZ", ImGuiDataType_Double, xyz + 6, 3, .01f))
                 {
                     obj->SetResliceAxesDirectionCosines(xyz);
+                    obj->Update();
                 }
 
                 if (double v[3]; obj->GetResliceAxesOrigin(v), ImGui::DragScalarN("Origin", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), .1f))
                 {
                     obj->SetResliceAxesOrigin(v);
+                    obj->Update();
                 } ImGui::SameLine(); vtkns::HelpMarker(u8R"(指定reslice坐标系的origin在旧世界中的位置
 调节该值相当于reslice坐标系在旧世界中移动
 xoy应该可以穿过imagedata，不然无输出
@@ -947,11 +951,13 @@ output的origin是相对于新坐标系的，把新坐标系的origin处看作�
             if (ImGui::Button("SetOutputOriginToDefault"))
             {
                 obj->SetOutputOriginToDefault();
+                obj->Update();
             }
             ImGui::SameLine();
             if (ImGui::Button("SetOutputExtentToDefault"))
             {
                 obj->SetOutputExtentToDefault();
+                obj->Update();
             }
 
             {
