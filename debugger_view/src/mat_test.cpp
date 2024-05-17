@@ -36,8 +36,24 @@ int main()
     rotateAxisPts.push_back({ double(3),double(3),double(3) });
     vtkns::makeLines(rotateAxisPts, rotateAxis);
 
+    std::pair<vtkNew<vtkMatrix4x4>, vtkNew<vtkMatrix4x4>> leftrightmutiply;
+
     ::imgui_render_callback = [&]
         {
+            if (ImGui::TreeNodeEx(u8"左右乘对比"))
+            {
+                vtkns::vtkObjSetup("A", leftrightmutiply.first);
+                vtkns::vtkObjSetup("B", leftrightmutiply.second);
+
+                vtkNew<vtkMatrix4x4> retMat;
+                vtkMatrix4x4::Multiply4x4(leftrightmutiply.first, leftrightmutiply.second, retMat);
+                vtkns::ImGuiText("A*B:\n{}", vtkns::getMatrixString(retMat));
+                vtkMatrix4x4::Multiply4x4(leftrightmutiply.second, leftrightmutiply.first, retMat);
+                vtkns::ImGuiText("B*A:\n{}", vtkns::getMatrixString(retMat));
+
+                ImGui::TreePop();
+            }
+
             if (double* v = rotateAxisPts.front().data(); ImGui::DragScalarN("RotateAxisPt1", ImGuiDataType_Double, v, 3, 0.01f))
             {
                 vtkns::makeLines(rotateAxisPts, rotateAxis);

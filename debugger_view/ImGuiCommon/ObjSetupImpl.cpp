@@ -684,18 +684,18 @@ namespace
                 ImGui::Checkbox("UseVtkTransform", &useVtkTransform);
                 ImGui::SameLine();
                 vtkns::HelpMarker(u8R"(使用vtkTransform(选中)，使用自定义矩阵(非选中))");
-                if (auto b = ImGui::TreeNodeEx(u8"旋转", ImGuiTreeNodeFlags_DefaultOpen); ImGui::SameLine(), vtkns::HelpMarker(u8R"(每次绕轴旋转5°)"), b)
-                {
-                    vtkns::ArrowButton("X", [&] { vtkns::mat::rotate(obj, 0, -1, useVtkTransform); }, [&] { vtkns::mat::rotate(obj, 0, 1, useVtkTransform); }); vtkns::ArrowButtonSameLine();
-                    vtkns::ArrowButton("Y", [&] { vtkns::mat::rotate(obj, 1, -1, useVtkTransform); }, [&] { vtkns::mat::rotate(obj, 1, 1, useVtkTransform); }); vtkns::ArrowButtonSameLine();
-                    vtkns::ArrowButton("Z", [&] { vtkns::mat::rotate(obj, 2, -1, useVtkTransform); }, [&] { vtkns::mat::rotate(obj, 2, 1, useVtkTransform); });
-                    ImGui::TreePop();
-                }
                 if (auto b = ImGui::TreeNodeEx(u8"平移", ImGuiTreeNodeFlags_DefaultOpen); ImGui::SameLine(), vtkns::HelpMarker(u8R"(每次沿轴移动1)"), b)
                 {
                     vtkns::ArrowButton("X", [&] { vtkns::mat::translate(obj, -1, 0, 0, useVtkTransform); }, [&] { vtkns::mat::translate(obj, 1, 0, 0, useVtkTransform); }); vtkns::ArrowButtonSameLine();
                     vtkns::ArrowButton("Y", [&] { vtkns::mat::translate(obj, 0, -1, 0, useVtkTransform); }, [&] { vtkns::mat::translate(obj, 0, 1, 0, useVtkTransform); }); vtkns::ArrowButtonSameLine();
                     vtkns::ArrowButton("Z", [&] { vtkns::mat::translate(obj, 0, 0, -1, useVtkTransform); }, [&] { vtkns::mat::translate(obj, 0, 0, 1, useVtkTransform); });
+                    ImGui::TreePop();
+                }
+                if (auto b = ImGui::TreeNodeEx(u8"旋转", ImGuiTreeNodeFlags_DefaultOpen); ImGui::SameLine(), vtkns::HelpMarker(u8R"(每次绕轴旋转5°)"), b)
+                {
+                    vtkns::ArrowButton("X", [&] { vtkns::mat::rotate(obj, 0, -1, useVtkTransform); }, [&] { vtkns::mat::rotate(obj, 0, 1, useVtkTransform); }); vtkns::ArrowButtonSameLine();
+                    vtkns::ArrowButton("Y", [&] { vtkns::mat::rotate(obj, 1, -1, useVtkTransform); }, [&] { vtkns::mat::rotate(obj, 1, 1, useVtkTransform); }); vtkns::ArrowButtonSameLine();
+                    vtkns::ArrowButton("Z", [&] { vtkns::mat::rotate(obj, 2, -1, useVtkTransform); }, [&] { vtkns::mat::rotate(obj, 2, 1, useVtkTransform); });
                     ImGui::TreePop();
                 }
                 if (auto b = ImGui::TreeNodeEx(u8"缩放", ImGuiTreeNodeFlags_DefaultOpen); ImGui::SameLine(), vtkns::HelpMarker(u8R"(每次缩放0.5或2)"), b)
