@@ -6,7 +6,7 @@ int main()
     auto img = vtkns::getVRData();
     vtkns::labelWorldZero(ren);
 
-    auto reslice = vtkSmartPointer<vtkImageReslice>::New();
+    vtkNew<vtkImageReslice> reslice;
     reslice->SetInputData(img);
     reslice->SetOutputDimensionality(3);
 
@@ -23,10 +23,7 @@ int main()
     // 将切割出来的体数据渲染出来
     vtkns::genVR(ren, reslice->GetOutput(), false);
     {
-        const double x[3] = { 1,0,0 };
-        const double y[3] = { 0,1,0 };
-        const double z[3] = { 0,0,1 };
-        reslice->SetResliceAxesDirectionCosines(x, y, z);
+        reslice->SetResliceAxesDirectionCosines(1,0,0, 0,1,0, 0,0,1);
         {
             auto f = [](vtkObject* caller, unsigned long eid, void* clientdata, void* calldata)
                 {
@@ -38,39 +35,25 @@ int main()
             reslice->GetResliceAxes()->AddObserver(vtkCommand::ModifiedEvent, pCC);
         }
         reslice->SetResliceAxesOrigin(img->GetCenter());
-        reslice->SetInterpolationModeToLinear();
     }
 
-    {
-        const double x[3] = { 1,0,0 };
-        const double y[3] = { 0,1,0 };
-        const double z[3] = { 0,0,1 };
-        const double o[3] = { 0,0,0 };
-        reslice->SetResliceAxesDirectionCosines(x, y, z);
-        reslice->SetResliceAxesOrigin(img->GetCenter());
-    }
     reslice->SetInterpolationModeToLinear();
     reslice->SetOutputOrigin(0, 0, 0);
     reslice->SetOutputExtent(0,400,0,400,0,400);
     reslice->SetOutputSpacing(img->GetSpacing());
-    reslice->Update(); // 没有此句的话在一开始不能显示三维线框
+    reslice->Update(); // !
 
-    vtkNew<vtkImageActor> actor;
-    actor->GetMapper()->SetInputConnection(reslice->GetOutputPort());
-    ren->AddActor(actor);
+    //vtkNew<vtkImageActor> actor;
+    //actor->GetMapper()->SetInputConnection(reslice->GetOutputPort());
+    //ren->AddActor(actor);
 
     ::imgui_render_callback = [&]
     {
         vtkns::vtkObjSetup("OriginalImageData", img);
-        static bool showResliceOutput = false;
-        ImGui::Checkbox("ShowResliceOutput", &showResliceOutput);
-        if (showResliceOutput)
-        {
-            ImGui::Begin("ResliceOutput");
-            vtkns::vtkObjSetup("ImageData", reslice->GetOutput(), ImGuiTreeNodeFlags_DefaultOpen);
-            ImGui::End();
-        }
+        vtkns::vtkObjSetupWin("ResliceOutput", reslice->GetOutput());
         vtkns::vtkObjSetup("Reslice", reslice, ImGuiTreeNodeFlags_DefaultOpen);
+
+        reslice->Update(); // !
     };
 
     AFTER_MY_CODE

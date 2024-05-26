@@ -2,6 +2,16 @@
 
 #include "IncludeAllInOne.h"
 
+template<typename T, std::size_t N>
+using TmpArr_t = T[N];
+#if 0
+template<typename T, std::size_t N>
+auto TmpArr = TmpArr_t<T, N>{}; // 不能为constexpr？
+#else
+template<typename T, typename = std::enable_if_t<std::is_array_v<T>>>
+auto TmpArr = T{}; // 不能为constexpr？
+#endif
+
 namespace
 {
 	void setupDefaultVolumeProperty(vtkVolume* pVolume)
@@ -376,7 +386,19 @@ namespace vtkns
 namespace vtkns
 {
     void HelpMarker(const char* desc);
+	void HelpMarkerSameLine(const char* desc);
     void vtkObjSetup(std::string_view objName, vtkSmartPointer<vtkObject> vtkObj, const ImGuiTreeNodeFlags = 0);
+	inline void vtkObjSetupWin(std::string_view objName, vtkSmartPointer<vtkObject> vtkObj)
+	{
+		static std::map<const void*, bool> mymap; // 两个内容相同的字符串字面量的内存地址一定不同吗？
+		ImGui::Checkbox(objName.data(), &mymap[objName.data()]);
+		if (mymap[objName.data()])
+		{
+			ImGui::Begin(objName.data());
+			vtkns::vtkObjSetup("", vtkObj, ImGuiTreeNodeFlags_DefaultOpen);
+			ImGui::End();
+		}
+	}
 	struct LogView
 	{
 		ImGuiTextBuffer     Buf;
@@ -626,8 +648,8 @@ namespace vtkns
 
 	static const char* getDicomFile()
 	{
-		const char* retval = "D:/test_data/series/I0000000200.dcm";
-		//const char* retval = "C:\\Users\\123\\Desktop\\series\\I0000000200.dcm";
+		//const char* retval = "D:/test_data/series/I0000000200.dcm";
+		const char* retval = "C:\\Users\\123\\Desktop\\series\\I0000000200.dcm";
 		if (!std::filesystem::exists(retval))
 		{
 			throw "dicom file does not exist!";
@@ -637,8 +659,8 @@ namespace vtkns
 
 	static const char* getDicomDir()
 	{
-		const char* retval = "D:/test_data/series";
-		//const char* retval = "C:\\Users\\123\\Desktop\\series";
+		//const char* retval = "D:/test_data/series";
+		const char* retval = "C:\\Users\\123\\Desktop\\series";
 		if (!std::filesystem::exists(retval))
 		{
 			throw "dicom dir does not exist!";

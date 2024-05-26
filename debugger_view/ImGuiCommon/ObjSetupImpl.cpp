@@ -14,6 +14,12 @@ namespace vtkns
             ImGui::EndTooltip();
         }
     }
+
+    void HelpMarkerSameLine(const char* desc)
+    {
+        ImGui::SameLine();
+        vtkns::HelpMarker(desc);
+    }
 }
 
 namespace
@@ -25,7 +31,8 @@ namespace
     template <>
     void setupImpl(vtkObject* vtkObj)
     {
-        ImGui::Text("Pointer: %0x", vtkObj);
+        // ImGui::Text("Pointer: %0x", vtkObj);
+        vtkns::ImGuiText(u8"地址: {}", (void*)vtkObj);
         ImGui::Text("MTime: %ld", vtkObj->GetMTime());
         ImGui::Text("Name: %s", vtkObj->GetClassName());
     }
@@ -880,9 +887,9 @@ namespace
 
             ImGui::TreePop();
         }
-        vtkns::vtkObjSetup("ResliceAxes", obj->GetResliceAxes(), ImGuiTreeNodeFlags_DefaultOpen);
+        vtkns::vtkObjSetup(u8"矩阵", obj->GetResliceAxes(), ImGuiTreeNodeFlags_DefaultOpen);
         {
-            if (auto b = ImGui::TreeNodeEx("ResliceAxes_2", ImGuiTreeNodeFlags_DefaultOpen); ImGui::SameLine(), vtkns::HelpMarker(u8R"(1.将reslice坐标系放到origin指定的位置
+            if (auto b = ImGui::TreeNodeEx("ResliceAxes", ImGuiTreeNodeFlags_DefaultOpen); ImGui::SameLine(), vtkns::HelpMarker(u8R"(1.将reslice坐标系放到origin指定的位置
 2.根据xoy平面reslice一个slice
 3.根据设置的output相关的origin，spacing和extent选取此slice的一部分
 4.将最终得到vtkImageData在旧世界中呈现)"), b)
@@ -892,23 +899,23 @@ namespace
                 if (ImGui::DragScalarN("DirectionCosinesX", ImGuiDataType_Double, xyz, 3, .01f))
                 {
                     obj->SetResliceAxesDirectionCosines(xyz);
-                    obj->Update();
+                    //obj->Update();
                 }
                 if (ImGui::DragScalarN("DirectionCosinesY", ImGuiDataType_Double, xyz + 3, 3, .01f))
                 {
                     obj->SetResliceAxesDirectionCosines(xyz);
-                    obj->Update();
+                    //obj->Update();
                 }
                 if (ImGui::DragScalarN("DirectionCosinesZ", ImGuiDataType_Double, xyz + 6, 3, .01f))
                 {
                     obj->SetResliceAxesDirectionCosines(xyz);
-                    obj->Update();
+                    //obj->Update();
                 }
 
                 if (double v[3]; obj->GetResliceAxesOrigin(v), ImGui::DragScalarN("Origin", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), .1f))
                 {
                     obj->SetResliceAxesOrigin(v);
-                    obj->Update();
+                    //obj->Update();
                 } ImGui::SameLine(); vtkns::HelpMarker(u8R"(指定reslice坐标系的origin在旧世界中的位置
 调节该值相当于reslice坐标系在旧世界中移动
 xoy应该可以穿过imagedata，不然无输出
@@ -931,33 +938,33 @@ output的origin是相对于新坐标系的，把新坐标系的origin处看作�
             if (double v[3]; obj->GetOutputOrigin(v), ImGui::DragScalarN("Origin", ImGuiDataType_Double, v, IM_ARRAYSIZE(v)))
             {
                 obj->SetOutputOrigin(v);
-                obj->Update(); // 没有此句会输出的都是二维. 使用SetInputConnection就不需要？？
+                //obj->Update(); // 没有此句会输出的都是二维. 使用SetInputConnection就不需要？？
             } ImGui::SameLine(); vtkns::HelpMarker(u8R"(将reslice坐标系的origin处当中新世界的（0，0，0）
 如果输出的是2维，调节z无效，因为只reslice出一张图，所以z被忽略了？？输出图像只能在一个平面上游移)");
             //::reslice->GetOutputInformation(0)->Get(vtkDataObject::SPACING(), myArray); // 0.25
             if (double v[3]; obj->GetOutputSpacing(v), ImGui::DragScalarN("Spacing", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), .01f))
             {
                 obj->SetOutputSpacing(v);
-                obj->Update(); // 没有此句会输出的都是二维
+                //obj->Update(); // 没有此句会输出的都是二维
             } ImGui::SameLine(); vtkns::HelpMarker(u8R"(和vtkImageData的spacing不同。
 通过调大spacing再配合网格可以看到虽然输出的图像尺寸变大了，但是对应像素的位置是不变的，通过采样？？
 确定了spacing就相当于确定了网格，后面的extent只是选取想要的网格索引来进一步reslice)");
             if (int v[6]; obj->GetOutputExtent(v), ImGui::DragScalarN("Extent", ImGuiDataType_S32, v, IM_ARRAYSIZE(v)))
             {
                 obj->SetOutputExtent(v);
-                obj->Update(); // 没有此句会输出的都是二维
+                //obj->Update(); // 没有此句会输出的都是二维
             } ImGui::SameLine(); vtkns::HelpMarker(u8R"(新的slice已经切割出来，此属性控制可以看到的图像范围)");
 
             if (ImGui::Button("SetOutputOriginToDefault"))
             {
                 obj->SetOutputOriginToDefault();
-                obj->Update();
+                //obj->Update();
             }
             ImGui::SameLine();
             if (ImGui::Button("SetOutputExtentToDefault"))
             {
                 obj->SetOutputExtentToDefault();
-                obj->Update();
+                //obj->Update();
             }
 
             {
@@ -969,7 +976,7 @@ output的origin是相对于新坐标系的，把新坐标系的origin处看作�
                 if (obj->GetOutputDimensionality() != v)
                 {
                     obj->SetOutputDimensionality(v);
-                    obj->Update(); // 没有此句会输出的都是二维
+                    //obj->Update(); // 没有此句会输出的都是二维
                 }
             }
             // InterpolationMode
@@ -2875,7 +2882,7 @@ namespace vtkns
             return;
         }
 
-        if (ImGui::TreeNodeEx(objName.data(), flags))
+        if (objName.empty() || ImGui::TreeNodeEx(objName.data(), flags)) // ! name为空直接通过，否则才TreeNode判断
         {
             ::setupHelper<vtkObject>(vtkObj);
 
@@ -2966,7 +2973,10 @@ namespace vtkns
             // vtkImageMapper3D
             ::setupHelper<vtkImageSliceMapper, vtkImageResliceMapper>(vtkObj);
 
-            ImGui::TreePop();
+            if (!objName.empty())
+            {
+                ImGui::TreePop();
+            }
         }
     }
 }
