@@ -18,6 +18,7 @@
 #include <vtkContourFilter.h>
 #include <vtkPolydataNormals.h>
 #include <vtkWarpTo.h>
+#include <vtkCutter.h>
 #include <vtkLinearExtrusionFilter.h>
 #include <vtkRotationalExtrusionFilter.h>
 #include <vtkRegularPolygonSource.h>

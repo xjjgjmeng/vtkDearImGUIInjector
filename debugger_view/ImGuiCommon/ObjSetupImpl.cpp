@@ -58,6 +58,79 @@ namespace
         }
     }
 
+    template <>
+    void setupImpl(vtkPointPlacer* vtkobj)
+    {
+        if (int v = vtkobj->GetPixelTolerance(); ImGui::DragInt("PixelTolerance", &v))
+        {
+            vtkobj->SetPixelTolerance(v);
+        }
+        if (int v = vtkobj->GetWorldTolerance(); ImGui::DragInt("WorldTolerance", &v))
+        {
+            vtkobj->SetWorldTolerance(v);
+        }
+    }
+
+    template <>
+    void setupImpl(vtkBoundedPlanePointPlacer* vtkobj)
+    {
+        {
+            ImGui::Text("ProjectionNormal");
+            ImGui::SameLine();
+            int v = vtkobj->GetProjectionNormal();
+            ImGui::RadioButton("XAxis", &v, vtkBoundedPlanePointPlacer::XAxis); ImGui::SameLine();
+            ImGui::RadioButton("YAxis", &v, vtkBoundedPlanePointPlacer::YAxis); ImGui::SameLine();
+            ImGui::RadioButton("ZAxis", &v, vtkBoundedPlanePointPlacer::ZAxis); ImGui::SameLine();
+            ImGui::RadioButton("Oblique", &v, vtkBoundedPlanePointPlacer::Oblique);
+            if (vtkobj->GetProjectionNormal() != v)
+            {
+                vtkobj->SetProjectionNormal(v);
+            }
+            if (vtkBoundedPlanePointPlacer::Oblique == v)
+            {
+                vtkns::vtkObjSetup("ObliquePlane", vtkobj->GetObliquePlane(), ImGuiTreeNodeFlags_DefaultOpen);
+            }
+        }
+
+        if (float v = vtkobj->GetProjectionPosition(); ImGui::DragFloat("ProjectionPosition", &v))
+        {
+            vtkobj->SetProjectionPosition(v);
+        }
+    }
+
+    template <>
+    void setupImpl(vtkCutter* vtkobj)
+    {
+        if (bool v = vtkobj->GetGenerateTriangles(); ImGui::Checkbox("GenerateTriangles ", &v))
+        {
+            vtkobj->SetGenerateTriangles(v);
+        }
+        if (bool v = vtkobj->GetGenerateCutScalars(); ImGui::Checkbox("GenerateCutScalars ", &v))
+        {
+            vtkobj->SetGenerateCutScalars(v);
+        }
+        if (int v = vtkobj->GetNumberOfContours(); ImGui::DragInt("NumberOfContours", &v))
+        {
+            vtkobj->SetNumberOfContours(v);
+        }
+        if (int v = vtkobj->GetOutputPointsPrecision(); ImGui::DragInt("OutputPointsPrecision", &v))
+        {
+            vtkobj->SetOutputPointsPrecision(v);
+        }
+        {
+            ImGui::Text("SortBy");
+            ImGui::SameLine();
+            int v = vtkobj->GetSortBy();
+            ImGui::RadioButton("VALUE", &v, VTK_SORT_BY_VALUE); ImGui::SameLine();
+            ImGui::RadioButton("CELL", &v, VTK_SORT_BY_CELL);
+            if (vtkobj->GetSortBy() != v)
+            {
+                vtkobj->SetSortBy(v);
+            }
+        }
+        vtkns::vtkObjSetup("CutFunction", vtkobj->GetCutFunction(), ImGuiTreeNodeFlags_DefaultOpen);
+    }
+
     template<>
     void setupImpl(vtkImageChangeInformation* vtkobj)
     {
@@ -2904,8 +2977,11 @@ namespace vtkns
                 , vtkWindow
                 , vtkAbstractImageInterpolator
                 , vtkMatrix4x4
+                , vtkPointPlacer
                 , vtkVolumeProperty
                 , vtkScalarsToColors>(vtkObj);
+            // vtkPointPlacer
+            ::setupHelper<vtkBoundedPlanePointPlacer>(vtkObj);
             // vtkViewport
             ::setupHelper<vtkRenderer>(vtkObj);
             // vtkScalarsToColors
@@ -2941,7 +3017,7 @@ namespace vtkns
             // vtkDataSetAlgorithm
             ::setupHelper<vtkElevationFilter>(vtkObj);
             // vtkPolyDataAlgorithm
-            ::setupHelper<vtkLineSource, vtkVolumeOutlineSource, vtkFlyingEdges3D, vtkMarchingCubes, vtkTransformPolyDataFilter, vtkPlaneSource, vtkImageToPolyDataFilter>(vtkObj);
+            ::setupHelper<vtkLineSource, vtkCutter, vtkVolumeOutlineSource, vtkFlyingEdges3D, vtkMarchingCubes, vtkTransformPolyDataFilter, vtkPlaneSource, vtkImageToPolyDataFilter>(vtkObj);
             // vtkAbstractMapper3D
             ::setupHelper<vtkMapper, vtkImageMapper3D>(vtkObj);
             // vtkMapper

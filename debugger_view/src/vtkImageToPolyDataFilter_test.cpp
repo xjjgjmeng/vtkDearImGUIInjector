@@ -24,17 +24,11 @@ namespace {
 
 int main(int argc, char* argv[])
 {
-    vtkNew<vtkRenderer> renPoly;
-    vtkNew<vtkRenderWindow> renWin;
-    renWin->AddRenderer(renPoly);
-    vtkNew<vtkRenderWindowInteractor> iren;
-    iren->SetRenderWindow(renWin);
-
-    vtkNew<vtkDICOMImageReader> reader;
-    reader->SetDirectoryName(vtkns::getDicomDir());
-    reader->Update();
+    BEFORE_MY_CODE
+    auto img = vtkns::getVRData();
 
     // 显示体数据用于对比
+#if 0
     {
         vtkNew<vtkRenderer> ren;
         ren->SetViewport(0.8, 0.5, 1, 1);
@@ -49,6 +43,7 @@ int main(int argc, char* argv[])
         ren->AddVolume(pVolume);
         ren->ResetCamera();
     }
+#endif
 
     // 只能处理一张图？？
     vtkNew<vtkImageToPolyDataFilter> imgPolyFilter;
@@ -58,63 +53,20 @@ int main(int argc, char* argv[])
         lut->SetRange(0, 255);
         imgPolyFilter->SetLookupTable(lut);
     }
-    imgPolyFilter->SetInputData(reader->GetOutput());
+    imgPolyFilter->SetInputData(img);
     vtkNew<vtkPolyDataMapper> mapper;
     mapper->SetInputConnection(imgPolyFilter->GetOutputPort());
     vtkNew<vtkActor> polydataActor;
     polydataActor->SetMapper(mapper);
     polydataActor->GetProperty()->SetColor(1, 0, 0);
-    renPoly->AddActor(polydataActor);
+    ren->AddActor(polydataActor);
 
-    ::pWindow = renWin;
     ::imgui_render_callback = [&]
     {
-        static bool showPolydata = true;
-        ImGui::Checkbox("ShowPolydata", &showPolydata);
-        if (showPolydata)
-        {
-            ImGui::Begin("PolyData");
-            vtkns::vtkObjSetup("FilterOutput", imgPolyFilter->GetOutput(), ImGuiTreeNodeFlags_DefaultOpen);
-            ImGui::End();
-        }
+        vtkns::vtkObjSetupWin("FilterOutput", imgPolyFilter->GetOutput());
         vtkns::vtkObjSetup("filter", imgPolyFilter, ImGuiTreeNodeFlags_DefaultOpen);
         vtkns::vtkObjSetup("actor", polydataActor);
     };
 
-    // Start rendering app
-    renWin->Render(); // 非常重要！！
-
-    /// Change to your code begins here. ///
-    // Initialize an overlay with DearImgui elements.
-    vtkNew<vtkDearImGuiInjector> dearImGuiOverlay;
-    ImPlot::CreateContext(); //
-    // 💉 the overlay.
-    dearImGuiOverlay->Inject(iren);
-    // These functions add callbacks to ImGuiSetupEvent and ImGuiDrawEvents.
-    vtkns::SetupUI(dearImGuiOverlay);
-    // You can draw custom user interface elements using ImGui:: namespace.
-    vtkns::DrawUI(dearImGuiOverlay);
-    /// Change to your code ends here. ///
-
-    vtkNew<vtkCameraOrientationWidget> camManipulator;
-    camManipulator->SetParentRenderer(renPoly);
-    camManipulator->On();
-    auto rep = vtkCameraOrientationRepresentation::SafeDownCast(camManipulator->GetRepresentation());
-    rep->AnchorToLowerRight();
-
-    // Start event loop
-#if 0
-    renderWindow->SetSize(1920, 1000);
-#else
-#ifdef _WIN32
-    // 获取窗口句柄
-    HWND hwnd = ::FindWindow(NULL, renWin->GetWindowName());
-    // 最大化窗口
-    ::ShowWindow(hwnd, SW_MAXIMIZE);
-#endif
-#endif
-    vtkInteractorStyleSwitch::SafeDownCast(iren->GetInteractorStyle())->SetCurrentStyleToTrackballCamera();
-    iren->EnableRenderOff();
-    iren->Start();
-    return 0;
+    AFTER_MY_CODE
 }

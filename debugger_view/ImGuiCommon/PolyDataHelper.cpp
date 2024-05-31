@@ -7,6 +7,8 @@
 #include <vtkCellArray.h>
 #include <vtkPoints.h>
 #include <vtkTextProperty.h>
+#include <vtkProperty.h>
+#include <vtkRenderWindow.h>
 
 namespace vtkns
 {
@@ -94,6 +96,16 @@ namespace vtkns
         vtkNew<vtkPolyDataMapper> pMapper;
         pMapper->SetInputData(vtkns::makePoints(pts));
         pActor->SetMapper(pMapper);
+    }
+
+    void addPt(vtkRenderer* ren, const vtkns::Pt_t& pt)
+    {
+        vtkNew<vtkActor> actor;
+        vtkns::makePoints({ pt }, actor);
+        ren->AddViewProp(actor);
+        actor->GetProperty()->SetPointSize(13);
+        actor->GetProperty()->SetRenderPointsAsSpheres(1);
+        ren->GetRenderWindow()->Render();
     }
 
     Pt_t advance(const Pt_t& pt, const double direction[3], const double len)
