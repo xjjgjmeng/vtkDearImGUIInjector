@@ -56,6 +56,29 @@ namespace
         {
             pActor2D->SetPosition2(v[0], v[1]);
         }
+        vtkns::vtkObjSetup("Property", pActor2D->GetProperty());
+    }
+
+    template<>
+    void setupImpl(vtkTexturedActor2D* vtkobj)
+    {
+    
+    }
+
+    template<>
+    void setupImpl(vtkTextActor* vtkobj)
+    {
+        {
+            double v[4];
+            vtkobj->GetBoundingBox(::pRen, v);
+            vtkns::ImGuiText("BoundingBox: {}", v);
+        }
+        {
+            double v[2];
+            vtkobj->GetSize(::pRen, v);
+            vtkns::ImGuiText("Size: {}", v);
+        }
+        vtkns::vtkObjSetup("TextProperty", vtkobj->GetTextProperty());
     }
 
     template <>
@@ -492,6 +515,10 @@ namespace
         {
             pTextProperty->SetInteriorLinesVisibility(v);
         }
+        if (bool v = pTextProperty->GetUseTightBoundingBox(); ImGui::Checkbox("UseTightBoundingBox ", &v))
+        {
+            pTextProperty->SetUseTightBoundingBox(v);
+        }
         if (int v = pTextProperty->GetInteriorLinesWidth(); ImGui::DragInt("InteriorLinesWidth", &v))
         {
             pTextProperty->SetInteriorLinesWidth(v);
@@ -500,9 +527,29 @@ namespace
         {
             pTextProperty->SetInteriorLinesColor(v[0], v[1], v[2]);
         }
+        if (double v = pTextProperty->GetLineOffset(); ImGui::DragScalar("LineOffset", ImGuiDataType_Double, &v, 0.01f))
+        {
+            pTextProperty->SetLineOffset(v);
+        }
+        if (double v = pTextProperty->GetLineSpacing(); ImGui::DragScalar("LineSpacing", ImGuiDataType_Double, &v, 0.01f))
+        {
+            pTextProperty->SetLineSpacing(v);
+        }
         if (double v = pTextProperty->GetCellOffset(); ImGui::DragScalar("CellOffset", ImGuiDataType_Double, &v, 0.01f))
         {
             pTextProperty->SetCellOffset(v);
+        }
+        if (double v = pTextProperty->GetOrientation(); ImGui::DragScalar("Orientation", ImGuiDataType_Double, &v, 0.01f))
+        {
+            pTextProperty->SetOrientation(v);
+        }
+        if (bool v = pTextProperty->GetShadow(); ImGui::Checkbox("Shadow", &v))
+        {
+            pTextProperty->SetShadow(v);
+        }
+        if (int v[2]; pTextProperty->GetShadowOffset(v), ImGui::DragInt2("ShadowOffset", v))
+        {
+            pTextProperty->SetShadowOffset(v);
         }
         if (float v = pTextProperty->GetFontSize(); ImGui::SliderFloat("FontSize", &v, 0, 100))
         {
@@ -511,6 +558,31 @@ namespace
         if (ImGui::Button("SetFontFamilyToArial")) pTextProperty->SetFontFamilyToArial();
         if (ImGui::Button("SetFontFamilyToCourier")) pTextProperty->SetFontFamilyToCourier();
         if (ImGui::Button("SetFontFamilyToTimes")) pTextProperty->SetFontFamilyToTimes();
+
+        {
+            ImGui::Text("Justification");
+            ImGui::SameLine();
+            int v = pTextProperty->GetJustification();
+            ImGui::RadioButton("LEFT", &v, VTK_TEXT_LEFT); ImGui::SameLine();
+            ImGui::RadioButton("H_CENTERED", &v, VTK_TEXT_CENTERED); ImGui::SameLine();
+            ImGui::RadioButton("RIGHT", &v, VTK_TEXT_RIGHT);
+            if (pTextProperty->GetJustification() != v)
+            {
+                pTextProperty->SetJustification(v);
+            }
+        }
+        {
+            ImGui::Text("VerticalJustification");
+            ImGui::SameLine();
+            int v = pTextProperty->GetVerticalJustification();
+            ImGui::RadioButton("BOTTOM", &v, VTK_TEXT_BOTTOM); ImGui::SameLine();
+            ImGui::RadioButton("V_CENTERED", &v, VTK_TEXT_CENTERED); ImGui::SameLine();
+            ImGui::RadioButton("TOP", &v, VTK_TEXT_TOP);
+            if (pTextProperty->GetVerticalJustification() != v)
+            {
+                pTextProperty->SetVerticalJustification(v);
+            }
+        }
     }
 
     template <>
@@ -3037,7 +3109,9 @@ namespace vtkns
             // vtkVolumeMapper
             ::setupHelper<vtkGPUVolumeRayCastMapper>(vtkObj);
             // vtkActor2D
-            ::setupHelper<vtkAxisActor2D, vtkCaptionActor2D>(vtkObj);
+            ::setupHelper<vtkAxisActor2D, vtkCaptionActor2D, vtkTexturedActor2D>(vtkObj);
+            // vtkTexturedActor2D
+            ::setupHelper<vtkTextActor>(vtkObj);
             // vtkWidgetRepresentation
             ::setupHelper<vtkBoxRepresentation, vtkLineRepresentation, vtkDistanceRepresentation, vtkBorderRepresentation, vtkHandleRepresentation>(vtkObj);
             // vtkHandleRepresentation

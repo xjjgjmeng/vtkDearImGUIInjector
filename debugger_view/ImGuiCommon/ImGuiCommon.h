@@ -534,6 +534,7 @@ namespace vtkns
 
 static std::function<void()> imgui_render_callback;
 static vtkWeakPointer<vtkRenderWindow> pWindow;
+inline vtkWeakPointer<vtkRenderer> pRen;
 static bool showLogView = false;
 static vtkns::LogView* logger()
 {
@@ -837,6 +838,7 @@ namespace vtkns
 		vtkInteractorStyleSwitch::SafeDownCast(iren->GetInteractorStyle())->SetCurrentStyleToTrackballCamera();
 
 		::pWindow = renWin;
+		::pRen = ren;
 
 		// 相机方向
 		auto camManipulator = vtkSmartPointer<vtkCameraOrientationWidget>::New();
