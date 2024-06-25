@@ -29,12 +29,20 @@ int main()
     pts.push_back({ double(0),double(0),double(5) });
     vtkns::makePoints(pts, actor);
 
-    vtkNew<vtkActor> rotateAxis;
+    vtkNew<vtkLeaderActor2D> rotateAxis;
+    {
+        rotateAxis->GetPositionCoordinate()->SetCoordinateSystemToWorld();
+        rotateAxis->GetPosition2Coordinate()->SetCoordinateSystemToWorld();
+        rotateAxis->SetArrowStyleToOpen();
+        rotateAxis->SetArrowPlacementToPoint2();
+        rotateAxis->GetProperty()->SetColor(1,1,0);
+    }
     ren->AddViewProp(rotateAxis);
     vtkns::Pts_t rotateAxisPts;
     rotateAxisPts.push_back({ double(0),double(0),double(0) });
     rotateAxisPts.push_back({ double(3),double(3),double(3) });
-    vtkns::makeLines(rotateAxisPts, rotateAxis);
+    rotateAxis->GetPositionCoordinate()->SetValue(rotateAxisPts.front().data());
+    rotateAxis->GetPosition2Coordinate()->SetValue(rotateAxisPts.back().data());
 
     std::pair<vtkNew<vtkMatrix4x4>, vtkNew<vtkMatrix4x4>> leftrightmutiply;
 
@@ -56,11 +64,11 @@ int main()
 
             if (double* v = rotateAxisPts.front().data(); ImGui::DragScalarN("RotateAxisPt1", ImGuiDataType_Double, v, 3, 0.01f))
             {
-                vtkns::makeLines(rotateAxisPts, rotateAxis);
+                rotateAxis->GetPositionCoordinate()->SetValue(v);
             }
             if (double* v = rotateAxisPts.back().data(); ImGui::DragScalarN("RotateAxisPt2", ImGuiDataType_Double, v, 3, 0.01f))
             {
-                vtkns::makeLines(rotateAxisPts, rotateAxis);
+                rotateAxis->GetPosition2Coordinate()->SetValue(v);
             }
             // 缩放
             {
@@ -121,6 +129,20 @@ int main()
                 constexpr auto mystep = 3.14159/2/2/2/2;
                 auto f = [&](const int idx, const double v)
                     {
+                        switch (idx)
+                        {
+                        case 0:
+                            vtkns::log(u8"沿着{}轴，平移{}", "X", v);
+                            break;
+                        case 1:
+                            vtkns::log(u8"沿着{}轴，平移{}", "Y", v);
+                            break;
+                        case 2:
+                            vtkns::log(u8"沿着{}轴，平移{}", "Z", v);
+                            break;
+                        default:
+                            break;
+                        }
                         std::array<double, 16> arr;
                         switch (idx)
                         {
@@ -190,9 +212,9 @@ int main()
                 };
                 vtkns::ArrowButton("Rodrigues' rotation formula", [&] { f(-mystep); }, [&] { f(mystep); });
                 ImGui::SameLine(); vtkns::HelpMarker(u8R"(参数v,q,r
-q的第一个值的旋转角度，第二到四个值是旋转（单位）向量，方向是p1指向p2
+q的第一个值的旋转角度（弧度），第二到四个值是旋转向量（需要是单位向量），方向是p1指向p2
 v向量绕着q的二到四参数指定的单位旋转轴，旋转q的第一个参数指定的弧度，得到r向量
-旋转正方向遵循右手定则
+旋转正方向遵循右手定则（右手握住旋转轴，大拇指指向向量所指的方向，其他手指所指方向为旋转正方向）
 v和得到的r的长度一致)");
             }
         };
