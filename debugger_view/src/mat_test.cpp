@@ -38,11 +38,6 @@ int main()
         rotateAxis->GetProperty()->SetColor(1,1,0);
     }
     ren->AddViewProp(rotateAxis);
-    vtkns::Pts_t rotateAxisPts;
-    rotateAxisPts.push_back({ double(0),double(0),double(0) });
-    rotateAxisPts.push_back({ double(3),double(3),double(3) });
-    rotateAxis->GetPositionCoordinate()->SetValue(rotateAxisPts.front().data());
-    rotateAxis->GetPosition2Coordinate()->SetValue(rotateAxisPts.back().data());
 
     std::pair<vtkNew<vtkMatrix4x4>, vtkNew<vtkMatrix4x4>> leftrightmutiply;
 
@@ -62,14 +57,6 @@ int main()
                 ImGui::TreePop();
             }
 
-            if (double* v = rotateAxisPts.front().data(); ImGui::DragScalarN("RotateAxisPt1", ImGuiDataType_Double, v, 3, 0.01f))
-            {
-                rotateAxis->GetPositionCoordinate()->SetValue(v);
-            }
-            if (double* v = rotateAxisPts.back().data(); ImGui::DragScalarN("RotateAxisPt2", ImGuiDataType_Double, v, 3, 0.01f))
-            {
-                rotateAxis->GetPosition2Coordinate()->SetValue(v);
-            }
             // 缩放
             {
                 constexpr auto p = 1.1;
@@ -189,33 +176,48 @@ int main()
                 vtkns::ArrowButton(u8"旋转Z", [&] { f(2, -mystep); }, [&] { f(2, mystep); });
                 ImGui::SameLine(); vtkns::HelpMarker(u8R"(右手握住旋转轴，大拇指指向正方向，四指弯曲的方向为旋转的正方向)");
             }
-            // Rodrigues' rotation formula
+
+            if (ImGui::TreeNodeEx("Rodrigues' rotation formula", ImGuiTreeNodeFlags_DefaultOpen))
             {
+                static vtkns::Pts_t rotateAxisPts{ {0,0,0}, {3,3,3} };
+                if (ImGui::TreeNodeEx("RotateAxis", ImGuiTreeNodeFlags_DefaultOpen))
+                {
+                    ImGui::DragScalarN("p1", ImGuiDataType_Double, rotateAxisPts.front().data(), 3, 0.01f);
+                    ImGui::DragScalarN("p2", ImGuiDataType_Double, rotateAxisPts.back().data(), 3, 0.01f);
+                    rotateAxis->GetPositionCoordinate()->SetValue(rotateAxisPts.front().data());
+                    rotateAxis->GetPosition2Coordinate()->SetValue(rotateAxisPts.back().data());
+                    ImGui::SameLine(); vtkns::HelpMarker(u8"p1是旋转中心(或p2)，旋转轴的方向由p1指向p2，且需为单位向量");
+
+                    ImGui::TreePop();
+                }
+
                 constexpr auto mystep = 0.1;
                 auto f = [&](const double angle)
                 {
-                    const auto& dstPt = rotateAxisPts.back();
-                    const auto& srcPt = rotateAxisPts.front();
+                    const auto& p2 = rotateAxisPts.back();
+                    const auto& p1 = rotateAxisPts.front();
                     for (auto& i : pts)
                     {
-                        double v[] = { i[0] - srcPt[0], i[1] - srcPt[1], i[2] - srcPt[2] };
+                        double v[] = { i[0] - p1[0], i[1] - p1[1], i[2] - p1[2] };
                         decltype(v) r;
-                        double q[] = { angle, dstPt[0] - srcPt[0], dstPt[1] - srcPt[1], dstPt[2] - srcPt[2] };
+                        double q[] = { angle, p2[0] - p1[0], p2[1] - p1[1], p2[2] - p1[2] };
                         vtkMath::Normalize(&q[1]); // 须为单位向量
                         vtkMath::RotateVectorByWXYZ(v, q, r);
                         // vtkMath::RotateVectorByNormalizedQuaternion
-                        i[0] = srcPt[0] + r[0];
-                        i[1] = srcPt[1] + r[1];
-                        i[2] = srcPt[2] + r[2];
+                        i[0] = p1[0] + r[0];
+                        i[1] = p1[1] + r[1];
+                        i[2] = p1[2] + r[2];
                     }
                     vtkns::makePoints(pts, actor);
                 };
-                vtkns::ArrowButton("Rodrigues' rotation formula", [&] { f(-mystep); }, [&] { f(mystep); });
+                vtkns::ArrowButton(u8"逆向(顺时针)/正向(逆时针)", [&] { f(-mystep); }, [&] { f(mystep); });
                 ImGui::SameLine(); vtkns::HelpMarker(u8R"(参数v,q,r
 q的第一个值的旋转角度（弧度），第二到四个值是旋转向量（需要是单位向量），方向是p1指向p2
 v向量绕着q的二到四参数指定的单位旋转轴，旋转q的第一个参数指定的弧度，得到r向量
 旋转正方向遵循右手定则（右手握住旋转轴，大拇指指向向量所指的方向，其他手指所指方向为旋转正方向）
 v和得到的r的长度一致)");
+
+                ImGui::TreePop();
             }
         };
 
