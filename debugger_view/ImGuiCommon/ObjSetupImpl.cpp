@@ -2163,6 +2163,183 @@ output的origin是相对于新坐标系的，把新坐标系的origin处看作�
         vtkns::vtkObjSetup("Output", pPolyDataAlgorithm->GetOutput());
     }
 
+    template<>
+    void setupImpl(vtkGlyph3D* vtkobj)
+    {
+        if (bool v = vtkobj->GetScaling(); ImGui::Checkbox("Scaling", &v))
+        {
+            vtkobj->SetScaling(v);
+        }
+        if (ImGui::TreeNodeEx("ScaleMode", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            int v = vtkobj->GetScaleMode();
+            ImGui::RadioButton("VTK_SCALE_BY_SCALAR", &v, VTK_SCALE_BY_SCALAR);
+            ImGui::RadioButton("VTK_SCALE_BY_VECTOR", &v, VTK_SCALE_BY_VECTOR);
+            ImGui::RadioButton("VTK_SCALE_BY_VECTORCOMPONENTS", &v, VTK_SCALE_BY_VECTORCOMPONENTS);
+            ImGui::RadioButton("VTK_DATA_SCALING_OFF", &v, VTK_DATA_SCALING_OFF);
+            if (vtkobj->GetScaleMode() != v)
+            {
+                vtkobj->SetScaleMode(v);
+            }
+            ImGui::TreePop();
+        }
+        if (ImGui::TreeNodeEx("ColorMode", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            int v = vtkobj->GetColorMode();
+            ImGui::RadioButton("VTK_SCALE_BY_SCALAR", &v, VTK_COLOR_BY_SCALE);
+            ImGui::RadioButton("VTK_SCALE_BY_VECTOR", &v, VTK_COLOR_BY_SCALAR);
+            ImGui::RadioButton("VTK_SCALE_BY_VECTORCOMPONENTS", &v, VTK_COLOR_BY_VECTOR);
+            if (vtkobj->GetColorMode() != v)
+            {
+                vtkobj->SetColorMode(v);
+            }
+            ImGui::TreePop();
+        }
+        if (ImGui::TreeNodeEx("VectorMode", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            int v = vtkobj->GetVectorMode();
+            ImGui::RadioButton("VTK_USE_VECTOR", &v, VTK_USE_VECTOR);
+            ImGui::RadioButton("VTK_USE_NORMAL", &v, VTK_USE_NORMAL);
+            ImGui::RadioButton("VTK_VECTOR_ROTATION_OFF", &v, VTK_VECTOR_ROTATION_OFF);
+            ImGui::RadioButton("VTK_FOLLOW_CAMERA_DIRECTION", &v, VTK_FOLLOW_CAMERA_DIRECTION);
+            if (vtkobj->GetVectorMode() != v)
+            {
+                vtkobj->SetVectorMode(v);
+            }
+            ImGui::TreePop();
+        }
+        if (ImGui::TreeNodeEx("IndexMode", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            int v = vtkobj->GetIndexMode();
+            ImGui::RadioButton("VTK_INDEXING_OFF", &v, VTK_INDEXING_OFF);
+            ImGui::RadioButton("VTK_INDEXING_BY_SCALAR", &v, VTK_INDEXING_BY_SCALAR);
+            ImGui::RadioButton("VTK_INDEXING_BY_VECTOR", &v, VTK_INDEXING_BY_VECTOR);
+            if (vtkobj->GetIndexMode() != v)
+            {
+                vtkobj->SetIndexMode(v);
+            }
+            ImGui::TreePop();
+        }
+        if (double v = vtkobj->GetScaleFactor(); ImGui::DragScalar("ScaleFactor", ImGuiDataType_Double, &v, 0.1f))
+        {
+            vtkobj->SetScaleFactor(v);
+        }
+        if (double v[2]; vtkobj->GetRange(v), ImGui::DragScalarN("Range", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), 0.1f))
+        {
+            vtkobj->SetRange(v);
+        }
+        if (bool v = vtkobj->GetOrient(); ImGui::Checkbox("Orient", &v))
+        {
+            vtkobj->SetOrient(v);
+        }
+        if (bool v = vtkobj->GetGeneratePointIds(); ImGui::Checkbox("GeneratePointIds", &v))
+        {
+            vtkobj->SetGeneratePointIds(v);
+        }
+        vtkns::ImGuiText("PointIdsName: {}", vtkobj->GetPointIdsName());
+        if (bool v = vtkobj->GetClamping(); ImGui::Checkbox("Clamping", &v))
+        {
+            vtkobj->SetClamping(v);
+        }
+        if (bool v = vtkobj->GetFillCellData(); ImGui::Checkbox("FillCellData", &v))
+        {
+            vtkobj->SetFillCellData(v);
+        }
+        if (double v[3]; vtkobj->GetFollowedCameraPosition(v), ImGui::DragScalarN("FollowedCameraPosition", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), 0.1f))
+        {
+            vtkobj->SetFollowedCameraPosition(v);
+        }
+        if (double v[3]; vtkobj->GetFollowedCameraViewUp(v), ImGui::DragScalarN("FollowedCameraViewUp", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), 0.1f))
+        {
+            vtkobj->SetFollowedCameraViewUp(v);
+        }
+        if (int v = vtkobj->GetOutputPointsPrecision(); ImGui::DragInt("OutputPointsPrecision", &v))
+        {
+            vtkobj->SetOutputPointsPrecision(v);
+        }
+    }
+
+    template<>
+    void setupImpl(vtkGlyph2D* vtkobj)
+    {
+
+    }
+
+    template<>
+    void setupImpl(vtkGlyphSource2D* vtkobj)
+    {
+        if (double v = vtkobj->GetRotationAngle(); ImGui::DragScalar("RotationAngle", ImGuiDataType_Double, &v, 0.1f))
+        {
+            vtkobj->SetRotationAngle(v);
+        }
+        if (double v = vtkobj->GetScale(); ImGui::DragScalar("Scale", ImGuiDataType_Double, &v, 0.1f))
+        {
+            vtkobj->SetScale(v);
+        }
+        if (double v = vtkobj->GetScale2(); ImGui::DragScalar("Scale2", ImGuiDataType_Double, &v, 0.1f))
+        {
+            vtkobj->SetScale2(v);
+        }
+        if (double v[3]; vtkobj->GetCenter(v), ImGui::DragScalarN("Center", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), 0.1f))
+        {
+            vtkobj->SetCenter(v);
+        }
+        if (int v = vtkobj->GetResolution(); ImGui::DragInt("Resolution", &v))
+        {
+            vtkobj->SetResolution(v);
+        }
+        if (int v = vtkobj->GetOutputPointsPrecision(); ImGui::DragInt("OutputPointsPrecision", &v))
+        {
+            vtkobj->SetOutputPointsPrecision(v);
+        }
+
+        {
+            float color[3] = { vtkobj->GetColor()[0],vtkobj->GetColor()[1],vtkobj->GetColor()[2] };
+            if (ImGui::ColorEdit3("Color", color))
+            {
+                vtkobj->SetColor(color[0], color[1], color[2]);
+            }
+        }
+
+        if (bool v = vtkobj->GetFilled(); ImGui::Checkbox("Filled", &v))
+        {
+            vtkobj->SetFilled(v);
+        }
+
+        if (bool v = vtkobj->GetDash(); ImGui::Checkbox("Dash", &v))
+        {
+            vtkobj->SetDash(v);
+        }
+
+        if (bool v = vtkobj->GetCross(); ImGui::Checkbox("Cross", &v))
+        {
+            vtkobj->SetCross(v);
+        }
+
+        if (ImGui::TreeNodeEx("GlyphType", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            int v = vtkobj->GetGlyphType();
+            ImGui::RadioButton("VTK_NO_GLYPH", &v, VTK_NO_GLYPH);
+            ImGui::RadioButton("VTK_VERTEX_GLYPH", &v, VTK_VERTEX_GLYPH);
+            ImGui::RadioButton("VTK_DASH_GLYPH", &v, VTK_DASH_GLYPH);
+            ImGui::RadioButton("VTK_CROSS_GLYPH", &v, VTK_CROSS_GLYPH);
+            ImGui::RadioButton("VTK_THICKCROSS_GLYPH", &v, VTK_THICKCROSS_GLYPH);
+            ImGui::RadioButton("VTK_TRIANGLE_GLYPH", &v, VTK_TRIANGLE_GLYPH);
+            ImGui::RadioButton("VTK_SQUARE_GLYPH", &v, VTK_SQUARE_GLYPH);
+            ImGui::RadioButton("VTK_CIRCLE_GLYPH", &v, VTK_CIRCLE_GLYPH);
+            ImGui::RadioButton("VTK_DIAMOND_GLYPH", &v, VTK_DIAMOND_GLYPH);
+            ImGui::RadioButton("VTK_ARROW_GLYPH", &v, VTK_ARROW_GLYPH);
+            ImGui::RadioButton("VTK_THICKARROW_GLYPH", &v, VTK_THICKARROW_GLYPH);
+            ImGui::RadioButton("VTK_HOOKEDARROW_GLYPH", &v, VTK_HOOKEDARROW_GLYPH);
+            ImGui::RadioButton("VTK_EDGEARROW_GLYPH", &v, VTK_EDGEARROW_GLYPH);
+            if (vtkobj->GetGlyphType() != v)
+            {
+                vtkobj->SetGlyphType(v);
+            }
+            ImGui::TreePop();
+        }
+    }
+
     template <>
     void setupImpl(vtk3DWidget* obj)
     {
@@ -3089,7 +3266,9 @@ namespace vtkns
             // vtkDataSetAlgorithm
             ::setupHelper<vtkElevationFilter>(vtkObj);
             // vtkPolyDataAlgorithm
-            ::setupHelper<vtkLineSource, vtkCutter, vtkVolumeOutlineSource, vtkFlyingEdges3D, vtkMarchingCubes, vtkTransformPolyDataFilter, vtkPlaneSource, vtkImageToPolyDataFilter>(vtkObj);
+            ::setupHelper<vtkLineSource, vtkCutter, vtkGlyphSource2D, vtkGlyph3D, vtkVolumeOutlineSource, vtkFlyingEdges3D, vtkMarchingCubes, vtkTransformPolyDataFilter, vtkPlaneSource, vtkImageToPolyDataFilter>(vtkObj);
+            // vtkGlyph3D
+            ::setupHelper<vtkGlyph2D>(vtkObj);
             // vtkAbstractMapper3D
             ::setupHelper<vtkMapper, vtkImageMapper3D>(vtkObj);
             // vtkMapper

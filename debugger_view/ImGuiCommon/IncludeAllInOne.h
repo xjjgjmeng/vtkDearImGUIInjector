@@ -19,6 +19,8 @@
 #include <vtkPolydataNormals.h>
 #include <vtkWarpTo.h>
 #include <vtkCutter.h>
+#include <vtkGlyphSource2D.h>
+#include <vtkGlyph2D.h>
 #include <vtkLinearExtrusionFilter.h>
 #include <vtkRotationalExtrusionFilter.h>
 #include <vtkRegularPolygonSource.h>
