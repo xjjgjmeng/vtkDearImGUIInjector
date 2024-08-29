@@ -1282,6 +1282,34 @@ output的origin是相对于新坐标系的，把新坐标系的origin处看作�
     }
 
     template <>
+    void setupImpl(vtkScalarBarActor* obj)
+    {
+        if (int v = obj->GetNumberOfLabels(); ImGui::SliderInt("NumberOfLabels", &v, 0, 100))
+        {
+            obj->SetNumberOfLabels(v);
+        }
+        if (int v = obj->GetVerticalTitleSeparation(); ImGui::SliderInt("VerticalTitleSeparation", &v, 0, 100))
+        {
+            obj->SetVerticalTitleSeparation(v);
+        }
+        if (ImGui::TreeNodeEx("TextPosition", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            int v = obj->GetTextPosition();
+            ImGui::RadioButton("PrecedeScalarBar", &v, vtkScalarBarActor::PrecedeScalarBar);
+            ImGui::RadioButton("SucceedScalarBar", &v, vtkScalarBarActor::SucceedScalarBar);
+            if (obj->GetTextPosition() != v)
+            {
+                obj->SetTextPosition(v);
+            }
+            ImGui::TreePop();
+        }
+        if (bool v = obj->GetDrawAnnotations(); ImGui::Checkbox("DrawAnnotations ", &v))
+        {
+            obj->SetDrawAnnotations(v);
+        }
+    }
+
+    template <>
     void setupImpl(vtkImageViewer2* pImageViewer2)
     {
         if (int v[3]; pImageViewer2->GetSliceRange(v), v[2] = pImageViewer2->GetSlice(), ImGui::SliderInt("Slice", &v[2], v[0], v[1]))
@@ -3288,7 +3316,7 @@ namespace vtkns
             // vtkVolumeMapper
             ::setupHelper<vtkGPUVolumeRayCastMapper>(vtkObj);
             // vtkActor2D
-            ::setupHelper<vtkAxisActor2D, vtkCaptionActor2D, vtkTexturedActor2D>(vtkObj);
+            ::setupHelper<vtkAxisActor2D, vtkCaptionActor2D, vtkTexturedActor2D, vtkScalarBarActor>(vtkObj);
             // vtkTexturedActor2D
             ::setupHelper<vtkTextActor>(vtkObj);
             // vtkWidgetRepresentation

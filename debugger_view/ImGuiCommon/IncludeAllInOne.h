@@ -50,6 +50,8 @@
 #include <vtkImageSinusoidSource.h>
 #include <vtkXMLImageDataReader.h>
 #include <vtkPlane.h>
+#include <vtkStripper.h>
+#include <vtkLODActor.h>
 #include <vtkRectilinearGrid.h>
 #include <vtkStructuredGrid.h>
 #include <vtkUnstructuredGrid.h>

@@ -566,6 +566,19 @@ namespace vtkns
 			ImGui::Begin("VTK");
 			{
 				ImGui::Checkbox("ShowLogView", &::showLogView);
+				ImGui::SameLine();
+				if (ImGui::Button(u8"距离测量"))
+				{
+					//vtkNew<vtkDistanceWidget> distanceWidget;
+					auto distanceWidget = vtkDistanceWidget::New();
+					{
+						distanceWidget->SetInteractor(::pWindow->GetInteractor());
+						distanceWidget->CreateDefaultRepresentation();
+						vtkDistanceRepresentation::SafeDownCast(distanceWidget->GetRepresentation())->SetLabelFormat("%-#6.3g mm");
+						::pWindow->Render();
+						distanceWidget->On();
+					}
+				}
 
 				if (::pWindow.Get())
 				{

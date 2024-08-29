@@ -4,10 +4,15 @@ int main()
 {
     BEFORE_MY_CODE
 
-    vtkNew<vtkScalarsToColors> s2c;
+    vtkNew<vtkLookupTable> lut;
+    lut->SetNumberOfColors(100);		// 指定颜色查找表中有多少种颜色
+    lut->SetHueRange(0.00, 0.6667);	//蓝到红渐变
+    lut->SetTableRange(0, 666);
+    lut->Build();
 
     vtkNew<vtkScalarBarActor> bar;
-    bar->SetLookupTable(s2c);
+    bar->SetTitle("MyTitle");
+    bar->SetLookupTable(lut);
     ren->AddActor2D(bar);
 
     ren->ResetCamera();
@@ -15,36 +20,9 @@ int main()
     ::pWindow = rw;
     ::imgui_render_callback = [&]
         {
-            vtkns::vtkObjSetup("ScalarsToColors", s2c, ImGuiTreeNodeFlags_DefaultOpen);
-            vtkns::vtkObjSetup("bar", bar);
+            vtkns::vtkObjSetup("lut", lut, ImGuiTreeNodeFlags_DefaultOpen);
+            vtkns::vtkObjSetup("bar", bar, ImGuiTreeNodeFlags_DefaultOpen);
         };
 
-    // Start rendering app
-    rw->Render(); // 非常重要！！
-
-    /// Change to your code begins here. ///
-    // Initialize an overlay with DearImgui elements.
-    vtkNew<vtkDearImGuiInjector> dearImGuiOverlay;
-    // 💉 the overlay.
-    dearImGuiOverlay->Inject(rwi);
-    // These functions add callbacks to ImGuiSetupEvent and ImGuiDrawEvents.
-    vtkns::SetupUI(dearImGuiOverlay);
-    // You can draw custom user interface elements using ImGui:: namespace.
-    vtkns::DrawUI(dearImGuiOverlay);
-    /// Change to your code ends here. ///
-
-    // Start event loop
-#if 0
-    renderWindow->SetSize(1920, 1000);
-#else
-#ifdef _WIN32
-    // 获取窗口句柄
-    HWND hwnd = ::FindWindow(NULL, rw->GetWindowName());
-    // 最大化窗口
-    ::ShowWindow(hwnd, SW_MAXIMIZE);
-#endif
-#endif
-    vtkInteractorStyleSwitch::SafeDownCast(rwi->GetInteractorStyle())->SetCurrentStyleToTrackballCamera();
-    rwi->EnableRenderOff();
-    rwi->Start();
+    AFTER_MY_CODE
 }
