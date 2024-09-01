@@ -15,12 +15,14 @@
 #include <vtkTubeFilter.h>
 #include <vtkVectorText.h>
 #include <vtkimplicitModeller.h>
+#include <vtkPlaneWidget.h>
 #include <vtkContourFilter.h>
 #include <vtkPolydataNormals.h>
 #include <vtkWarpTo.h>
 #include <vtkCutter.h>
 #include <vtkGlyphSource2D.h>
 #include <vtkGlyph2D.h>
+#include <vtkPlaneCollection.h>
 #include <vtkLinearExtrusionFilter.h>
 #include <vtkRotationalExtrusionFilter.h>
 #include <vtkRegularPolygonSource.h>

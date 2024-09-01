@@ -347,6 +347,16 @@ namespace
     void setupImpl(vtkAbstractMapper* pAbstractMapper)
     {
         ImGui::Text(fmt::format("NumberOfClippingPlanes: {}", pAbstractMapper->GetNumberOfClippingPlanes()).c_str());
+        if (ImGui::TreeNodeEx("ClippingPlanes"))
+        {
+            auto pc = pAbstractMapper->GetClippingPlanes();
+            for (auto i = 0; i < pc->GetNumberOfItems(); ++i)
+            {
+                vtkns::vtkObjSetup(("Plane" + std::to_string(i)).c_str(), pc->GetItem(i));
+            }
+
+            ImGui::TreePop();
+        }
     }
 
     template <>
@@ -716,6 +726,81 @@ namespace
     }
 
     template <>
+    void setupImpl(vtkPolyDataSourceWidget* obj)
+    {
+    
+    }
+
+    template <>
+    void setupImpl(vtkPlaneWidget* obj)
+    {
+        {
+            vtkNew<vtkPlane> plane;// ?
+            obj->GetPlane(plane.GetPointer());
+            vtkns::vtkObjSetup("Plane(ReadOnly)", plane, ImGuiTreeNodeFlags_DefaultOpen);
+        }
+        {
+            vtkNew<vtkPolyData> polyData;
+            obj->GetPolyData(polyData.GetPointer());
+            vtkns::vtkObjSetup("PolyData(ReadOnly)", polyData);
+        }
+        if (int v = obj->GetResolution(); ImGui::DragInt("Resolution", &v))
+        {
+            obj->SetResolution(v);
+        }
+        if (double v[3]; obj->GetOrigin(v), ImGui::DragScalarN("Origin", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), .01f))
+        {
+            obj->SetOrigin(v);
+        }
+        if (double v[3]; obj->GetPoint1(v), ImGui::DragScalarN("Point1", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), .01f))
+        {
+            obj->SetPoint1(v);
+        }
+        if (double v[3]; obj->GetPoint2(v), ImGui::DragScalarN("Point2", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), .01f))
+        {
+            obj->SetPoint2(v);
+        }
+        if (double v[3]; obj->GetNormal(v), ImGui::DragScalarN("Normal", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), .01f))
+        {
+            obj->SetNormal(v);
+        }
+        if (double v[3]; obj->GetCenter(v), ImGui::DragScalarN("Center", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), .01f))
+        {
+            obj->SetCenter(v);
+        }
+        ImGui::SameLine(); vtkns::HelpMarker(u8R"(影响vtkPlane的origin)");
+        if (ImGui::TreeNodeEx("Representation", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            int v = obj->GetRepresentation();
+            ImGui::RadioButton("VTK_PLANE_OFF", &v, VTK_PLANE_OFF);
+            ImGui::RadioButton("VTK_PLANE_OUTLINE", &v, VTK_PLANE_OUTLINE);
+            ImGui::RadioButton("VTK_PLANE_WIREFRAME", &v, VTK_PLANE_WIREFRAME);
+            ImGui::RadioButton("VTK_PLANE_SURFACE", &v, VTK_PLANE_SURFACE);
+            if (obj->GetRepresentation() != v)
+            {
+                obj->SetRepresentation(v); // 不自动刷新
+            }
+            ImGui::TreePop();
+        }
+        if (bool v = obj->GetNormalToXAxis(); ImGui::Checkbox("NormalToXAxis ", &v))
+        {
+            obj->SetNormalToXAxis(v); // 无效
+        }
+        if (bool v = obj->GetNormalToYAxis(); ImGui::Checkbox("NormalToYAxis ", &v))
+        {
+            obj->SetNormalToYAxis(v);
+        }
+        if (bool v = obj->GetNormalToZAxis(); ImGui::Checkbox("NormalToZAxis ", &v))
+        {
+            obj->SetNormalToZAxis(v);
+        }
+        vtkns::vtkObjSetup("HandleProperty", obj->GetHandleProperty());
+        vtkns::vtkObjSetup("SelectedHandleProperty", obj->GetSelectedHandleProperty());
+        vtkns::vtkObjSetup("PlaneProperty", obj->GetPlaneProperty());
+        vtkns::vtkObjSetup("SelectedPlaneProperty", obj->GetSelectedPlaneProperty());
+    }
+
+    template <>
     void setupImpl(vtkImageToPolyDataFilter* obj)
     {
         if (ImGui::TreeNodeEx("OutputStyle", ImGuiTreeNodeFlags_DefaultOpen))
@@ -787,25 +872,25 @@ namespace
             ImGui::SameLine();
             vtkns::HelpMarker(u8R"(沿着法向前进或后退)");
         }
-        if (double v[3]; obj->GetPoint1(v), ImGui::DragScalarN("Point1", ImGuiDataType_Double, v, IM_ARRAYSIZE(v)))
-        {
-            obj->SetPoint1(v);
-        }
-        if (double v[3]; obj->GetPoint2(v), ImGui::DragScalarN("Point2", ImGuiDataType_Double, v, IM_ARRAYSIZE(v)))
-        {
-            obj->SetPoint2(v);
-        }
-        if (double v[3]; obj->GetOrigin(v), ImGui::DragScalarN("Origin", ImGuiDataType_Double, v, IM_ARRAYSIZE(v)))
+        if (double v[3]; obj->GetOrigin(v), ImGui::DragScalarN("Origin", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), .01f))
         {
             obj->SetOrigin(v);
         }
-        if (double v[3]; obj->GetCenter(v), ImGui::DragScalarN("Center", ImGuiDataType_Double, v, IM_ARRAYSIZE(v)))
+        if (double v[3]; obj->GetPoint1(v), ImGui::DragScalarN("Point1", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), .01f))
+        {
+            obj->SetPoint1(v);
+        }
+        if (double v[3]; obj->GetPoint2(v), ImGui::DragScalarN("Point2", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), .01f))
+        {
+            obj->SetPoint2(v);
+        }
+        if (double v[3]; obj->GetCenter(v), ImGui::DragScalarN("Center", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), .01f))
         {
             obj->SetCenter(v);
         }
         ImGui::SameLine();
         vtkns::HelpMarker(u8R"(移动整个plane，plane的size不变，Point1和Point2和Origin会被修改)");
-        if (double v[3]; obj->GetNormal(v), ImGui::DragScalarN("Normal", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), 0.01f))
+        if (double v[3]; obj->GetNormal(v), ImGui::DragScalarN("Normal", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), .01f))
         {
             obj->SetNormal(v);
         }
@@ -3304,7 +3389,9 @@ namespace vtkns
             // vtkImplicitFunction
             ::setupHelper<vtkPlane>(vtkObj);
             // vtk3DWidget
-            ::setupHelper<vtkPointWidget>(vtkObj);
+            ::setupHelper<vtkPointWidget, vtkPolyDataSourceWidget>(vtkObj);
+            // vtkPolyDataSourceWidget
+            ::setupHelper<vtkPlaneWidget>(vtkObj);
             // vtkProp
             ::setupHelper<vtkProp3D, vtkActor2D, vtkWidgetRepresentation>(vtkObj);
             // vtkProp3D
