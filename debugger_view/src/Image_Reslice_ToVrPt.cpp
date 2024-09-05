@@ -224,7 +224,10 @@ int main()
     ::pWindow = rw;
     ::imgui_render_callback = [&]
     {
-        if (bool v = resliceImgActor->GetVisibility(); ImGui::Checkbox("ShowResliceImg", &v)) resliceImgActor->SetVisibility(v);
+        if (bool v = resliceImgActor->GetVisibility(); ImGui::Checkbox("ShowResliceImg", &v))
+        {
+            resliceImgActor->SetVisibility(v);
+        }
 
         vtkns::vtkObjSetupWin("ResliceOutput", reslice->GetOutput());
         ImGui::SameLine();
@@ -250,13 +253,13 @@ int main()
             if (ImGui::Button("Z-")) f(2, -1);*/
         }
 
-        if (auto b = ImGui::TreeNodeEx(u8"Post处理", ImGuiTreeNodeFlags_DefaultOpen))
+        if (auto sg = nonstd::make_scope_exit(ImGui::TreePop); ImGui::TreeNodeEx(u8"Post处理", ImGuiTreeNodeFlags_DefaultOpen))
         {
             static bool autoOrigin0 = false;
             ImGui::Checkbox("AutoOrigin0", &autoOrigin0); vtkns::HelpMarkerSameLine(u8"自动调整输出影像的origin，使左下角永远在0处"); // ??
             if (autoOrigin0)
             {
-                changer->SetOriginTranslation(::reslice->GetResliceAxesOrigin()[0], ::reslice->GetResliceAxesOrigin()[1], ::reslice->GetResliceAxesOrigin()[2]);
+                ::changer->SetOriginTranslation(::reslice->GetResliceAxesOrigin());
             }
         }
     };

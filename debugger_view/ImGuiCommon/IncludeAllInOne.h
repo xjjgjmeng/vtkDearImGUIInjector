@@ -210,3 +210,4 @@
 #include "ImageSharpenFilter.h"
 #include "DrawFreeLineStyle.h"
 #include "ImGuiHelper.h"
+#include "scope.hpp"

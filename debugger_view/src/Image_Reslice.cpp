@@ -1,7 +1,6 @@
 ﻿#include <ImGuiCommon.h>
 
 vtkSmartPointer<vtkImageReslice> reslice;
-double spacing[3];
 vtkNew<vtkActor> centerPtActor;
 vtkNew<vtkActor> meshActor;
 
@@ -10,12 +9,7 @@ int main()
     BEFORE_MY_CODE
     auto img = vtkns::getVRData();
     vtkns::labelWorldZero(ren);
-
-    int extent[6];
-    double origin[3];
-    img->GetExtent(extent);
-    img->GetSpacing(::spacing);
-    img->GetOrigin(origin);
+    auto volume = vtkns::genVR(ren, img, false, false);
 
     ::reslice = vtkSmartPointer<vtkImageReslice>::New();
     ::reslice->SetInputData(img);
@@ -37,16 +31,18 @@ int main()
     {
         {
             ::reslice->SetResliceAxesDirectionCosines(1,0,0, 0,1,0, 0,0,1);
+#if 1 // 显示切割平面
             {
                 auto f = [](vtkObject* caller, unsigned long eid, void* clientdata, void* calldata)
-                {
-                    vtkns::mat::genAxes(reinterpret_cast<vtkRenderer*>(clientdata), vtkMatrix4x4::SafeDownCast(caller));
-                };
+                    {
+                        vtkns::mat::genAxes(reinterpret_cast<vtkRenderer*>(clientdata), vtkMatrix4x4::SafeDownCast(caller));
+                    };
                 vtkNew<vtkCallbackCommand> pCC;
                 pCC->SetCallback(f);
                 pCC->SetClientData(ren);
                 reslice->GetResliceAxes()->AddObserver(vtkCommand::ModifiedEvent, pCC);
             }
+#endif
             ::reslice->SetResliceAxesOrigin(img->GetCenter());
         }
 
@@ -81,8 +77,8 @@ int main()
     }
     reslice->SetInterpolationModeToLinear();
     reslice->SetOutputOrigin(0, 0, 0);
-    reslice->SetOutputExtent(0,400,0,400,0,400);
-    reslice->SetOutputSpacing(::spacing);
+    reslice->SetOutputExtent(0, 400, 0, 400, 0, 400);
+    reslice->SetOutputSpacing(img->GetSpacing());
     //::reslice->Update(); // 没有此句的话在一开始不能显示三维线框
 
     vtkNew<vtkImageActor> actor;
@@ -93,12 +89,21 @@ int main()
 
     ::pWindow = rw;
     ::imgui_render_callback = [&]
-    {
-        vtkns::vtkObjSetup("OriginalImageData", img);
-        vtkns::vtkObjSetupWin("ResliceOutput", reslice->GetOutput());
-        vtkns::vtkObjSetup("vtkImageActor", actor);
-        vtkns::vtkObjSetup("Reslice", ::reslice, ImGuiTreeNodeFlags_DefaultOpen);
-    };
+        {
+            if (bool v = ::meshActor->GetVisibility(); ImGui::Checkbox("ShowMesh", &v))
+            {
+                ::meshActor->SetVisibility(v);
+            }
+            ImGui::SameLine();
+            if (bool v = volume->GetVisibility(); ImGui::Checkbox("ShowVolume", &v))
+            {
+                volume->SetVisibility(v);
+            }
+            vtkns::vtkObjSetup("OriginalImageData", img);
+            vtkns::vtkObjSetupWin("ResliceOutput", reslice->GetOutput());
+            vtkns::vtkObjSetup("vtkImageActor", actor);
+            vtkns::vtkObjSetup("Reslice", ::reslice, ImGuiTreeNodeFlags_DefaultOpen);
+        };
 
     AFTER_MY_CODE
 }
