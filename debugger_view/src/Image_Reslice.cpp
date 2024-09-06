@@ -14,16 +14,20 @@ int main()
     ::reslice = vtkSmartPointer<vtkImageReslice>::New();
     ::reslice->SetInputData(img);
     ::reslice->SetOutputDimensionality(2);
+    ::reslice->SetInterpolationModeToLinear();
+    ::reslice->SetOutputSpacing(img->GetSpacing());
 
     ren->AddViewProp(::centerPtActor);
-    ::centerPtActor->GetProperty()->SetColor(0, 1, 0);
-    ::centerPtActor->GetProperty()->SetPointSize(18);
+    ::centerPtActor->GetProperty()->SetColor(0, 1, 1);
+    ::centerPtActor->GetProperty()->SetPointSize(21);
+    ::centerPtActor->GetProperty()->SetRenderPointsAsSpheres(true);
 
     ren->AddActor(::meshActor);
     ::meshActor->GetProperty()->SetPointSize(12);
     ::meshActor->GetProperty()->SetRepresentationToWireframe();
     ::meshActor->GetProperty()->SetColor(0, 1, 0);
     ::meshActor->GetProperty()->SetOpacity(.1);
+    ::meshActor->SetVisibility(0);
 
     // 将原始的image用线框显示出来
     vtkns::genImgOutline(ren, img, false)->GetProperty()->SetColor(1., 1., 0.);
@@ -49,14 +53,19 @@ int main()
         {
             auto f = [](vtkObject* caller, unsigned long eid, void* clientdata, void* calldata)
                 {
+                    // 将当前矩阵的origin显示出来
                     if (auto mat = vtkMatrix4x4::SafeDownCast(caller))
                     {
                         double src[4]{ 0,0,0,1 };
                         double dst[4];
                         mat->MultiplyPoint(src, dst);
                         vtkns::makePoints({ {dst[0], dst[1], dst[2]} }, ::centerPtActor);
+                        {
+                            vtkns::log("{:.2f} {:.2f} {:.2f}", dst[0], dst[1], dst[2]);
+                            vtkns::log("{:.2f} {:.2f} {:.2f}", mat->GetElement(0,3),mat->GetElement(1, 3),mat->GetElement(2, 3));
+                        }
                     }
-
+                    // 将输出的数据用网格的形式显示出来
                     if (auto img = vtkImageData::SafeDownCast(caller))
                     {
                         vtkNew<vtkDataSetMapper> mapper;
@@ -75,10 +84,11 @@ int main()
             ::reslice->GetOutput()->AddObserver(vtkCommand::ModifiedEvent, pCC);
         }
     }
-    reslice->SetInterpolationModeToLinear();
+#if 1
     reslice->SetOutputOrigin(0, 0, 0);
     reslice->SetOutputExtent(0, 400, 0, 400, 0, 400);
-    reslice->SetOutputSpacing(img->GetSpacing());
+    // 如果没有指定Origin和Extend，输出的图像的Extend会从（0，0，0）开始，扩展到包围整个裁切图像，输出图像的Origin指的是extent (0,0,0)的世界坐标
+#endif
     //::reslice->Update(); // 没有此句的话在一开始不能显示三维线框
 
     vtkNew<vtkImageActor> actor;
@@ -87,7 +97,6 @@ int main()
     actor->GetProperty()->SetColorLevel(2000);
     ren->AddActor(actor);
 
-    ::pWindow = rw;
     ::imgui_render_callback = [&]
         {
             if (bool v = ::meshActor->GetVisibility(); ImGui::Checkbox("ShowMesh", &v))

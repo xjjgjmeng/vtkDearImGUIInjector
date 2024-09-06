@@ -1169,7 +1169,10 @@ output的origin是相对于新坐标系的，把新坐标系的origin处看作�
             {
                 obj->SetOutputOrigin(v);
                 //obj->Update(); // 没有此句会输出的都是二维. 使用SetInputConnection就不需要？？
-            } ImGui::SameLine(); vtkns::HelpMarker(u8R"(将reslice坐标系的origin处当中新世界的（0，0，0）
+            } ImGui::SameLine(); vtkns::HelpMarker(u8R"(reslice坐标系的origin永远处于新世界的（0，0，0）处
+（想象：将reslice的矩阵放置在旧世界中，此矩阵的xoy面会切出一帧图像，矩阵已经和整体的imagedata完成绑定。此刻拖拽着矩阵会带着imagedata，将矩阵的xyz轴和origin和旧世界进行对齐，就得到了imagedata的新世界坐标）
+OutpuOrigin是相对于新世界的
+The origin is the position in world coordinates of the point of extent (0,0,0)
 如果输出的是2维，调节z无效，因为只reslice出一张图，所以z被忽略了？？输出图像只能在一个平面上游移)");
             //::reslice->GetOutputInformation(0)->Get(vtkDataObject::SPACING(), myArray); // 0.25
             if (double v[3]; obj->GetOutputSpacing(v), ImGui::DragScalarN("Spacing", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), .01f))
@@ -1183,7 +1186,10 @@ output的origin是相对于新坐标系的，把新坐标系的origin处看作�
             {
                 obj->SetOutputExtent(v);
                 //obj->Update(); // 没有此句会输出的都是二维
-            } ImGui::SameLine(); vtkns::HelpMarker(u8R"(新的slice已经切割出来，此属性控制可以看到的图像范围)");
+            } ImGui::SameLine(); vtkns::HelpMarker(u8R"(新的slice已经切割出来，此属性控制可以看到的图像范围
+1. 通过reslice在xoy平面切出图像
+2. 通过OutputOrigin指定输出图像的extent (0,0,0)的位置
+3. 通过OutputExtent选取输出区域)");
 
             if (ImGui::Button("SetOutputOriginToDefault"))
             {

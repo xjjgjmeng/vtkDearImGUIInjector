@@ -165,7 +165,12 @@ namespace vtkns
 
                 auto& xoyPlaneActor = mymap[mat].xoyPlaneActor;
                 //::xoyPlaneActor->GetProperty()->SetOpacity(.8);
+#if 1
                 xoyPlaneActor->GetProperty()->SetRepresentationToWireframe();
+#else
+                xoyPlaneActor->GetProperty()->SetRepresentationToSurface();
+                xoyPlaneActor->GetProperty()->SetOpacity(.3);
+#endif
                 xoyPlaneActor->GetProperty()->SetColor(0, 1, 0);
                 ren->AddViewProp(xoyPlaneActor);
             }
@@ -192,8 +197,8 @@ namespace vtkns
                 src->SetPoint2(yPt);
                 src->SetOrigin(oPt);
                 src->SetCenter(oPt);
-                src->SetXResolution(33);
-                src->SetYResolution(33);
+                src->SetXResolution(23);
+                src->SetYResolution(23);
                 vtkNew<vtkPolyDataMapper> mapper;
                 mapper->SetInputConnection(src->GetOutputPort());
                 mymap[mat].xoyPlaneActor->SetMapper(mapper);
