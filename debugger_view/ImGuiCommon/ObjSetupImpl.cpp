@@ -173,6 +173,7 @@ namespace
         {
             vtkobj->SetCenterImage(v);
         }
+        ImGui::SameLine(); vtkns::HelpMarker(u8R"(将Origin设置为输出图像的左下角，Extend从（0，0，0）开始)");
     }
 
     template<>

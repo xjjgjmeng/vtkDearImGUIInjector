@@ -253,15 +253,15 @@ int main()
             if (ImGui::Button("Z-")) f(2, -1);*/
         }
 
-        if (auto sg = nonstd::make_scope_exit(ImGui::TreePop); ImGui::TreeNodeEx(u8"Post处理", ImGuiTreeNodeFlags_DefaultOpen))
-        {
-            static bool autoOrigin0 = false;
-            ImGui::Checkbox("AutoOrigin0", &autoOrigin0); vtkns::HelpMarkerSameLine(u8"自动调整输出影像的origin，使左下角永远在0处"); // ??
-            if (autoOrigin0)
-            {
-                ::changer->SetOriginTranslation(::reslice->GetResliceAxesOrigin());
-            }
-        }
+        //if (auto sg = nonstd::make_scope_exit(ImGui::TreePop); ImGui::TreeNodeEx(u8"Post处理", ImGuiTreeNodeFlags_DefaultOpen))
+        //{
+        //    static bool autoOrigin0 = false;
+        //    ImGui::Checkbox("AutoOrigin0", &autoOrigin0); vtkns::HelpMarkerSameLine(u8"自动调整输出影像的origin，使左下角永远在0处"); // ??
+        //    if (autoOrigin0)
+        //    {
+        //        ::changer->SetOriginTranslation(::reslice->GetResliceAxesOrigin());
+        //    }
+        //}
     };
 
     AFTER_MY_CODE
