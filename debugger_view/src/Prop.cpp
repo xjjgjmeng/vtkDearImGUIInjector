@@ -3,14 +3,14 @@
 int main()
 {
     BEFORE_MY_CODE
-    // vtkns::labelWorldZero(ren);
+    vtkns::labelWorldZero(ren, false, 0.1, 1);
 
     vtkNew<vtkConeSource> coneSource;
     vtkNew<vtkPolyDataMapper> mapper;
     mapper->SetInputConnection(coneSource->GetOutputPort());
     vtkNew<vtkActor> coneActor;
     coneActor->SetMapper(mapper);
-    //ren->AddActor(coneActor);
+    ren->AddActor(coneActor);
 
     auto textActor = vtkns::genTextActor();
     textActor->SetInput("Hello");
@@ -24,7 +24,7 @@ int main()
 
     ::imgui_render_callback = [&]
     {
-        vtkns::vtkObjSetup("ConeActor", coneActor);
+        vtkns::vtkObjSetup("ConeActor", coneActor, ImGuiTreeNodeFlags_DefaultOpen);
         vtkns::vtkObjSetup("TextActor", textActor, ImGuiTreeNodeFlags_DefaultOpen);
 
         textActor->GetPositionCoordinate()->SetCoordinateSystemToWorld();

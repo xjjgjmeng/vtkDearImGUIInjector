@@ -698,7 +698,7 @@ namespace vtkns
 		return reader->GetOutput();
 	}
 
-	static void labelWorldZero(vtkRenderer* pRen, const bool b = true)
+	static void labelWorldZero(vtkRenderer* pRen, const bool b = true, const double radius = 1., const int len = 10)
 	{
 		// 在世界原点放置一个标记
 		if (b)
@@ -706,7 +706,7 @@ namespace vtkns
 			vtkNew<vtkSphereSource> pointSource;
 			pointSource->SetCenter(0, 0, 0);
 			//pointSource->SetNumberOfPoints(1);
-			pointSource->SetRadius(1.0);
+			pointSource->SetRadius(radius);
 			pointSource->Update();
 
 			// Create a mapper and actor.
@@ -725,7 +725,7 @@ namespace vtkns
 			{
 				double pos[3];
 				double color[3];
-			} xLine{ {10, 0, 0},{1,0,0} }, yLine{ {0,10,0},{0,1,0} }, zLine{ {0,0,10}, {0,0,1} };
+			} xLine{ {len, 0, 0},{1,0,0} }, yLine{ {0,len,0},{0,1,0} }, zLine{ {0,0,len}, {0,0,1} };
 
 			for (const auto& [pos, color] : { xLine, yLine, zLine })
 			{
