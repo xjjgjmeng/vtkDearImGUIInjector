@@ -66,6 +66,90 @@ namespace
     }
 
     template<>
+    void setupImpl(vtkImageResize* vtkobj)
+    {
+        if (auto sg = nonstd::make_scope_exit(ImGui::TreePop); ImGui::TreeNodeEx("ResizeMethod", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            int v = vtkobj->GetResizeMethod();
+            ImGui::RadioButton("OUTPUT_DIMENSIONS", &v, vtkImageResize::OUTPUT_DIMENSIONS);
+            ImGui::RadioButton("OUTPUT_SPACING", &v, vtkImageResize::OUTPUT_SPACING);
+            ImGui::RadioButton("MAGNIFICATION_FACTORS", &v, vtkImageResize::MAGNIFICATION_FACTORS);
+            if (vtkobj->GetResizeMethod() != v)
+            {
+                vtkobj->SetResizeMethod(v);
+            }
+        }
+
+        if (int v[3]; vtkobj->GetOutputDimensions(v), ImGui::DragScalarN("OutputDimensions", ImGuiDataType_S32, v, IM_ARRAYSIZE(v)))
+        {
+            vtkobj->SetOutputDimensions(v);
+        }
+        if (double v[3]; vtkobj->GetOutputSpacing(v), ImGui::DragScalarN("OutputSpacing", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), 0.1))
+        {
+            vtkobj->SetOutputSpacing(v);
+        }
+        if (double v[3]; vtkobj->GetMagnificationFactors(v), ImGui::DragScalarN("MagnificationFactors", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), 0.01))
+        {
+            vtkobj->SetMagnificationFactors(v);
+        }
+        if (bool v = vtkobj->GetBorder(); ImGui::Checkbox("Border ", &v))
+        {
+            vtkobj->SetBorder(v);
+        }
+        if (bool v = vtkobj->GetInterpolate(); ImGui::Checkbox("Interpolate ", &v))
+        {
+            vtkobj->SetInterpolate(v);
+        }
+        if (bool v = vtkobj->GetCropping(); ImGui::Checkbox("Cropping ", &v))
+        {
+            vtkobj->SetCropping(v);
+        }
+        if (double v[6]; vtkobj->GetCroppingRegion(v), ImGui::DragScalarN("CroppingRegion", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), 0.1))
+        {
+            vtkobj->SetCroppingRegion(v);
+        }
+        vtkns::vtkObjSetup("Interpolator", vtkobj->GetInterpolator());
+    }
+
+    template<>
+    void setupImpl(vtkImageSincInterpolator* vtkobj)
+    {
+        if (bool v = vtkobj->GetAntialiasing(); ImGui::Checkbox("Antialiasing ", &v))
+        {
+            vtkobj->SetAntialiasing(v);
+        }
+        if (bool v = vtkobj->GetRenormalization(); ImGui::Checkbox("Renormalization ", &v))
+        {
+            vtkobj->SetRenormalization(v);
+        }
+        if (double v[3]; vtkobj->GetBlurFactors(v), ImGui::DragScalarN("BlurFactors", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), 0.1))
+        {
+            vtkobj->SetBlurFactors(v);
+        }
+        if (auto sg = nonstd::make_scope_exit(ImGui::TreePop); ImGui::TreeNodeEx("WindowFunction", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            int v = vtkobj->GetWindowFunction();
+            ImGui::RadioButton("VTK_LANCZOS_WINDOW", &v, VTK_LANCZOS_WINDOW);
+            ImGui::RadioButton("VTK_KAISER_WINDOW", &v, VTK_KAISER_WINDOW);
+            ImGui::RadioButton("VTK_COSINE_WINDOW", &v, VTK_COSINE_WINDOW);
+            ImGui::RadioButton("VTK_HANN_WINDOW", &v, VTK_HANN_WINDOW);
+            ImGui::RadioButton("VTK_HAMMING_WINDOW", &v, VTK_HAMMING_WINDOW);
+            ImGui::RadioButton("VTK_BLACKMAN_WINDOW", &v, VTK_BLACKMAN_WINDOW);
+            ImGui::RadioButton("VTK_BLACKMAN_HARRIS3", &v, VTK_BLACKMAN_HARRIS3);
+            ImGui::RadioButton("VTK_BLACKMAN_HARRIS4", &v, VTK_BLACKMAN_HARRIS4);
+            ImGui::RadioButton("VTK_NUTTALL_WINDOW", &v, VTK_NUTTALL_WINDOW);
+            ImGui::RadioButton("VTK_BLACKMAN_NUTTALL3", &v, VTK_BLACKMAN_NUTTALL3);
+            ImGui::RadioButton("VTK_BLACKMAN_NUTTALL4", &v, VTK_BLACKMAN_NUTTALL4);
+            ImGui::RadioButton("VTK_SINC_KERNEL_SIZE_MAX", &v, VTK_SINC_KERNEL_SIZE_MAX);
+
+            if (vtkobj->GetWindowFunction() != v)
+            {
+                vtkobj->SetWindowFunction(v);
+            }
+        }
+    }
+
+    template<>
     void setupImpl(vtkTextActor* vtkobj)
     {
         {
@@ -2541,7 +2625,10 @@ The origin is the position in world coordinates of the point of extent (0,0,0)
     template <>
     void setupImpl(vtkWindow* obj)
     {
-
+        if (bool v = obj->GetErase(); ImGui::Checkbox("Erase", &v))
+        {
+            obj->SetErase(v);
+        }
     }
 
     template <>
@@ -3351,6 +3438,8 @@ namespace vtkns
                 , vtkScalarsToColors>(vtkObj);
             // vtkPointPlacer
             ::setupHelper<vtkBoundedPlanePointPlacer>(vtkObj);
+            // vtkAbstractImageInterpolator
+            ::setupHelper<vtkImageSincInterpolator>(vtkObj);
             // vtkViewport
             ::setupHelper<vtkRenderer>(vtkObj);
             // vtkScalarsToColors
@@ -3378,7 +3467,7 @@ namespace vtkns
             // vtkAbstractMapper
             ::setupHelper<vtkAbstractMapper3D>(vtkObj);
             // vtkThreadedImageAlgorithm
-            ::setupHelper<vtkImageSlab, vtkImageStencil, vtkImageThreshold, vtkImageReslice, vtkImageMapToColors>(vtkObj);
+            ::setupHelper<vtkImageResize, vtkImageSlab, vtkImageStencil, vtkImageThreshold, vtkImageReslice, vtkImageMapToColors>(vtkObj);
             // vtkImageViewer2
             ::setupHelper<vtkResliceImageViewer>(vtkObj);
             // vtkWindow

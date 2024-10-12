@@ -32,6 +32,8 @@
 #include "vtkCameraOrientationWidget.h"
 #include "vtkConeSource.h"
 #include "vtkCubeSource.h"
+#include <vtkImageSincInterpolator.h>
+#include <vtkImageResize.h>
 #include "vtkInteractorStyle.h"
 #include "vtkInteractorStyleSwitch.h"
 #include "vtkNew.h"

@@ -30,7 +30,7 @@ namespace
 			pProperty->SetInterpolationType(VTK_LINEAR_INTERPOLATION);
 			pProperty->SetScalarOpacity(pOpacity);
 			pProperty->SetColor(pColor);
-
+#if 0
 			pOpacity->AddPoint(-50.0, 0.0);
 			pOpacity->AddPoint(625.49, 0.0);
 			pOpacity->AddPoint(1286.34, 0.0);
@@ -46,6 +46,25 @@ namespace
 			pColor->AddRGBPoint(2427.80, 235 / 255., 222 / 255., 133 / 255.);
 			pColor->AddRGBPoint(2989.06, 255 / 255., 255 / 255., 255 / 255.);
 			pColor->AddRGBPoint(4680.69, 1.0, 1.0, 1.0);
+#else
+			const std::list<std::tuple<double, double, std::array<double, 3>>> mylist
+			{
+				{-50.0, 0., {60. / 255., 0., 255. / 255.}},
+				{625.49, 0., {91 / 255., 76 / 255., 141 / 255.}},
+				{1286.34, 0., {170 / 255., 0 / 255., 0 / 255.}},
+				{1917.15, 0.70, {208 / 255., 131 / 255., 79 / 255.}},
+				{2300, 1.0, {235 / 255., 222 / 255., 133 / 255.}},
+				{4043.31, 1.0, {255 / 255., 255 / 255., 255 / 255.}},
+				{5462.06, 1.0, {255 / 255., 255 / 255., 0. / 255.}},
+			};
+			int i = 0;
+			for (const auto [hu, op, rgb] : mylist)
+			{
+				pOpacity->AddPoint(hu, op);
+				pProperty->GetIsoSurfaceValues()->SetValue(i++, hu);
+				pColor->AddRGBPoint(hu, rgb[0], rgb[1], rgb[2]);
+			}
+#endif
 		}
 		pVolume->SetProperty(pProperty);
 	}
@@ -698,7 +717,7 @@ namespace vtkns
 		return reader->GetOutput();
 	}
 
-	static void labelWorldZero(vtkRenderer* pRen, const bool b = true, const double radius = 1., const int len = 10)
+	static void labelWorldZero(vtkRenderer* pRen, const bool b = true, const double radius = 1., const double len = 10.)
 	{
 		// 在世界原点放置一个标记
 		if (b)
@@ -745,6 +764,32 @@ namespace vtkns
 			}
 		}
 	}
+	static void genImgMesh(vtkRenderer* ren, vtkAlgorithmOutput* pData)
+	{
+		vtkNew<vtkDataSetMapper> pMapper;
+		pMapper->SetInputConnection(pData);
+
+		vtkNew<vtkActor> actor;
+		actor->GetProperty()->SetRepresentationToWireframe();
+		// actor->GetProperty()->SetColor(0, 1, 0);
+		actor->GetProperty()->SetOpacity(.5);
+		actor->SetMapper(pMapper);
+		ren->AddActor(actor);
+	}
+
+#if 1 // 后续合并两个版本函数
+	static void genImgOutline(vtkRenderer* ren, vtkAlgorithmOutput* pData)
+	{
+		vtkNew<vtkImageDataOutlineFilter> pFilter;
+		pFilter->SetInputConnection(pData);
+
+		vtkNew<vtkPolyDataMapper> pMapper;
+		pMapper->SetInputConnection(pFilter->GetOutputPort());
+
+		vtkNew<vtkActor> actor;
+		actor->SetMapper(pMapper);
+		ren->AddActor(actor);
+	}
 
 	static void updateImgOutlineMapper_(vtkImageData* pData, vtkActor* actor)
 	{
@@ -782,11 +827,20 @@ namespace vtkns
 
 		return pActor;
 	}
-
+#endif
+#if 1 // 后续合并两个版本的函数
 	static void genVR_(vtkVolume* volume, vtkImageData* data, const bool lowOpacity)
 	{
 		vtkNew<vtkGPUVolumeRayCastMapper> pMapper;
 		pMapper->SetInputData(data);
+		pMapper->SetBlendModeToComposite();
+		volume->SetMapper(pMapper);
+		::setupDefaultVolumeProperty(volume);
+	}
+	static void genVR_(vtkVolume* volume, vtkAlgorithmOutput* data, const bool lowOpacity)
+	{
+		vtkNew<vtkGPUVolumeRayCastMapper> pMapper;
+		pMapper->SetInputConnection(data);
 		pMapper->SetBlendModeToComposite();
 		volume->SetMapper(pMapper);
 		::setupDefaultVolumeProperty(volume);
@@ -827,7 +881,22 @@ namespace vtkns
 
 		return pVolume;
 	}
+	static auto genVR(vtkRenderer* ren, vtkAlgorithmOutput* pImg, const bool onChange = true, const bool lowOpacity = false)
+	{
+		vtkNew<vtkVolume> pVolume;
+		ren->AddVolume(pVolume);
+		genVR_(pVolume, pImg, lowOpacity);
+		if (lowOpacity)
+		{
+			// 调节透明度让slice更清楚
+			pVolume->GetProperty()->GetScalarOpacity()->RemoveAllPoints();
+			pVolume->GetProperty()->GetScalarOpacity()->AddPoint(1000, 0.);
+			pVolume->GetProperty()->GetScalarOpacity()->AddPoint(5000, 0.1);
+		}
 
+		return pVolume;
+	}
+#endif
 	static auto genPolyDataActor(vtkRenderer* ren, vtkAlgorithmOutput* algoOutput)
 	{
 		vtkNew<vtkPolyDataMapper> mapper;
@@ -843,7 +912,8 @@ namespace vtkns
 	static auto getX()
 	{
 		auto ren = vtkSmartPointer<vtkRenderer>::New();
-		ren->SetBackground(0.2, 0.3, 0.4);
+		// ren->SetBackground(0.2, 0.3, 0.4);
+		ren->SetBackground(0., 0., 0.);
 		auto renWin = vtkSmartPointer<vtkRenderWindow>::New();
 		renWin->AddRenderer(ren);
 		auto iren = vtkSmartPointer<vtkRenderWindowInteractor>::New();
