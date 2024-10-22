@@ -34,6 +34,9 @@
 #include "vtkCubeSource.h"
 #include <vtkImageSincInterpolator.h>
 #include <vtkImageResize.h>
+#include <vtkColorTransferControlPointsItem.h>
+#include <vtkContextView.h>
+#include <vtkContextScene.h>
 #include "vtkInteractorStyle.h"
 #include "vtkInteractorStyleSwitch.h"
 #include "vtkNew.h"
@@ -136,6 +139,7 @@
 #include <vtkCellPicker.h>
 #include <vtkCellPicker.h>
 #include <vtkTransformPolyDataFilter.h>
+#include <vtkPiecewiseControlPointsItem.h>
 #include <vtkPointPicker.h>
 #include <vtkPropPicker.h>
 #include <vtkProperty.h>
@@ -163,6 +167,9 @@
 #include <vtkRegularPolygonSource.h>
 #include <vtkROIStencilSource.h>
 #include <vtkTexture.h>
+#include <vtkAxis.h>
+#include <vtkCompositeControlPointsItem.h>
+#include <vtkCompositeTransferFunctionItem.h>
 #include <vtkResliceCursor.h>
 #include <vtkImageCast.h>
 #include <vtkImageGaussianSmooth.h>

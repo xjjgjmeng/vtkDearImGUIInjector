@@ -66,6 +66,161 @@ namespace
     }
 
     template<>
+    void setupImpl(vtkAbstractContextItem* vtkobj)
+    {
+        vtkns::ImGuiText("NumberOfItems: {}", vtkobj->GetNumberOfItems());
+        if (bool v = vtkobj->GetInteractive(); ImGui::Checkbox("Interactive ", &v))
+        {
+            vtkobj->SetInteractive(v);
+        }
+        if (bool v = vtkobj->GetVisible(); ImGui::Checkbox("Visible ", &v))
+        {
+            vtkobj->SetVisible(v);
+        }
+    }
+
+    template<>
+    void setupImpl(vtkContextItem* vtkobj)
+    {
+        if (float v = vtkobj->GetOpacity(); ImGui::DragFloat("Opacity", &v, 0.01, 0., 1.))
+        {
+            vtkobj->SetOpacity(v);
+        }
+    }
+
+    template<>
+    void setupImpl(vtkPlot* vtkobj)
+    {
+        {
+            double vd[3];
+            vtkobj->GetColor(vd);
+            float v[3] = { vd[0], vd[1], vd[2] };
+            if (ImGui::ColorEdit3("Color", v))
+            {
+                vtkobj->SetColor(v[0], v[1], v[2]);
+            }
+        }
+        vtkns::ImGuiText("NumberOfLabels: {}", vtkobj->GetNumberOfLabels());
+        if (bool v = vtkobj->GetLegendVisibility(); ImGui::Checkbox("LegendVisibility ", &v))
+        {
+            vtkobj->SetLegendVisibility(v);
+        }
+        if (bool v = vtkobj->GetSelectable(); ImGui::Checkbox("Selectable ", &v))
+        {
+            vtkobj->SetSelectable(v);
+        }
+        if (bool v = vtkobj->GetUseIndexForXSeries(); ImGui::Checkbox("UseIndexForXSeries ", &v))
+        {
+            vtkobj->SetUseIndexForXSeries(v);
+        }
+        if (float v = vtkobj->GetWidth(); ImGui::DragFloat("Width", &v, 0.01))
+        {
+            vtkobj->SetWidth(v);
+        }
+        vtkns::vtkObjSetup("XAxis", vtkobj->GetXAxis());
+        vtkns::vtkObjSetup("YAxis", vtkobj->GetYAxis());
+    }
+
+    template<>
+    void setupImpl(vtkControlPointsItem* vtkobj)
+    {
+        vtkns::ImGuiText("NumberOfPoints: {}", vtkobj->GetNumberOfPoints());
+        {
+            double v[4];
+            vtkobj->GetBounds(v);
+            ImGui::InputScalarN("Bounds", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), nullptr, nullptr, nullptr, ImGuiInputTextFlags_ReadOnly);
+        }
+        if (double v[4]; vtkobj->GetUserBounds(v), ImGui::DragScalarN("UserBounds", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), 0.1))
+        {
+            vtkobj->SetUserBounds(v);
+        }
+        if (double v[4]; vtkobj->GetValidBounds(v), ImGui::DragScalarN("ValidBounds", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), 0.1))
+        {
+            vtkobj->SetValidBounds(v);
+        }
+        if (bool v = vtkobj->GetUseAddPointItem(); ImGui::Checkbox("UseAddPointItem ", &v))
+        {
+            vtkobj->SetUseAddPointItem(v);
+        }
+        if (bool v = vtkobj->GetShowLabels(); ImGui::Checkbox("ShowLabels ", &v))
+        {
+            vtkobj->SetShowLabels(v);
+        }
+        if (bool v = vtkobj->GetDrawPoints(); ImGui::Checkbox("DrawPoints ", &v))
+        {
+            vtkobj->SetDrawPoints(v);
+        }
+        if (bool v = vtkobj->GetStrokeMode(); ImGui::Checkbox("StrokeMode ", &v))
+        {
+            vtkobj->SetStrokeMode(v);
+        }
+        if (bool v = vtkobj->GetSwitchPointsMode(); ImGui::Checkbox("SwitchPointsMode ", &v))
+        {
+            vtkobj->SetSwitchPointsMode(v);
+        }
+        if (bool v = vtkobj->GetEndPointsXMovable(); ImGui::Checkbox("EndPointsXMovable ", &v))
+        {
+            vtkobj->SetEndPointsXMovable(v);
+        }
+        if (bool v = vtkobj->GetEndPointsYMovable(); ImGui::Checkbox("EndPointsYMovable ", &v))
+        {
+            vtkobj->SetEndPointsYMovable(v);
+        }
+        if (bool v = vtkobj->GetEndPointsMovable(); ImGui::Checkbox("EndPointsMovable ", &v))
+        {
+            //vtkobj->SetEndPointsMovable(v);
+        }
+        if (float v = vtkobj->GetScreenPointRadius(); ImGui::DragFloat("ScreenPointRadius", &v, 0.01))
+        {
+            vtkobj->SetScreenPointRadius(v);
+        }
+    }
+
+    template<>
+    void setupImpl(vtkColorTransferControlPointsItem* vtkobj)
+    {
+        if (auto sg = nonstd::make_scope_exit(ImGui::TreePop); ImGui::TreeNodeEx("ControlPoint", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            for (vtkIdType i = 0; i < vtkobj->GetNumberOfPoints(); ++i)
+            {
+                double v[4];
+                vtkobj->GetControlPoint(i, v);
+                vtkns::ImGuiText("{}: {}", i, v);
+            }
+        }
+        if (bool v = vtkobj->GetColorFill(); ImGui::Checkbox("ColorFill ", &v))
+        {
+            vtkobj->SetColorFill(v);
+        }
+    }
+
+    template<>
+    void setupImpl(vtkCompositeControlPointsItem* vtkobj)
+    {
+        if (bool v = vtkobj->GetUseOpacityPointHandles(); ImGui::Checkbox("UseOpacityPointHandles ", &v))
+        {
+            vtkobj->SetUseOpacityPointHandles(v);
+        }
+        if (auto sg = nonstd::make_scope_exit(ImGui::TreePop); ImGui::TreeNodeEx("PointsFunction", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            int v = vtkobj->GetPointsFunction();
+            ImGui::RadioButton("ColorPointsFunction", &v, vtkCompositeControlPointsItem::ColorPointsFunction);
+            ImGui::RadioButton("OpacityPointsFunction", &v, vtkCompositeControlPointsItem::OpacityPointsFunction);
+            ImGui::RadioButton("ColorAndOpacityPointsFunction", &v, vtkCompositeControlPointsItem::ColorAndOpacityPointsFunction);
+            if (vtkobj->GetPointsFunction() != v)
+            {
+                vtkobj->SetPointsFunction(v);
+            }
+        }
+    }
+
+    template<>
+    void setupImpl(vtkPiecewiseControlPointsItem* vtkobj)
+    {
+    
+    }
+
+    template<>
     void setupImpl(vtkImageResize* vtkobj)
     {
         if (auto sg = nonstd::make_scope_exit(ImGui::TreePop); ImGui::TreeNodeEx("ResizeMethod", ImGuiTreeNodeFlags_DefaultOpen))
@@ -3435,7 +3590,18 @@ namespace vtkns
                 , vtkMatrix4x4
                 , vtkPointPlacer
                 , vtkVolumeProperty
+                , vtkAbstractContextItem
                 , vtkScalarsToColors>(vtkObj);
+            // vtkAbstractContextItem
+            ::setupHelper<vtkContextItem>(vtkObj);
+            // vtkContextItem
+            ::setupHelper<vtkPlot>(vtkObj);
+            // vtkPlot
+            ::setupHelper<vtkControlPointsItem>(vtkObj);
+            // vtkControlPointsItem
+            ::setupHelper<vtkColorTransferControlPointsItem, vtkPiecewiseControlPointsItem>(vtkObj);
+            // vtkColorTransferControlPointsItem
+            ::setupHelper<vtkCompositeControlPointsItem>(vtkObj);
             // vtkPointPlacer
             ::setupHelper<vtkBoundedPlanePointPlacer>(vtkObj);
             // vtkAbstractImageInterpolator
