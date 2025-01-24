@@ -44,7 +44,6 @@ int main()
 
     vtkNew<vtkMatrix4x4> myMat;
 
-    ::pWindow = rw;
     ::imgui_render_callback = [&]
         {
             if (ImGui::Button("ResetPts"))

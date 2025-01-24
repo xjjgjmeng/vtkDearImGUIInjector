@@ -20,21 +20,13 @@ int main()
     }
 
     {
-        double arr[] = {
+        const double arr[] = {
             1, 0, 0, 0,
             0, 1, 0, 0,
             0, 0, 1, 0,
             0, 0, 0, 1
         };
         matA->DeepCopy(arr);
-    }
-    {
-        double arr[] = {
-            1, 0, 0, 0,
-            0, 1, 0, 0,
-            0, 0, 1, 0,
-            0, 0, 0, 1
-        };
         matB->DeepCopy(arr);
     }
 
@@ -48,6 +40,7 @@ int main()
             vtkMatrix4x4::Multiply4x4(matB, matA, mat);
             matA->DeepCopy(mat);
         }
+        vtkns::HelpMarkerSameLine(u8R"(A沿着原始坐标系进行运动)");
         ImGui::SameLine();
         if (ImGui::Button("A*B"))
         {
@@ -55,6 +48,7 @@ int main()
             vtkMatrix4x4::Multiply4x4(matA, matB, mat);
             matA->DeepCopy(mat);
         }
+        vtkns::HelpMarkerSameLine(u8R"(A沿着自身坐标系进行运动)");
     };
 
     AFTER_MY_CODE
