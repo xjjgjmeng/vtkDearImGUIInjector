@@ -3478,6 +3478,10 @@ A value greater than 1 is a zoom-in, a value less than 1 is a zoom-out.
         {
             pRenderer->SetUseDepthPeelingForVolumes(v);
         }
+        if (bool v = pRenderer->GetUseDepthPeeling(); ImGui::Checkbox("UseDepthPeeling", &v))
+        {
+            pRenderer->SetUseDepthPeeling(v);
+        }
         if (int v = pRenderer->GetMaximumNumberOfPeels(); ImGui::SliderInt("MaximumNumberOfPeels", &v, 0, 100))
         {
             pRenderer->SetMaximumNumberOfPeels(v);
