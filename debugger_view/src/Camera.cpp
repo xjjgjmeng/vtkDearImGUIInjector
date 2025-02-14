@@ -1,55 +1,69 @@
 ﻿#include <ImGuiCommon.h>
 
-int main(int argc, char* argv[])
+int main()
 {
-    vtkNew<vtkNamedColors> colors;
-    vtkNew<vtkRenderer> ren;
-    vtkNew<vtkRenderWindow> renWin;
-    renWin->AddRenderer(ren);
-    renWin->SetWindowName("OrientationMarkerWidget");
-    vtkNew<vtkRenderWindowInteractor> iren;
-    iren->SetRenderWindow(renWin);
+    BEFORE_MY_CODE
+    rw->SetWindowName("OrientationMarkerWidget");
 
     vtkNew<vtkAnnotatedCubeActor> cubeActor;
-#if 1
-    cubeActor->SetXPlusFaceText("L");
-    cubeActor->SetXMinusFaceText("R");
-    cubeActor->SetYMinusFaceText("I");
-    cubeActor->SetYPlusFaceText("S");
-    cubeActor->SetZMinusFaceText("P");
-    cubeActor->SetZPlusFaceText("A");
-    cubeActor->SetXFaceTextRotation(-90);
-    cubeActor->SetZFaceTextRotation(90);
-#endif
-    ren->AddActor(cubeActor);
+    {
+        cubeActor->SetXPlusFaceText("L");
+        cubeActor->SetXMinusFaceText("R");
+        cubeActor->SetYMinusFaceText("I");
+        cubeActor->SetYPlusFaceText("S");
+        cubeActor->SetZMinusFaceText("P");
+        cubeActor->SetZPlusFaceText("A");
+        cubeActor->SetXFaceTextRotation(-90);
+        cubeActor->SetZFaceTextRotation(90);
+        ren->AddActor(cubeActor);
+    }
 
-    vtkNew<vtkAnnotatedCubeActor> axesActor;
-#if 1
-    axesActor->SetXPlusFaceText("L");
-    axesActor->SetXMinusFaceText("R");
-    axesActor->SetYMinusFaceText("I");
-    axesActor->SetYPlusFaceText("S");
-    axesActor->SetZMinusFaceText("P");
-    axesActor->SetZPlusFaceText("A");
-    axesActor->SetXFaceTextRotation(-90);
-    axesActor->SetZFaceTextRotation(90);
-#endif
-    axesActor->GetTextEdgesProperty()->SetColor(colors->GetColor3d("Yellow").GetData());
-    axesActor->GetTextEdgesProperty()->SetLineWidth(2);
-    axesActor->GetCubeProperty()->SetColor(colors->GetColor3d("Blue").GetData());
     vtkNew<vtkOrientationMarkerWidget> axes;
-    axes->SetViewport(0, 0, 0.1, 0.1);
-    axes->SetOrientationMarker(axesActor);
-    axes->SetInteractor(iren);
-    axes->EnabledOn();
-    axes->InteractiveOn();
+    vtkNew<vtkAnnotatedCubeActor> axesActor;
+    {
+        {
+            axesActor->SetXPlusFaceText("L");
+            axesActor->SetXMinusFaceText("R");
+            axesActor->SetYMinusFaceText("I");
+            axesActor->SetYPlusFaceText("S");
+            axesActor->SetZMinusFaceText("P");
+            axesActor->SetZPlusFaceText("A");
+            axesActor->SetXFaceTextRotation(-90);
+            axesActor->SetZFaceTextRotation(90);
+            axesActor->GetTextEdgesProperty()->SetColor(1, 1, 0);
+            axesActor->GetTextEdgesProperty()->SetLineWidth(2);
+            axesActor->GetCubeProperty()->SetColor(0,0,1);
+            axes->SetOrientationMarker(axesActor);
+        }
+        axes->SetViewport(0, 0, 0.1, 0.1);
+        axes->SetInteractor(rwi);
+        axes->EnabledOn();
+        axes->InteractiveOn();
+    }
+
+    vtkNew<vtkOrientationMarkerWidget> orientationWidget;
+    vtkNew<vtkAxesActor> iconActor;
+    {
+        orientationWidget->SetOutlineColor(0.9300, 0.5700, 0.1300);
+        orientationWidget->SetInteractor(rwi);
+        orientationWidget->SetOrientationMarker(iconActor);
+        orientationWidget->SetViewport(0.8, 0.8, 1., 1.);
+        orientationWidget->SetEnabled(1);
+        orientationWidget->InteractiveOff();
+    }
+
     ren->ResetCamera();
 
-    ::pWindow = renWin;
     ::imgui_render_callback = [&]
     {
-        vtkns::vtkObjSetup(u8"立方体", cubeActor, ImGuiTreeNodeFlags_DefaultOpen);
+        vtkns::vtkObjSetup(u8"立方体", cubeActor/*, ImGuiTreeNodeFlags_DefaultOpen*/);
         vtkns::vtkObjSetup(u8"左下角指示器", axesActor);
+        
+        if (auto sg = nonstd::make_scope_exit(ImGui::TreePop); ImGui::TreeNodeEx(u8"右上角指示器", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            vtkns::vtkObjSetup("OrientationMarkerWidget", orientationWidget);
+            vtkns::vtkObjSetup("AxesActor", iconActor);
+        }
 
         if (ImGui::TreeNodeEx("vtkOrientationMarkerWidget", ImGuiTreeNodeFlags_DefaultOpen))
         {
@@ -124,52 +138,5 @@ int main(int argc, char* argv[])
         }
     };
 
-    // Start rendering app
-    ren->SetBackground(0., 0., 0.);
-    renWin->Render(); // 非常重要！！
-
-      /// Change to your code begins here. ///
-      // Initialize an overlay with DearImgui elements.
-    vtkNew<vtkDearImGuiInjector> dearImGuiOverlay;
-    // 💉 the overlay.
-    dearImGuiOverlay->Inject(iren);
-    // These functions add callbacks to ImGuiSetupEvent and ImGuiDrawEvents.
-    vtkns::SetupUI(dearImGuiOverlay);
-    // You can draw custom user interface elements using ImGui:: namespace.
-    vtkns::DrawUI(dearImGuiOverlay);
-    /// Change to your code ends here. ///
-
-    // vtkCameraOrientationWidget
-    vtkNew<vtkCameraOrientationWidget> camManipulator;
-    camManipulator->SetParentRenderer(ren);
-    camManipulator->On();
-    auto rep = vtkCameraOrientationRepresentation::SafeDownCast(camManipulator->GetRepresentation());
-    rep->AnchorToLowerRight();
-
-    // vtkOrientationMarkerWidget
-    vtkNew<vtkAxesActor> iconActor;
-    vtkNew<vtkOrientationMarkerWidget> orientationWidget;
-    orientationWidget->SetOutlineColor(0.9300, 0.5700, 0.1300);
-    orientationWidget->SetInteractor(iren);
-    orientationWidget->SetOrientationMarker(iconActor);
-    orientationWidget->SetViewport(0.8, 0.8, 1., 1.);
-    orientationWidget->SetEnabled(1);
-    orientationWidget->InteractiveOff();
-
-    // Start event loop
-#if 0
-    renderWindow->SetSize(1920, 1000);
-#else
-#ifdef _WIN32
-// 获取窗口句柄
-    HWND hwnd = ::FindWindow(NULL, renWin->GetWindowName());
-    // 最大化窗口
-    ::ShowWindow(hwnd, SW_MAXIMIZE);
-#endif
-#endif
-    vtkInteractorStyleSwitch::SafeDownCast(iren->GetInteractorStyle())->SetCurrentStyleToTrackballCamera();
-    iren->EnableRenderOff();
-    iren->Start();
-
-    return 0;
+    AFTER_MY_CODE
 }

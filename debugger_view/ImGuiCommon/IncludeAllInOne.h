@@ -206,7 +206,6 @@
 #include <vtkOutlineFilter.h>
 #include <vtkWeakPointer.h>
 #include <vtkAxesActor.h>
-#include <vtkOrientationMarkerWidget.h>
 #include "vtkfmt/core.h"
 #include "vtkfmt/ranges.h"
 #include "vtkfmt/format.h"

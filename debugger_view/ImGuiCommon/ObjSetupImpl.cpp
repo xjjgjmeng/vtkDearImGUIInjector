@@ -3538,6 +3538,130 @@ A value greater than 1 is a zoom-in, a value less than 1 is a zoom-out.
         vtkns::vtkObjSetup("Mapper", pVolume->GetMapper(), ImGuiTreeNodeFlags_DefaultOpen);
         vtkns::vtkObjSetup("Property", pVolume->GetProperty());
     }
+
+    template <>
+    void setupImpl(vtkAxesActor* obj)
+    {
+        {
+            double bounds[6];
+            obj->GetBounds(bounds);
+            vtkns::ImGuiText("Bounds: {::.2f}", bounds);
+        }
+
+        vtkns::ImGuiText("XAxisLabelText: {}", obj->GetXAxisLabelText());
+        vtkns::ImGuiText("YAxisLabelText: {}", obj->GetYAxisLabelText());
+        vtkns::ImGuiText("ZAxisLabelText: {}", obj->GetZAxisLabelText());
+
+        if (double v[3]; obj->GetTotalLength(v), ImGui::DragScalarN("TotalLength", ImGuiDataType_Double, v, IM_ARRAYSIZE(v)))
+        {
+            obj->SetTotalLength(v);
+        }
+        if (double v[3]; obj->GetNormalizedShaftLength(v), ImGui::DragScalarN("NormalizedShaftLength", ImGuiDataType_Double, v, IM_ARRAYSIZE(v)))
+        {
+            obj->SetNormalizedShaftLength(v);
+        }
+        if (double v[3]; obj->GetNormalizedTipLength(v), ImGui::DragScalarN("NormalizedTipLength", ImGuiDataType_Double, v, IM_ARRAYSIZE(v)))
+        {
+            obj->SetNormalizedTipLength(v);
+        }
+        if (double v[3]; obj->GetNormalizedLabelPosition(v), ImGui::DragScalarN("NormalizedLabelPosition", ImGuiDataType_Double, v, IM_ARRAYSIZE(v)))
+        {
+            obj->SetNormalizedLabelPosition(v);
+        }
+
+        if (int v = obj->GetConeResolution(); ImGui::SliderInt("ConeResolution", &v, 0, 100))
+        {
+            obj->SetConeResolution(v);
+        }
+        if (int v = obj->GetSphereResolution(); ImGui::SliderInt("SphereResolution", &v, 0, 100))
+        {
+            obj->SetSphereResolution(v);
+        }
+        if (int v = obj->GetCylinderResolution(); ImGui::SliderInt("CylinderResolution", &v, 0, 100))
+        {
+            obj->SetCylinderResolution(v);
+        }
+
+        if (double v = obj->GetConeRadius(); ImGui::DragScalar("ConeRadius", ImGuiDataType_Double, &v, 0.01f))
+        {
+            obj->SetConeRadius(v);
+        }
+        if (double v = obj->GetSphereRadius(); ImGui::DragScalar("SphereRadius", ImGuiDataType_Double, &v, 0.01f))
+        {
+            obj->SetSphereRadius(v);
+        }
+        if (double v = obj->GetCylinderRadius(); ImGui::DragScalar("CylinderRadius", ImGuiDataType_Double, &v, 0.01f))
+        {
+            obj->SetCylinderRadius(v);
+        }
+
+        {
+            ImGui::Text("ShaftType");
+            ImGui::SameLine();
+            int v = obj->GetShaftType();
+            ImGui::RadioButton("CYLINDER_SHAFT", &v, vtkAxesActor::CYLINDER_SHAFT); ImGui::SameLine();
+            ImGui::RadioButton("LINE_SHAFT", &v, vtkAxesActor::LINE_SHAFT); ImGui::SameLine();
+            ImGui::RadioButton("USER_DEFINED_SHAFT", &v, vtkAxesActor::USER_DEFINED_SHAFT);
+            if (obj->GetShaftType() != v)
+            {
+                obj->SetShaftType(v);
+            }
+        }
+
+        {
+            ImGui::Text("TipType");
+            ImGui::SameLine();
+            int v = obj->GetTipType();
+            ImGui::RadioButton("CONE_TIP", &v, vtkAxesActor::CONE_TIP); ImGui::SameLine();
+            ImGui::RadioButton("SPHERE_TIP", &v, vtkAxesActor::SPHERE_TIP); ImGui::SameLine();
+            ImGui::RadioButton("USER_DEFINED_TIP", &v, vtkAxesActor::USER_DEFINED_TIP);
+            if (obj->GetTipType() != v)
+            {
+                obj->SetTipType(v);
+            }
+        }
+
+        if (bool v = obj->GetAxisLabels(); ImGui::Checkbox("AxisLabels", &v))
+        {
+            obj->SetAxisLabels(v);
+        }
+    }
+
+    template <>
+    void setupImpl(vtkOrientationMarkerWidget* obj)
+    {
+        {
+            float color[3] = { obj->GetOutlineColor()[0],obj->GetOutlineColor()[1],obj->GetOutlineColor()[2] };
+            if (ImGui::ColorEdit3("OutlineColor", color))
+            {
+                obj->SetOutlineColor(color[0], color[1], color[2]);
+            }
+        }
+
+        if (bool v = obj->GetInteractive(); ImGui::Checkbox("Interactive", &v))
+        {
+            obj->SetInteractive(v);
+        }
+        if (bool v = obj->GetShouldConstrainSize(); ImGui::Checkbox("ShouldConstrainSize", &v))
+        {
+            obj->SetShouldConstrainSize(v);
+        }
+
+        if (double v[4]; obj->GetViewport(v), ImGui::DragScalarN("Viewport", ImGuiDataType_Double, v, IM_ARRAYSIZE(v), 0.001f))
+        {
+            obj->SetViewport(v);
+        }
+
+        if (double v = obj->GetZoom(); ImGui::DragScalar("Zoom", ImGuiDataType_Double, &v, 0.01f))
+        {
+            obj->SetZoom(v);
+        }
+
+        if (int v = obj->GetTolerance(); ImGui::SliderInt("Tolerance", &v, 1, 10))
+        {
+            obj->SetTolerance(v);
+        }
+    }
 }
 
 namespace
@@ -3625,7 +3749,7 @@ namespace vtkns
             // vtkPicker
             ::setupHelper<vtkPointPicker, vtkCellPicker>(vtkObj);
             // vtkInteractorObserver
-            ::setupHelper<vtkAbstractWidget, vtk3DWidget>(vtkObj);
+            ::setupHelper<vtkAbstractWidget, vtk3DWidget, vtkOrientationMarkerWidget>(vtkObj);
             // vtkAbstractWidget
             ::setupHelper<vtkResliceCursorWidget, vtkBoxWidget2, vtkLineWidget2, vtkDistanceWidget, vtkBorderWidget>(vtkObj);
             // vtkAlgorithm
@@ -3661,7 +3785,7 @@ namespace vtkns
             // vtkProp
             ::setupHelper<vtkProp3D, vtkActor2D, vtkWidgetRepresentation>(vtkObj);
             // vtkProp3D
-            ::setupHelper<vtkImageSlice, vtkActor, vtkVolume, vtkAnnotatedCubeActor>(vtkObj);
+            ::setupHelper<vtkImageSlice, vtkActor, vtkVolume, vtkAnnotatedCubeActor, vtkAxesActor>(vtkObj);
             // vtkImageSlice
             ::setupHelper<vtkImageActor>(vtkObj);
             // vtkAbstractVolumeMapper
