@@ -6,7 +6,7 @@ int main()
 
     vtkNew<vtkLookupTable> lut;
     lut->SetNumberOfColors(100);		// 指定颜色查找表中有多少种颜色
-    lut->SetHueRange(0.00, 0.6667);	//蓝到红渐变
+    lut->SetHueRange(0.00, 0.667);	//红到蓝渐变
     lut->SetTableRange(0, 666);
     lut->Build();
 

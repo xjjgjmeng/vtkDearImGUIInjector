@@ -454,14 +454,17 @@ namespace
         if (float v[2]{ vtkobj->GetHueRange()[0], vtkobj->GetHueRange()[1] }; ImGui::DragFloatRange2("HueRange", v, v + 1, 0.01, 0, 1))
         {
             vtkobj->SetHueRange(v[0], v[1]);
+            vtkobj->Build();
         }
         if (float v[2]{ vtkobj->GetSaturationRange()[0], vtkobj->GetSaturationRange()[1] }; ImGui::DragFloatRange2("SaturationRange", v, v + 1, 0.01, 0, 1))
         {
             vtkobj->SetSaturationRange(v[0], v[1]);
+            vtkobj->Build();
         }
         if (float v[2]{ vtkobj->GetValueRange()[0], vtkobj->GetValueRange()[1] }; ImGui::DragFloatRange2("ValueRange", v, v + 1, 0.01, 0, 1))
         {
             vtkobj->SetValueRange(v[0], v[1]);
+            vtkobj->Build();
         }
         {
             ImGui::Text("Ramp");
@@ -486,8 +489,18 @@ namespace
             ImGui::SameLine();
             vtkns::ImGuiText("[{}]", v);
         }
-        vtkns::ImGuiText("NumberOfColors: {}", vtkobj->GetNumberOfColors());
-        vtkns::ImGuiText("NumberOfTableValues: {}", vtkobj->GetNumberOfTableValues());
+        //vtkns::ImGuiText("NumberOfColors: {}", vtkobj->GetNumberOfColors());
+        if (int v = vtkobj->GetNumberOfColors(); ImGui::DragInt("NumberOfColors", &v))
+        {
+            vtkobj->SetNumberOfColors(v);
+            vtkobj->Build();
+        }
+        //vtkns::ImGuiText("NumberOfTableValues: {}", vtkobj->GetNumberOfTableValues());
+        if (int v = vtkobj->GetNumberOfTableValues(); ImGui::DragInt("NumberOfTableValues", &v))
+        {
+            vtkobj->SetNumberOfTableValues(v);
+            vtkobj->Build();
+        }
         if (ImGui::TreeNodeEx("TableValues"))
         {
             for (auto i = 0; i < vtkobj->GetNumberOfTableValues(); ++i)

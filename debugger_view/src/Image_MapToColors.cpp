@@ -7,8 +7,8 @@ int main()
 
     vtkNew<vtkLookupTable> lut;
     lut->SetTableRange(0, 2000);
-    lut->SetHueRange(0, 1); // 灰度图(0,0)
-    lut->SetSaturationRange(0, 1);
+    lut->SetHueRange(0, 1);
+    lut->SetSaturationRange(0, 1); // 灰度图(0,0)
     lut->SetValueRange(0, 1);
     lut->SetRampToLinear();
     lut->Build();
