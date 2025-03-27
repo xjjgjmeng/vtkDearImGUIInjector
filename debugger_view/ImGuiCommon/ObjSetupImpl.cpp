@@ -1,7 +1,96 @@
 ﻿#include "ImGuiCommon.h"
 
+#define _CRT_SECURE_NO_WARNINGS
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+#include <gl/GL.h>
+
+// Simple helper function to load an image into a OpenGL texture with common settings
+bool LoadTextureFromMemory(const void* data, size_t data_size, GLuint* out_texture, int* out_width, int* out_height)
+{
+    // Load from file
+    int image_width = 0;
+    int image_height = 0;
+    unsigned char* image_data = stbi_load_from_memory((const unsigned char*)data, (int)data_size, &image_width, &image_height, NULL, 4);
+    if (image_data == NULL)
+        return false;
+
+    // Create a OpenGL texture identifier
+    GLuint image_texture;
+    glGenTextures(1, &image_texture);
+    glBindTexture(GL_TEXTURE_2D, image_texture);
+
+    // Setup filtering parameters for display
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    // Upload pixels into texture
+    glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image_width, image_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image_data);
+    stbi_image_free(image_data);
+
+    *out_texture = image_texture;
+    *out_width = image_width;
+    *out_height = image_height;
+
+    return true;
+}
+
+// Open and read a file, then forward to LoadTextureFromMemory()
+bool LoadTextureFromFile(const char* file_name, GLuint* out_texture, int* out_width, int* out_height)
+{
+    struct Data
+    {
+        GLuint out_texture;
+        int out_width;
+        int out_height;
+    };
+    static std::map<std::string, Data> mymap;
+
+    try
+    {
+         const auto& data = mymap.at(file_name);
+         *out_texture = data.out_texture;
+         *out_width = data.out_width;
+         *out_height = data.out_height;
+         return true;
+    }
+    catch (const std::out_of_range& e)
+    {
+        FILE* f = std::fopen(file_name, "rb");
+        if (f == NULL)
+            return false;
+        std::fseek(f, 0, SEEK_END);
+        size_t file_size = (size_t)ftell(f);
+        if (file_size == -1)
+            return false;
+        std::fseek(f, 0, SEEK_SET);
+        void* file_data = IM_ALLOC(file_size);
+        std::fread(file_data, 1, file_size, f);
+        std::fclose(f);
+        bool ret = LoadTextureFromMemory(file_data, file_size, out_texture, out_width, out_height);
+        IM_FREE(file_data);
+
+        mymap[file_name] = { *out_texture, *out_width, *out_height };
+
+        return ret;
+    }
+}
+
 namespace vtkns
 {
+    void image(const char* file_name)
+    {
+        int my_image_width = 0;
+        int my_image_height = 0;
+        GLuint my_image_texture = 0;
+        bool ret = LoadTextureFromFile(file_name, &my_image_texture, &my_image_width, &my_image_height);
+        IM_ASSERT(ret);
+        //ImGui::Text("pointer = %x", my_image_texture);
+        //ImGui::Text("size = %d x %d", my_image_width, my_image_height);
+        ImGui::Image((ImTextureID)(intptr_t)my_image_texture, ImVec2(my_image_width, my_image_height));
+    }
+
     void HelpMarker(const char* desc)
     {
         ImGui::TextDisabled("(?)");
@@ -11,6 +100,20 @@ namespace vtkns
             ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
             ImGui::TextUnformatted(desc);
             ImGui::PopTextWrapPos();
+            ImGui::EndTooltip();
+        }
+    }
+
+    void HelpMarker(const char* desc, const char* file_name)
+    {
+        ImGui::TextDisabled("(?)");
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::BeginTooltip();
+            ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
+            ImGui::TextUnformatted(desc);
+            ImGui::PopTextWrapPos();
+            vtkns::image(file_name);
             ImGui::EndTooltip();
         }
     }
@@ -408,11 +511,16 @@ namespace
         {
             vtkobj->SetExtentTranslation(v);
         }
+        if (int v[3]; vtkobj->GetOutputExtentStart(v), ImGui::DragScalarN("OutputExtentStart", ImGuiDataType_S32, v, IM_ARRAYSIZE(v)))
+        {
+            vtkobj->SetOutputExtentStart(v);
+        }
         if (bool v = vtkobj->GetCenterImage(); ImGui::Checkbox("CenterImage", &v))
         {
             vtkobj->SetCenterImage(v);
         }
-        ImGui::SameLine(); vtkns::HelpMarker(u8R"(将Origin设置为输出图像的左下角，Extend从（0，0，0）开始)");
+        ImGui::SameLine();
+        vtkns::HelpMarker(u8R"(居中显示。通过Extent调整Origin，将整个Image的中心点和世界坐标的（0，0，0）对应)", "../../my_resource_dir/centerImage.png");
     }
 
     template<>
