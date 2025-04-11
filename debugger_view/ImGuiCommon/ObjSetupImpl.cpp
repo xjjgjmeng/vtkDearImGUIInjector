@@ -2951,6 +2951,8 @@ The origin is the position in world coordinates of the point of extent (0,0,0)
         {
             obj->SetLeaderGlyphSize(v);
         }
+        vtkns::vtkObjSetup("TextActor", obj->GetTextActor());
+        vtkns::vtkObjSetup("CaptionTextProperty", obj->GetCaptionTextProperty());
     }
 
     template <>
@@ -3746,6 +3748,10 @@ A value greater than 1 is a zoom-in, a value less than 1 is a zoom-out.
         {
             obj->SetAxisLabels(v);
         }
+
+        vtkns::vtkObjSetup("XAxisCaptionActor2D", obj->GetXAxisCaptionActor2D());
+        vtkns::vtkObjSetup("YAxisCaptionActor2D", obj->GetYAxisCaptionActor2D());
+        vtkns::vtkObjSetup("ZAxisCaptionActor2D", obj->GetZAxisCaptionActor2D());
     }
 
     template <>
