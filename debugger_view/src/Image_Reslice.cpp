@@ -30,7 +30,7 @@ int main()
     ::meshActor->SetVisibility(0);
 
     // 将原始的image用线框显示出来
-    vtkns::genImgOutline(ren, img, false)->GetProperty()->SetColor(1., 1., 0.);
+    // vtkns::genImgOutline(ren, img, false)->GetProperty()->SetColor(1., 1., 0.);
 
     {
         {

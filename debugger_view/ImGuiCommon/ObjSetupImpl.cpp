@@ -1524,7 +1524,9 @@ output的origin是相对于新坐标系的，把新坐标系的origin处看作�
         }
 
         // output
-        if (ImGui::TreeNodeEx("Output", ImGuiTreeNodeFlags_DefaultOpen))
+        if (auto b = ImGui::TreeNodeEx("Output", ImGuiTreeNodeFlags_DefaultOpen); ImGui::SameLine(), vtkns::HelpMarker(u8R"(调节Origin和Extent，效果就是在钉在世界0点的xoy图像上选取合适的图像区域，
+用Origin在xoy图像上确定输出图像的Origin，此点也就是输出图像的extent (0,0,0)，
+在此基础上使用Extent选择一个区域，即为输出图像)"), b)
         {
             if (double v[3]; obj->GetOutputOrigin(v), ImGui::DragScalarN("Origin", ImGuiDataType_Double, v, IM_ARRAYSIZE(v)))
             {

@@ -13,8 +13,11 @@
 
 #include "vtkActor.h"
 #include <vtkTubeFilter.h>
+#include <vtkPNGWriter.h>
+#include <vtkWindowToImageFilter.h>
 #include <vtkVectorText.h>
 #include <vtkimplicitModeller.h>
+#include <vtkImageMapToWindowLevelColors.h>
 #include <vtkPlaneWidget.h>
 #include <vtkContourFilter.h>
 #include <vtkPolydataNormals.h>
@@ -22,6 +25,7 @@
 #include <vtkCutter.h>
 #include <vtkGlyphSource2D.h>
 #include <vtkGlyph2D.h>
+#include <vtkImageLuminance.h>
 #include <vtkPlaneCollection.h>
 #include <vtkLinearExtrusionFilter.h>
 #include <vtkRotationalExtrusionFilter.h>
