@@ -39,12 +39,11 @@ int main()
     }
     ren->AddViewProp(rotateAxis);
 
-    std::pair<vtkNew<vtkMatrix4x4>, vtkNew<vtkMatrix4x4>> leftrightmutiply;
-
     ::imgui_render_callback = [&]
         {
             if (ImGui::TreeNodeEx(u8"左右乘对比"))
             {
+                static std::pair<vtkNew<vtkMatrix4x4>, vtkNew<vtkMatrix4x4>> leftrightmutiply;
                 vtkns::vtkObjSetup("A", leftrightmutiply.first);
                 vtkns::vtkObjSetup("B", leftrightmutiply.second);
 
