@@ -27,10 +27,13 @@
 #include <vtkGlyph2D.h>
 #include <vtkImageLuminance.h>
 #include <vtkPlaneCollection.h>
+#include <vtkTIFFReader.h>
+#include <vtkOMETIFFReader.h>
 #include <vtkLinearExtrusionFilter.h>
 #include <vtkRotationalExtrusionFilter.h>
 #include <vtkRegularPolygonSource.h>
 #include "vtkCallbackCommand.h"
+#include "vtk_tiff.h"
 #include "vtkCameraOrientationWidget.h"
 #include "vtkCameraOrientationRepresentation.h"
 #include "vtkCameraOrientationWidget.h"

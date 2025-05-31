@@ -1078,6 +1078,19 @@ namespace
         {
             vtkobj->SetPassAlphaToOutput(v);
         }
+        if (ImGui::TreeNodeEx("OutputFormat", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            int v = vtkobj->GetOutputFormat();
+            ImGui::RadioButton("VTK_LUMINANCE", &v, VTK_LUMINANCE);
+            ImGui::RadioButton("VTK_LUMINANCE_ALPHA", &v, VTK_LUMINANCE_ALPHA);
+            ImGui::RadioButton("VTK_RGB", &v, VTK_RGB);
+            ImGui::RadioButton("VTK_RGBA", &v, VTK_RGBA);
+            if (vtkobj->GetOutputFormat() != v)
+            {
+                vtkobj->SetOutputFormat(v);
+            }
+            ImGui::TreePop();
+        }
     }
 
     template <>
@@ -3665,6 +3678,47 @@ A value greater than 1 is a zoom-in, a value less than 1 is a zoom-out.
     }
 
     template <>
+    void setupImpl(vtkImageReader2* )
+    {
+
+    }
+
+    template <>
+    void setupImpl(vtkTIFFReader* vtkobj)
+    {
+        if (bool b = vtkobj->GetOriginSpecifiedFlag(); ImGui::Checkbox("OriginSpecifiedFlag", &b))
+        {
+            vtkobj->SetOriginSpecifiedFlag(b);
+        }
+        if (bool b = vtkobj->GetSpacingSpecifiedFlag(); ImGui::Checkbox("SpacingSpecifiedFlag", &b))
+        {
+            vtkobj->SetSpacingSpecifiedFlag(b);
+        }
+        if (bool b = vtkobj->GetIgnoreColorMap(); ImGui::Checkbox("IgnoreColorMap", &b))
+        {
+            vtkobj->SetIgnoreColorMap(b);
+        }
+
+        if (auto sg = nonstd::make_scope_exit(ImGui::TreePop); ImGui::TreeNodeEx("OrientationType", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            int v = vtkobj->GetOrientationType();
+            ImGui::RadioButton("ORIENTATION_TOPLEFT", &v, ORIENTATION_TOPLEFT);
+            ImGui::RadioButton("ORIENTATION_TOPRIGHT", &v, ORIENTATION_TOPRIGHT);
+            ImGui::RadioButton("ORIENTATION_BOTRIGHT", &v, ORIENTATION_BOTRIGHT);
+            ImGui::RadioButton("ORIENTATION_BOTLEFT", &v, ORIENTATION_BOTLEFT);
+            ImGui::RadioButton("ORIENTATION_LEFTTOP", &v, ORIENTATION_LEFTTOP);
+            ImGui::RadioButton("ORIENTATION_RIGHTTOP", &v, ORIENTATION_RIGHTTOP);
+            ImGui::RadioButton("ORIENTATION_RIGHTBOT", &v, ORIENTATION_RIGHTBOT);
+            ImGui::RadioButton("ORIENTATION_LEFTBOT", &v, ORIENTATION_LEFTBOT);
+
+            if (vtkobj->GetOrientationType() != v)
+            {
+                vtkobj->SetOrientationType(v);
+            }
+        }
+    }
+
+    template <>
     void setupImpl(vtkAxesActor* obj)
     {
         {
@@ -3886,7 +3940,9 @@ namespace vtkns
             // vtkImageStencilAlgorithm
             ::setupHelper<vtkImageToImageStencil>(vtkObj);
             // vtkImageAlgorithm
-            ::setupHelper<vtkThreadedImageAlgorithm, vtkExtractVOI, vtkImageGridSource, vtkImageChangeInformation>(vtkObj);
+            ::setupHelper<vtkThreadedImageAlgorithm, vtkExtractVOI, vtkImageGridSource, vtkImageChangeInformation, vtkImageReader2>(vtkObj);
+            // vtkImageReader2
+            ::setupHelper<vtkTIFFReader>(vtkObj);
             // vtkAbstractMapper
             ::setupHelper<vtkAbstractMapper3D>(vtkObj);
             // vtkThreadedImageAlgorithm
