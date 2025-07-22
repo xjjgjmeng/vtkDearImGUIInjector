@@ -1311,8 +1311,8 @@ namespace
                 }
                 if (auto b = ImGui::TreeNodeEx(u8"缩放", ImGuiTreeNodeFlags_DefaultOpen); ImGui::SameLine(), vtkns::HelpMarker(u8R"(每次缩放0.5或2)"), b)
                 {
-                    constexpr auto n = 0.5;
-                    constexpr auto p = 2;
+                    constexpr auto n = 0.9;
+                    constexpr auto p = 1.1;
                     vtkns::ArrowButton("X", [&] { vtkns::mat::scale(obj, n, 1, 1, useVtkTransform); }, [&] { vtkns::mat::scale(obj, p, 1, 1, useVtkTransform); }); vtkns::ArrowButtonSameLine();
                     vtkns::ArrowButton("Y", [&] { vtkns::mat::scale(obj, 1, n, 1, useVtkTransform); }, [&] { vtkns::mat::scale(obj, 1, p, 1, useVtkTransform); }); vtkns::ArrowButtonSameLine();
                     vtkns::ArrowButton("Z", [&] { vtkns::mat::scale(obj, 1, 1, n, useVtkTransform); }, [&] { vtkns::mat::scale(obj, 1, 1, p, useVtkTransform); });
@@ -1580,6 +1580,37 @@ The origin is the position in world coordinates of the point of extent (0,0,0)
             }
 
             {
+				int v[6];
+                obj->GetOutputExtent(v);
+                vtkns::ImGuiText("OutputExtent: {}", v);
+            }
+            {
+                double v[3];
+                obj->GetOutputOrigin(v);
+                vtkns::ImGuiText("OutputOrigin: {}", v);
+            }
+            {
+                double v[3];
+                obj->GetOutputSpacing(v);
+                vtkns::ImGuiText("OutputSpacing: {}", v);
+            }
+            {
+				int v[6];
+                obj->GetOutputInformation(0)->Get(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT(), v);
+                vtkns::ImGuiText("OutputInformation_WHOLE_EXTENT: {}", v);
+            }
+            {
+                double v[3];
+                obj->GetOutputInformation(0)->Get(vtkDataObject::ORIGIN(), v);
+                vtkns::ImGuiText("OutputInformation_ORIGIN: {}", v);
+            }
+            {
+                double v[3];
+                obj->GetOutputInformation(0)->Get(vtkDataObject::SPACING(), v);
+                vtkns::ImGuiText("OutputInformation_SPACING: {}", v);
+            }
+
+            {
                 ImGui::Text("Dimensionality");
                 ImGui::SameLine();
                 int v = obj->GetOutputDimensionality();
@@ -1655,7 +1686,22 @@ The origin is the position in world coordinates of the point of extent (0,0,0)
             }
         }
 
-        if (ImGui::TreeNodeEx("Border", ImGuiTreeNodeFlags_DefaultOpen))
+        if (ImGui::TreeNodeEx(u8"Transform测试", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            static vtkNew<vtkMatrix4x4> mat;
+            vtkns::vtkObjSetup("Mat", mat);
+            vtkns::vtkObjSetup("ResliceTransform", obj->GetResliceTransform());
+
+            {
+                vtkNew<vtkTransform> trans;
+                trans->SetMatrix(mat);
+                obj->SetResliceTransform(trans);
+            }
+
+            ImGui::TreePop();
+        }
+
+        if (ImGui::TreeNodeEx("Border"/*, ImGuiTreeNodeFlags_DefaultOpen*/))
         {
             if (bool v = obj->GetBorder(); ImGui::Checkbox("On", &v))
             {

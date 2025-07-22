@@ -390,7 +390,7 @@ namespace vtkns
 	static auto getMatrixString(vtkMatrix4x4* obj)
 	{
 #if 1
-		return fmt::format("Element:\n\t{:.5f}\t{:.5f}\t{:.5f}\t{:.5f}\n\t{:.5f}\t{:.5f}\t{:.5f}\t{:.5f}\n\t{:.5f}\t{:.5f}\t{:.5f}\t{:.5f}\n\t{:.5f}\t{:.5f}\t{:.5f}\t{:.5f}",
+		return fmt::format("Element:\n\t{:010.3f}\t{:010.3f}\t{:010.3f}\t{:010.3f}\n\t{:010.3f}\t{:010.3f}\t{:010.3f}\t{:010.3f}\n\t{:010.3f}\t{:010.3f}\t{:010.3f}\t{:010.3f}\n\t{:010.3f}\t{:010.3f}\t{:010.3f}\t{:010.3f}",
 			obj->GetElement(0, 0), obj->GetElement(0, 1), obj->GetElement(0, 2), obj->GetElement(0, 3),
 			obj->GetElement(1, 0), obj->GetElement(1, 1), obj->GetElement(1, 2), obj->GetElement(1, 3),
 			obj->GetElement(2, 0), obj->GetElement(2, 1), obj->GetElement(2, 2), obj->GetElement(2, 3),
@@ -701,11 +701,29 @@ namespace vtkns
 		return retval;
 	}
 
-	static vtkSmartPointer<vtkImageData> getVRData()
+	static vtkSmartPointer<vtkImageData> getVRData(const double downsampling_factor = 0.)
 	{
 		vtkNew<vtkDICOMImageReader> reader;
 		reader->SetDirectoryName(vtkns::getDicomDir());
 		reader->Update();
+
+		if (downsampling_factor)
+		{
+			vtkNew<vtkImageSincInterpolator> interpolator;
+			interpolator->SetWindowFunctionToHann();
+			interpolator->AntialiasingOn();
+
+			vtkNew<vtkImageResize> resize;
+			resize->SetInputData(reader->GetOutput());
+			resize->InterpolateOn();
+			resize->SetInterpolator(interpolator);
+			resize->SetResizeMethodToOutputDimensions();
+			const auto dims = reader->GetOutput()->GetDimensions();
+			resize->SetOutputDimensions(dims[0] / downsampling_factor, dims[1] / downsampling_factor, dims[2] / downsampling_factor);
+			resize->Update();
+			return resize->GetOutput();
+		}
+
 		return reader->GetOutput();
 	}
 

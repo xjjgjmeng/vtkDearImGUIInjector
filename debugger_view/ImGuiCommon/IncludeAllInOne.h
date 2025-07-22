@@ -36,7 +36,7 @@
 #include "vtk_tiff.h"
 #include "vtkCameraOrientationWidget.h"
 #include "vtkCameraOrientationRepresentation.h"
-#include "vtkCameraOrientationWidget.h"
+#include "vtkStreamingDemandDrivenPipeline.h"
 #include "vtkConeSource.h"
 #include "vtkCubeSource.h"
 #include <vtkImageSincInterpolator.h>

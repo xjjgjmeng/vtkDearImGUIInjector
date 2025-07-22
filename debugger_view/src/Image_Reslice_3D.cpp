@@ -3,7 +3,7 @@
 int main()
 {
     BEFORE_MY_CODE
-    auto img = vtkns::getVRData();
+    auto img = vtkns::getVRData(10.);
     vtkns::labelWorldZero(ren);
 
     vtkNew<vtkImageReslice> reslice;
@@ -16,7 +16,7 @@ int main()
     {
         auto actor = vtkns::genImgOutline(ren, reslice->GetOutput(), true);
         actor->GetProperty()->SetColor(1., 0., 0.);
-        actor->GetProperty()->SetLineWidth(5);
+        actor->GetProperty()->SetLineWidth(0.1);
     }
 
     vtkns::genVR(ren, img, false, true);
@@ -37,10 +37,10 @@ int main()
         reslice->SetResliceAxesOrigin(img->GetCenter());
     }
 
-    reslice->SetInterpolationModeToLinear();
-    reslice->SetOutputOrigin(0, 0, 0);
-    reslice->SetOutputExtent(0,400,0,400,0,400);
-    reslice->SetOutputSpacing(img->GetSpacing());
+    //reslice->SetInterpolationModeToLinear();
+    //reslice->SetOutputOrigin(0, 0, 0);
+    //reslice->SetOutputExtent(0,400,0,400,0,400);
+    //reslice->SetOutputSpacing(img->GetSpacing());
     reslice->Update(); // !
 
     //vtkNew<vtkImageActor> actor;

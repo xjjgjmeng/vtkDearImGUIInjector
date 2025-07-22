@@ -40,7 +40,7 @@ int main()
     ::imgui_render_callback = [&]
     {
             static bool bPostMultiply = true;
-            static bool bRotateAroundCenterline = false;
+            static bool bRotateAroundCustomline = false;
             static double rotateAxisPtBegin[4]{ 1.,0.,0., 1. };
             static double rotateAxisPtEnd[4]{ 1.,1.,1., 1. };
 
@@ -58,6 +58,7 @@ int main()
                     rotateAxis->SetArrowPlacementToPoint2();
                     rotateAxis->GetProperty()->SetColor(1, 1, 0);
                     rotateAxis->GetProperty()->SetOpacity(0.3);
+                    //rotateAxis->SetLabel("OriginalAxis");
                     ren->AddViewProp(rotateAxis);
                     rotateAxis->GetPositionCoordinate()->SetValue(rotateAxisPtBegin);
                     rotateAxis->GetPosition2Coordinate()->SetValue(rotateAxisPtEnd);
@@ -117,7 +118,7 @@ int main()
                     trans->PreMultiply();
                 }
 
-                if (-1 == axis && !bRotateAroundCenterline)
+                if (-1 == axis && bRotateAroundCustomline)
                 {
                     const double center[] =
                     {
@@ -167,21 +168,20 @@ int main()
                     myMat->DeepCopy(trans->GetMatrix());
                 }
             };
-        if (ImGui::TreeNodeEx("Rotate", ImGuiTreeNodeFlags_DefaultOpen))
+        if (auto sg = nonstd::make_scope_exit(ImGui::TreePop); ImGui::TreeNodeEx("Rotate", ImGuiTreeNodeFlags_DefaultOpen))
         {
-            ImGui::Checkbox("RotateAroundCenterline ", &bRotateAroundCenterline);
-            ImGui::SameLine();
-            ImGui::Checkbox("PostMultiply ", &bPostMultiply);
+            ImGui::Checkbox(u8"在原始坐标系中运动(PostMultiply)", &bPostMultiply);
             vtkns::HelpMarkerSameLine(bPostMultiply ? u8R"(左乘，M_new=A*M，新的变换A是在世界坐标系中进行的)" : u8R"(右乘，M_new=M*A，新的变换A是在由M所定义的当前局部坐标系中进行的)");
             vtkns::ArrowButton("X", [&] { f(-1.8, 0); }, [&] { f(1.8, 0); });
             ImGui::SameLine();
             vtkns::ArrowButton("Y", [&] { f(-1.8, 1); }, [&] { f(1.8, 1); });
             ImGui::SameLine();
             vtkns::ArrowButton("Z", [&] { f(-1.8, 2); }, [&] { f(1.8, 2); });
-            ImGui::SameLine();
-            vtkns::ArrowButton("WXYZ", [&] { f(-1.8); }, [&] { f(1.8); });
-
-            ImGui::TreePop();
+            if (auto sg = nonstd::make_scope_exit(ImGui::TreePop); ImGui::TreeNodeEx("WXYZ", ImGuiTreeNodeFlags_DefaultOpen))
+            {
+                ImGui::Checkbox(u8"起止线", &bRotateAroundCustomline);
+                vtkns::ArrowButton(bRotateAroundCustomline ? u8"围绕起止线旋转" : u8"将起止线移动至原点并绕其旋转", [&] { f(-1.8); }, [&] { f(1.8); });
+            }
         }
     };
 
